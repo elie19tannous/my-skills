@@ -1,0 +1,18 @@
+{
+  "subject": {
+    "type": "Person",
+    "id": "ada"
+  },
+  "resource": {
+    "type": "Server",
+    "id": "gpu-node-7"
+  },
+  "action": {
+    "name": "PROVISION"
+  },
+  "context": {
+    "input_params": {
+      "max_price": 120000
+    }
+  }
+}

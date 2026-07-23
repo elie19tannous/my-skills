@@ -1,0 +1,49 @@
+{
+  "name": "kq-app-create-contract",
+  "display_name": "App Query: Create Contract and link to Vehicle + Person",
+  "description": "Call tool 'ciq_execute' with arguments: id: \"<this query's id>\", input_params: {vehicleID: (required) external_id of the existing Vehicle, personID: (required) external_id of the existing Person, contract_external_id: (required) external_id for the new Contract, contractNumber: (required) contract number}. Auth: X-IK-ClientKey only (_Application subject), no Bearer token, $_appId is auto-filled. Returns: the new Contract (external_id, number), the COVERS relationship to the Vehicle, and the ACCEPTED relationship from the Person.",
+  "project_id": "<project-gid>",
+  "policy_id": "<policy-gid>",
+  "query": {
+    "upsert_nodes": [
+      {
+        "name": "contract",
+        "type": "Contract",
+        "external_id": "$contract_external_id",
+        "properties": [
+          {
+            "type": "number",
+            "value": "$contractNumber"
+          },
+          {
+            "type": "status",
+            "value": "Active"
+          }
+        ]
+      }
+    ],
+    "upsert_relationships": [
+      {
+        "name": "r3",
+        "source": "contract",
+        "target": "vehicle",
+        "type": "COVERS"
+      },
+      {
+        "name": "r4",
+        "source": "person",
+        "target": "contract",
+        "type": "ACCEPTED"
+      }
+    ],
+    "nodes": [
+      "contract.external_id",
+      "contract.property.number"
+    ],
+    "relationships": [
+      "r3",
+      "r4"
+    ]
+  },
+  "status": "ACTIVE"
+}
