@@ -1,426 +1,208 @@
 ---
-name: code-refactor
-description: Systematic code refactoring based on Martin Fowler's methodology. Use when users ask to refactor code, improve code structure, reduce technical debt, clean up legacy code, eliminate code smells, or improve code maintainability. This skill guides through a phased approach with research, planning, and safe incremental implementation.
+name: refactor
+license: MIT
+description: >-
+  Safe multi-file refactoring with automatic rollback. Establishes a type/test
+  baseline, plans all changes, executes file-by-file, and verifies zero
+  regressions. Reverts if verification fails after two fix attempts.
+  Handles renames, extracts, moves, splits, merges, and inlines.
+user-invocable: true
+auto-trigger: false
+trigger_keywords:
+  - refactor
+  - rename
+  - extract
+  - inline
+  - move file
+  - split file
+  - merge files
+last-updated: 2026-03-20
 ---
 
-# Code Refactoring Skill
+# /refactor — Safe Multi-File Refactoring
 
-A systematic approach to refactoring code based on Martin Fowler's *Refactoring: Improving the Design of Existing Code* (2nd Edition). This skill emphasizes safe, incremental changes backed by tests.
+## Orientation
 
-> "Refactoring is the process of changing a software system in such a way that it does not alter the external behavior of the code yet improves its internal structure." — Martin Fowler
+Use `/refactor` when you need to:
+- Rename a symbol, file, or module across the codebase
+- Extract a function, component, hook, class, or module from existing code
+- Inline a function or module back into its callers
+- Move a file or set of files to a new location
+- Split a large file into smaller pieces
+- Merge related files into one
+- Change a function signature and update all call sites
 
-## Core Principles
+**Don't use when:** debugging a specific bug (use /systematic-debugging); adding new features (use /marshal or /scaffold); deleting dead code (use /marshal for a targeted cleanup).
 
-1. **Behavior Preservation**: External behavior must remain unchanged
-2. **Small Steps**: Make tiny, testable changes
-3. **Test-Driven**: Tests are the safety net
-4. **Continuous**: Refactoring is ongoing, not a one-time event
-5. **Collaborative**: User approval required at each phase
+**Boundary with /organize:** /refactor changes code structure within files (extract, inline, split, merge, rename) and moves files as part of those operations. Repository-wide file/directory placement, naming sweeps, and where-does-this-belong decisions are /organize.
 
-## Workflow Overview
+**Behavior does not change.** Tests pass before and after, no new type errors — the refactoring is correct.
+
+## Commands
+
+| Command | Behavior |
+|---|---|
+| `/refactor rename [old] to [new]` | Rename symbol, file, or module |
+| `/refactor extract [target] from [source]` | Extract function/component/module |
+| `/refactor inline [target]` | Inline a function/module into callers |
+| `/refactor move [source] to [dest]` | Move file(s) with import updates |
+| `/refactor split [file]` | Split a file into logical pieces |
+| `/refactor merge [files...]` | Merge related files into one |
+| `/refactor [freeform description]` | Auto-detect refactoring type from description |
+| `/refactor --dry-run [any above]` | Plan only, show what would change |
+
+## Protocol
+
+### Phase 1: BASELINE
+
+Run typecheck (via `node scripts/run-with-timeout.js 300 npm run typecheck`) and tests. Record error/failure counts — pre-existing issues are not your responsibility, but you must not add to them. Warn if there are uncommitted changes in files you plan to modify.
 
 ```
-Phase 1: Research & Analysis
-    ↓
-Phase 2: Test Coverage Assessment
-    ↓
-Phase 3: Code Smell Identification
-    ↓
-Phase 4: Refactoring Plan Creation
-    ↓
-Phase 5: Incremental Implementation
-    ↓
-Phase 6: Review & Iteration
+Baseline established:
+  Typecheck: {pass | N errors (pre-existing)}
+  Tests: {pass | N failures (pre-existing) | no test suite found}
+  Git: {clean | M files with uncommitted changes}
 ```
 
----
+### Phase 2: PLAN
 
-## Phase 1: Research & Analysis
+Analyze the refactoring target and produce a concrete plan.
 
-### Objectives
-- Understand the codebase structure and purpose
-- Identify the scope of refactoring
-- Gather context about business requirements
+1. **Identify scope**: Search the codebase for every reference to the target.
+   Use grep/search for:
+   - Import statements referencing the target
+   - Usage sites (function calls, type references, component usage)
+   - Re-exports from index files
+   - Test files that reference the target
+   - Documentation or comments mentioning the target
+   - Config files (e.g., route definitions, dependency injection)
 
-### Questions to Ask User
-Before starting, clarify:
+2. **Classify the refactoring type** and apply type-specific analysis:
 
-1. **Scope**: Which files/modules/functions need refactoring?
-2. **Goals**: What problems are you trying to solve? (readability, performance, maintainability)
-3. **Constraints**: Are there any areas that should NOT be changed?
-4. **Timeline pressure**: Is this blocking other work?
-5. **Test status**: Do tests exist? Are they passing?
+   **Rename (symbol):** all imports + usage sites + string references + dynamic access patterns (`obj[key]`)
 
-### Actions
-- [ ] Read and understand the target code
-- [ ] Identify dependencies and integrations
-- [ ] Document current architecture
-- [ ] Note any existing technical debt markers (TODOs, FIXMEs)
+   **Rename (file/module):** all import paths + path aliases + dynamic imports + index re-exports
 
-### Output
-Present findings to user:
-- Code structure summary
-- Identified problem areas
-- Initial recommendations
-- **Request approval to proceed**
+   **Extract (function/component/module):** code to extract, enclosing-scope dependencies, return values back to caller, destination file, interface design
 
----
+   **Move (file):** every import of old path → compute new relative paths, check alias boundary changes, barrel updates
 
-## Phase 2: Test Coverage Assessment
+   **Split (file):** logical groupings, internal cross-references, which group keeps the original path, new files per group, index if needed
 
-### Why Tests Matter
-> "Refactoring without tests is like driving without a seatbelt." — Martin Fowler
+   **Merge (files):** duplicates/conflicts, import consolidation, merged file organization
 
-Tests are the **key enabler** of safe refactoring. Without them, you risk introducing bugs.
+3. **Produce the plan** — list every file that will change and what changes:
 
-### Assessment Steps
-
-1. **Check for existing tests**
-   ```bash
-   # Look for test files
-   find . -name "*test*" -o -name "*spec*" | head -20
-   ```
-
-2. **Run existing tests**
-   ```bash
-   # JavaScript/TypeScript
-   npm test
-
-   # Python
-   pytest -v
-
-   # Java
-   mvn test
-   ```
-
-3. **Check coverage (if available)**
-   ```bash
-   # JavaScript
-   npm run test:coverage
-
-   # Python
-   pytest --cov=.
-   ```
-
-### Decision Point: Ask User
-
-**If tests exist and pass:**
-- Proceed to Phase 3
-
-**If tests are missing or incomplete:**
-Present options:
-1. Write tests first (recommended)
-2. Add tests incrementally during refactoring
-3. Proceed without tests (risky - requires user acknowledgment)
-
-**If tests are failing:**
-- STOP. Fix failing tests before refactoring
-- Ask user: Should we fix tests first?
-
-### Test Writing Guidelines (if needed)
-
-For each function being refactored, ensure tests cover:
-- Happy path (normal operation)
-- Edge cases (empty inputs, null, boundaries)
-- Error scenarios (invalid inputs, exceptions)
-
-Use the "red-green-refactor" cycle:
-1. Write failing test (red)
-2. Make it pass (green)
-3. Refactor
-
----
-
-## Phase 3: Code Smell Identification
-
-### What Are Code Smells?
-Symptoms of deeper problems in code. They're not bugs, but indicators that the code could be improved.
-
-### Common Code Smells to Check
-
-See [references/code-smells.md](references/code-smells.md) for the complete catalog.
-
-#### Quick Reference
-
-| Smell | Signs | Impact |
-|-------|-------|--------|
-| **Long Method** | Methods > 30-50 lines | Hard to understand, test, maintain |
-| **Duplicated Code** | Same logic in multiple places | Bug fixes needed in multiple places |
-| **Large Class** | Class with too many responsibilities | Violates Single Responsibility |
-| **Feature Envy** | Method uses another class's data more | Poor encapsulation |
-| **Primitive Obsession** | Overuse of primitives instead of objects | Missing domain concepts |
-| **Long Parameter List** | Methods with 4+ parameters | Hard to call correctly |
-| **Data Clumps** | Same data items appearing together | Missing abstraction |
-| **Switch Statements** | Complex switch/if-else chains | Hard to extend |
-| **Speculative Generality** | Code "just in case" | Unnecessary complexity |
-| **Dead Code** | Unused code | Confusion, maintenance burden |
-
-### Analysis Steps
-
-1. **Automated Analysis** (if scripts available)
-   ```bash
-   python scripts/detect-smells.py <file>
-   ```
-
-2. **Manual Review**
-   - Walk through code systematically
-   - Note each smell with location and severity
-   - Categorize by impact (Critical/High/Medium/Low)
-
-3. **Prioritization**
-   Focus on smells that:
-   - Block current development
-   - Cause bugs or confusion
-   - Affect most-changed code paths
-
-### Output: Smell Report
-
-Present to user:
-- List of identified smells with locations
-- Severity assessment for each
-- Recommended priority order
-- **Request approval on priorities**
-
----
-
-## Phase 4: Refactoring Plan Creation
-
-### Selecting Refactorings
-
-For each smell, select an appropriate refactoring from the catalog.
-
-See [references/refactoring-catalog.md](references/refactoring-catalog.md) for the complete list.
-
-#### Smell-to-Refactoring Mapping
-
-| Code Smell | Recommended Refactoring(s) |
-|------------|---------------------------|
-| Long Method | Extract Method, Replace Temp with Query |
-| Duplicated Code | Extract Method, Pull Up Method, Form Template Method |
-| Large Class | Extract Class, Extract Subclass |
-| Feature Envy | Move Method, Move Field |
-| Primitive Obsession | Replace Primitive with Object, Replace Type Code with Class |
-| Long Parameter List | Introduce Parameter Object, Preserve Whole Object |
-| Data Clumps | Extract Class, Introduce Parameter Object |
-| Switch Statements | Replace Conditional with Polymorphism |
-| Speculative Generality | Collapse Hierarchy, Inline Class, Remove Dead Code |
-| Dead Code | Remove Dead Code |
-
-### Plan Structure
-
-Use the template at [templates/refactoring-plan.md](templates/refactoring-plan.md).
-
-For each refactoring:
-1. **Target**: What code will change
-2. **Smell**: What problem it addresses
-3. **Refactoring**: Which technique to apply
-4. **Steps**: Detailed micro-steps
-5. **Risks**: What could go wrong
-6. **Rollback**: How to undo if needed
-
-### Phased Approach
-
-**CRITICAL**: Introduce refactoring gradually in phases.
-
-**Phase A: Quick Wins** (Low risk, high value)
-- Rename variables for clarity
-- Extract obvious duplicate code
-- Remove dead code
-
-**Phase B: Structural Improvements** (Medium risk)
-- Extract methods from long functions
-- Introduce parameter objects
-- Move methods to appropriate classes
-
-**Phase C: Architectural Changes** (Higher risk)
-- Replace conditionals with polymorphism
-- Extract classes
-- Introduce design patterns
-
-### Decision Point: Present Plan to User
-
-Before implementation:
-- Show complete refactoring plan
-- Explain each phase and its risks
-- Get explicit approval for each phase
-- **Ask**: "Should I proceed with Phase A?"
-
----
-
-## Phase 5: Incremental Implementation
-
-### The Golden Rule
-> "Change → Test → Green? → Commit → Next step"
-
-### Implementation Rhythm
-
-For each refactoring step:
-
-1. **Pre-check**
-   - Tests are passing (green)
-   - Code compiles
-
-2. **Make ONE small change**
-   - Follow the mechanics from the catalog
-   - Keep changes minimal
-
-3. **Verify**
-   - Run tests immediately
-   - Check for compilation errors
-
-4. **If tests pass (green)**
-   - Commit with descriptive message
-   - Move to next step
-
-5. **If tests fail (red)**
-   - STOP immediately
-   - Undo the change
-   - Analyze what went wrong
-   - Ask user if unclear
-
-### Commit Strategy
-
-Each commit should be:
-- **Atomic**: One logical change
-- **Reversible**: Easy to revert
-- **Descriptive**: Clear commit message
-
-Example commit messages:
 ```
-refactor: Extract calculateTotal() from processOrder()
-refactor: Rename 'x' to 'customerCount' for clarity
-refactor: Remove unused validateOldFormat() method
+Refactoring Plan: {type} — {description}
+
+Files to modify:
+  1. {file}: {what changes and why}
+  2. {file}: {what changes and why}
+  ...
+
+Files to create:
+  - {file}: {extracted from where, contains what}
+
+Files to delete:
+  - {file}: {contents moved to where}
+
+Risk assessment:
+  - {any concerns: dynamic references, string-based lookups, config files}
 ```
 
-### Progress Reporting
+4. If `--dry-run` was specified, output the plan and stop.
 
-After each sub-phase, report to user:
-- Changes made
-- Tests still passing?
-- Any issues encountered
-- **Ask**: "Continue with next batch?"
+### Phase 3: EXECUTE
 
----
+Apply changes in this order to minimize intermediate breakage:
+1. Create new files first (exports only, not yet imported)
+2. Update importers to point to new locations/names
+3. Update the source file (remove extracted code, rename, etc.)
+4. Delete old files last (only after all importers are updated)
+5. Update index/barrel files
 
-## Phase 6: Review & Iteration
+Read each file before editing. Make the minimal change needed — do not reformat unrelated code.
 
-### Post-Refactoring Checklist
+### Phase 4: VERIFY
 
-- [ ] All tests passing
-- [ ] No new warnings/errors
-- [ ] Code compiles successfully
-- [ ] Behavior unchanged (manual verification)
-- [ ] Documentation updated if needed
-- [ ] Commit history is clean
+Run typecheck and tests from Phase 1. Compare against baseline — any NEW errors or failures? Search for import paths referencing old/deleted files.
 
-### Metrics Comparison
-
-Run complexity analysis before and after:
-```bash
-python scripts/analyze-complexity.py <file>
+```
+Verification: PASS
+  Typecheck: {pass | same N pre-existing errors}
+  Tests: {pass | same N pre-existing failures}
+  No new broken imports detected.
 ```
 
-Present improvements:
-- Lines of code change
-- Cyclomatic complexity change
-- Maintainability index change
+### Phase 5: FIX (if verification fails)
 
-### User Review
+Two attempts: read errors, identify root cause (missed import update, missing re-export, type mismatch), fix, re-run verification. After 2 failed attempts: REVERT.
 
-Present final results:
-- Summary of all changes
-- Before/after code comparison
-- Metrics improvements
-- Remaining technical debt
-- **Ask**: "Are you satisfied with these changes?"
+### Phase 6: REVERT (if fixes fail)
 
-### Next Steps
+1. Use `git checkout -- [files]` to restore every modified file
+2. Remove any newly created files
+3. Verify the revert: typecheck should match baseline exactly
+4. Report what went wrong
 
-Discuss with user:
-- Additional smells to address?
-- Schedule follow-up refactoring?
-- Apply similar changes elsewhere?
+```
+REVERTED — Refactoring could not be completed cleanly.
 
----
+Root cause: {why the refactoring failed}
+Errors encountered:
+  - {error 1}
+  - {error 2}
 
-## Important Guidelines
-
-### When to STOP and Ask
-
-Always pause and consult user when:
-- Unsure about business logic
-- Change might affect external APIs
-- Test coverage is inadequate
-- Significant architectural decision needed
-- Risk level increases
-- You encounter unexpected complexity
-
-### Safety Rules
-
-1. **Never refactor without tests** (unless user explicitly acknowledges risk)
-2. **Never make big changes** - break into tiny steps
-3. **Never skip the test run** after each change
-4. **Never continue if tests fail** - fix or rollback first
-5. **Never assume** - when in doubt, ask
-
-### What NOT to Do
-
-- Don't combine refactoring with feature additions
-- Don't refactor during production emergencies
-- Don't refactor code you don't understand
-- Don't over-engineer - keep it simple
-- Don't refactor everything at once
-
----
-
-## Quick Start Example
-
-### Scenario: Long Method with Duplication
-
-**Before:**
-```javascript
-function processOrder(order) {
-  // 150 lines of code with:
-  // - Duplicated validation logic
-  // - Inline calculations
-  // - Mixed responsibilities
-}
+Suggestion: {what the user might do differently}
 ```
 
-**Refactoring Steps:**
+## Fringe Cases
 
-1. **Ensure tests exist** for processOrder()
-2. **Extract** validation into validateOrder()
-3. **Test** - should pass
-4. **Extract** calculation into calculateOrderTotal()
-5. **Test** - should pass
-6. **Extract** notification into notifyCustomer()
-7. **Test** - should pass
-8. **Review** - processOrder() now orchestrates 3 clear functions
+- **No test baseline**: no test suite found in Phase 1 — output: "No tests found. Refactor proceeds without a safety net — abort or continue? Recommend running /test-gen first." Wait for user confirmation before continuing.
+- **Baseline typecheck fails**: typecheck errors exist before any refactor changes — output: "Baseline typecheck failed. Fix existing type errors before refactoring to establish a clean baseline." Do not proceed.
+- **Build fails after refactor commit**: Phase 4 build regression detected — revert the commit with `git revert HEAD --no-edit`, then report which verification step introduced the regression and what the failing error is.
+- **Circular dependency detected**: import cycle surfaces during scope analysis — treat as a blocker; output: "Circular dependency detected in [file]. Resolve the cycle before proceeding." Do not modify that file without explicit user decision.
+- **Target file exceeds 500 lines**: output: "Warning: [file] is [N] lines. Refactoring may split this file into multiple pieces. Confirm scope before proceeding." Show the proposed split in the plan and wait for user approval.
 
-**After:**
-```javascript
-function processOrder(order) {
-  validateOrder(order);
-  const total = calculateOrderTotal(order);
-  notifyCustomer(order, total);
-  return { order, total };
-}
+## Quality Gates
+
+- **Zero new type errors** — zero NEW ones, not just fewer.
+- **Zero new test failures** — baseline failures accepted, new failures are not.
+- **All imports resolve** — no dangling references to old paths or removed exports.
+- **Behavior unchanged** — adding logic or changing return values is scope creep; stop and do it separately.
+- **Minimal diff** — no reformatting, unrelated cleanups, or whitespace changes in untouched files.
+- **Plan matches execution** — every planned file modified, no unplanned files touched.
+
+## Exit Protocol
+
+Report the result:
+
+```
+=== Refactor Report ===
+
+Type: {rename | extract | inline | move | split | merge}
+Target: {what was refactored}
+
+Changes:
+  Modified: {N} files
+  Created: {N} files
+  Deleted: {N} files
+
+Verification:
+  Typecheck: {pass | same baseline errors}
+  Tests: {pass | same baseline failures | no test suite}
+
+Key decisions:
+- {any non-obvious choices made during execution}
 ```
 
+```
+---HANDOFF---
+- Refactored {target}: {what changed}
+- {N} files modified, {N} created, {N} deleted
+- Typecheck and tests pass (no regressions)
+- {any follow-up suggestions}
+- Reversibility: green -- single atomic commit, revert with git revert HEAD
 ---
-
-## References
-
-- [Code Smells Catalog](references/code-smells.md) - Complete list of code smells
-- [Refactoring Catalog](references/refactoring-catalog.md) - Refactoring techniques
-- [Refactoring Plan Template](templates/refactoring-plan.md) - Planning template
-
-## Scripts
-
-- `scripts/analyze-complexity.py` - Analyze code complexity metrics
-- `scripts/detect-smells.py` - Automated smell detection
-
-## Version History
-
-- v1.0.0 (2025-01-15): Initial release with Fowler methodology, phased approach, user consultation points
+```

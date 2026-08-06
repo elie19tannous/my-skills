@@ -8,8 +8,6 @@ allowed-tools:
   - "Read"
   - "Write"
   - "web_fetch"
-risk: unknown
-source: community
 ---
 
 # Stitch to Remotion Walkthrough Videos
@@ -192,7 +190,7 @@ Create the video components following Remotion best practices:
 **Reference Resources:**
 - Use `resources/screen-slide-template.tsx` as starting point
 - Follow `resources/composition-checklist.md` for completeness
-- Review examples in `examples/walkthrough/` directory
+- Review examples in `examples/` directory
 
 ### Step 3: Preview and Refine
 
@@ -393,12 +391,3 @@ that shows a walkthrough of the screens.
 - **Remotion Skills**: https://www.remotion.dev/docs/ai/skills
 - **Remotion MCP**: https://www.remotion.dev/docs/ai/mcp
 - **Remotion Transitions**: https://www.remotion.dev/docs/transitions
-
-
-## When to Use
-Use this skill when tackling tasks related to its primary domain or functionality as described above.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

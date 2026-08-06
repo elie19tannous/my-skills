@@ -1,138 +1,201 @@
 ---
 name: rag-implementation
-description: Build Retrieval-Augmented Generation (RAG) systems for LLM applications with vector databases and semantic search. Use when implementing knowledge-grounded AI, building document Q&A systems, or integrating LLMs with external knowledge bases.
+description: "RAG (Retrieval-Augmented Generation) implementation workflow covering embedding selection, vector database setup, chunking strategies, and retrieval optimization."
+category: granular-workflow-bundle
+risk: safe
+source: personal
+date_added: "2026-02-27"
 ---
 
-# RAG Implementation
+# RAG Implementation Workflow
 
-Master Retrieval-Augmented Generation (RAG) to build LLM applications that provide accurate, grounded responses using external knowledge sources.
+## Overview
 
-## When to Use This Skill
+Specialized workflow for implementing RAG (Retrieval-Augmented Generation) systems including embedding model selection, vector database setup, chunking strategies, retrieval optimization, and evaluation.
 
-- Building Q&A systems over proprietary documents
-- Creating chatbots with current, factual information
-- Implementing semantic search with natural language queries
-- Reducing hallucinations with grounded responses
-- Enabling LLMs to access domain-specific knowledge
-- Building documentation assistants
-- Creating research tools with source citation
+## When to Use This Workflow
 
-## Core Components
+Use this workflow when:
+- Building RAG-powered applications
+- Implementing semantic search
+- Creating knowledge-grounded AI
+- Setting up document Q&A systems
+- Optimizing retrieval quality
 
-### 1. Vector Databases
+## Workflow Phases
 
-**Purpose**: Store and retrieve document embeddings efficiently
+### Phase 1: Requirements Analysis
 
-**Options:**
+#### Skills to Invoke
+- `ai-product` - AI product design
+- `rag-engineer` - RAG engineering
 
-- **Pinecone**: Managed, scalable, serverless
-- **Weaviate**: Open-source, hybrid search, GraphQL
-- **Milvus**: High performance, on-premise
-- **Chroma**: Lightweight, easy to use, local development
-- **Qdrant**: Fast, filtered search, Rust-based
-- **pgvector**: PostgreSQL extension, SQL integration
+#### Actions
+1. Define use case
+2. Identify data sources
+3. Set accuracy requirements
+4. Determine latency targets
+5. Plan evaluation metrics
 
-### 2. Embeddings
-
-**Purpose**: Convert text to numerical vectors for similarity search
-
-**Models (2026):**
-| Model | Dimensions | Best For |
-|-------|------------|----------|
-| **voyage-3-large** | 1024 | Claude apps (Anthropic recommended) |
-| **voyage-code-3** | 1024 | Code search |
-| **text-embedding-3-large** | 3072 | OpenAI apps, high accuracy |
-| **text-embedding-3-small** | 1536 | OpenAI apps, cost-effective |
-| **bge-large-en-v1.5** | 1024 | Open source, local deployment |
-| **multilingual-e5-large** | 1024 | Multi-language support |
-
-### 3. Retrieval Strategies
-
-**Approaches:**
-
-- **Dense Retrieval**: Semantic similarity via embeddings
-- **Sparse Retrieval**: Keyword matching (BM25, TF-IDF)
-- **Hybrid Search**: Combine dense + sparse with weighted fusion
-- **Multi-Query**: Generate multiple query variations
-- **HyDE**: Generate hypothetical documents for better retrieval
-
-### 4. Reranking
-
-**Purpose**: Improve retrieval quality by reordering results
-
-**Methods:**
-
-- **Cross-Encoders**: BERT-based reranking (ms-marco-MiniLM)
-- **Cohere Rerank**: API-based reranking
-- **Maximal Marginal Relevance (MMR)**: Diversity + relevance
-- **LLM-based**: Use LLM to score relevance
-
-## Quick Start with LangGraph
-
-```python
-from langgraph.graph import StateGraph, START, END
-from langchain_anthropic import ChatAnthropic
-from langchain_voyageai import VoyageAIEmbeddings
-from langchain_pinecone import PineconeVectorStore
-from langchain_core.documents import Document
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from typing import TypedDict, Annotated
-
-class RAGState(TypedDict):
-    question: str
-    context: list[Document]
-    answer: str
-
-# Initialize components
-llm = ChatAnthropic(model="claude-sonnet-4-6")
-embeddings = VoyageAIEmbeddings(model="voyage-3-large")
-vectorstore = PineconeVectorStore(index_name="docs", embedding=embeddings)
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
-
-# RAG prompt
-rag_prompt = ChatPromptTemplate.from_template(
-    """Answer based on the context below. If you cannot answer, say so.
-
-    Context:
-    {context}
-
-    Question: {question}
-
-    Answer:"""
-)
-
-async def retrieve(state: RAGState) -> RAGState:
-    """Retrieve relevant documents."""
-    docs = await retriever.ainvoke(state["question"])
-    return {"context": docs}
-
-async def generate(state: RAGState) -> RAGState:
-    """Generate answer from context."""
-    context_text = "\n\n".join(doc.page_content for doc in state["context"])
-    messages = rag_prompt.format_messages(
-        context=context_text,
-        question=state["question"]
-    )
-    response = await llm.ainvoke(messages)
-    return {"answer": response.content}
-
-# Build RAG graph
-builder = StateGraph(RAGState)
-builder.add_node("retrieve", retrieve)
-builder.add_node("generate", generate)
-builder.add_edge(START, "retrieve")
-builder.add_edge("retrieve", "generate")
-builder.add_edge("generate", END)
-
-rag_chain = builder.compile()
-
-# Use
-result = await rag_chain.ainvoke({"question": "What are the main features?"})
-print(result["answer"])
+#### Copy-Paste Prompts
+```
+Use @ai-product to define RAG application requirements
 ```
 
-## Detailed patterns and worked examples
+### Phase 2: Embedding Selection
 
-Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
+#### Skills to Invoke
+- `embedding-strategies` - Embedding selection
+- `rag-engineer` - RAG patterns
 
+#### Actions
+1. Evaluate embedding models
+2. Test domain relevance
+3. Measure embedding quality
+4. Consider cost/latency
+5. Select model
+
+#### Copy-Paste Prompts
+```
+Use @embedding-strategies to select optimal embedding model
+```
+
+### Phase 3: Vector Database Setup
+
+#### Skills to Invoke
+- `vector-database-engineer` - Vector DB
+- `similarity-search-patterns` - Similarity search
+
+#### Actions
+1. Choose vector database
+2. Design schema
+3. Configure indexes
+4. Set up connection
+5. Test queries
+
+#### Copy-Paste Prompts
+```
+Use @vector-database-engineer to set up vector database
+```
+
+### Phase 4: Chunking Strategy
+
+#### Skills to Invoke
+- `rag-engineer` - Chunking strategies
+- `rag-implementation` - RAG implementation
+
+#### Actions
+1. Choose chunk size
+2. Implement chunking
+3. Add overlap handling
+4. Create metadata
+5. Test retrieval quality
+
+#### Copy-Paste Prompts
+```
+Use @rag-engineer to implement chunking strategy
+```
+
+### Phase 5: Retrieval Implementation
+
+#### Skills to Invoke
+- `similarity-search-patterns` - Similarity search
+- `hybrid-search-implementation` - Hybrid search
+
+#### Actions
+1. Implement vector search
+2. Add keyword search
+3. Configure hybrid search
+4. Set up reranking
+5. Optimize latency
+
+#### Copy-Paste Prompts
+```
+Use @similarity-search-patterns to implement retrieval
+```
+
+```
+Use @hybrid-search-implementation to add hybrid search
+```
+
+### Phase 6: LLM Integration
+
+#### Skills to Invoke
+- `llm-application-dev-ai-assistant` - LLM integration
+- `llm-application-dev-prompt-optimize` - Prompt optimization
+
+#### Actions
+1. Select LLM provider
+2. Design prompt template
+3. Implement context injection
+4. Add citation handling
+5. Test generation quality
+
+#### Copy-Paste Prompts
+```
+Use @llm-application-dev-ai-assistant to integrate LLM
+```
+
+### Phase 7: Caching
+
+#### Skills to Invoke
+- `prompt-caching` - Prompt caching
+- `rag-engineer` - RAG optimization
+
+#### Actions
+1. Implement response caching
+2. Set up embedding cache
+3. Configure TTL
+4. Add cache invalidation
+5. Monitor hit rates
+
+#### Copy-Paste Prompts
+```
+Use @prompt-caching to implement RAG caching
+```
+
+### Phase 8: Evaluation
+
+#### Skills to Invoke
+- `llm-evaluation` - LLM evaluation
+- `evaluation` - AI evaluation
+
+#### Actions
+1. Define evaluation metrics
+2. Create test dataset
+3. Measure retrieval accuracy
+4. Evaluate generation quality
+5. Iterate on improvements
+
+#### Copy-Paste Prompts
+```
+Use @llm-evaluation to evaluate RAG system
+```
+
+## RAG Architecture
+
+```
+User Query -> Embedding -> Vector Search -> Retrieved Docs -> LLM -> Response
+                |              |              |              |
+            Model         Vector DB     Chunk Store    Prompt + Context
+```
+
+## Quality Gates
+
+- [ ] Embedding model selected
+- [ ] Vector DB configured
+- [ ] Chunking implemented
+- [ ] Retrieval working
+- [ ] LLM integrated
+- [ ] Evaluation passing
+
+## Related Workflow Bundles
+
+- `ai-ml` - AI/ML development
+- `ai-agent-development` - AI agents
+- `database` - Vector databases
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

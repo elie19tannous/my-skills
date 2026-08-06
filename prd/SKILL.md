@@ -1,66 +1,172 @@
 ---
 name: prd
-description: "Gated PRD generation — interrogates problem, user, and metric before drafting; refuses to draft on unknowns. Usage: /prd <feature-or-problem>"
-argument-hint: <feature-or-problem>
+license: MIT
+description: >-
+  Generates a Product Requirements Document from a natural language app description.
+  Asks clarifying questions, researches similar apps, defines scope, stack, architecture,
+  and produces a structured PRD that Archon can decompose into a campaign.
+user-invocable: true
+auto-trigger: false
+trigger_keywords:
+  - prd
+  - requirements
+  - spec
+  - plan an app
+  - design an app
+effort: high
 ---
 
-# /prd
+# /prd — Product Requirements Document Generator
 
-Generate a concise, evidence-gated product requirements document for `$ARGUMENTS`.
+## When to Use
 
-## Usage
+**Don't use when:** architecture is already defined and you need implementation (use /architect then /archon); adding a small feature to an existing app (use /marshal directly).
 
-```bash
-/prd <feature-or-problem>
+- User describes an app or feature to build (greenfield or feature mode)
+- Before any Archon campaign for a new project or feature
+
+## Mode Detection
+
+Before starting, determine the mode:
+
+**Greenfield mode**: No existing source files, or user explicitly says "new app" / "from scratch."
+Produces a full PRD as described below.
+
+**Feature mode**: The project already has source files (check for `src/`, `app/`, `lib/`,
+`package.json` with dependencies, or similar). The user describes a feature to add, not a
+whole app ("add auth", "add a dashboard", "add payment processing").
+
+In feature mode:
+- Read the existing file tree and `package.json`/equivalent before asking questions
+- The existing stack is a given — don't recommend alternatives
+- "Architecture" section describes integration points with existing code, not standalone shape
+- End conditions MUST include regression checks: "existing tests still pass", "typecheck has no new errors"
+- "Out of Scope" is relative to the feature, not the whole app
+- Technical Decisions only covers decisions the feature introduces (new dependencies, new patterns)
+
+The PRD template below works for both modes. Feature mode just scopes it tighter.
+
+## Protocol
+
+### Step 1: UNDERSTAND
+
+Determine mode (greenfield vs feature). Identify core functionality, target user, and success criteria (greenfield) or integration points and existing stack (feature). Ask up to 3 questions — only those that would change the architecture. Do not ask about tech stack in greenfield mode; in feature mode, the stack is already decided.
+
+### Step 2: RESEARCH (Optional)
+
+If the concept has well-known implementations, run /research to identify 2-3 reference apps and common expected features. Skip for simple concepts (landing page, personal tool, CRUD).
+
+### Step 3: DEFINE
+
+Produce a structured PRD. Write to `.planning/prd-{slug}.md`:
+
+```markdown
+# PRD: {App Name or Feature Name}
+
+> Description: {One sentence}
+> Author: {user}
+> Date: {ISO date}
+> Status: draft
+> Mode: {greenfield | feature}
+
+## Problem
+{What problem does this solve? Why does the user want it?}
+
+## Users
+{Who uses this? One or two user types max.}
+
+## Core Features
+{Numbered list. Maximum 5 for v1. Each feature is one sentence.}
+1. {Feature}: {what it does}
+2. ...
+
+## Out of Scope (v1)
+{Things the user might expect but should NOT be built yet.
+Being explicit about what's out prevents scope creep.}
+
+## Technical Decisions
+- **Frontend**: {recommendation with reasoning}
+- **Backend**: {recommendation with reasoning, or "none" for static apps}
+- **Database**: {recommendation with reasoning, or "none"}
+- **Auth**: {recommendation, or "none" if no user accounts}
+- **Deployment**: {recommendation}
+
+{In feature mode, only list decisions the feature introduces.
+Existing stack decisions are inherited, not re-evaluated.}
+
+## Architecture
+{High-level description. 3-5 sentences max. How the pieces connect.
+NOT a file tree. NOT implementation details. Just the shape.}
+
+{In feature mode: describe integration points with existing code.
+"The new auth middleware hooks into the existing Express router at
+src/routes/index.ts. User model extends the existing Prisma schema."}
+
+## Integration Points (feature mode only)
+{Skip this section in greenfield mode.}
+- **Existing files modified**: {list of files the feature will touch}
+- **New files created**: {list of new files}
+- **Dependencies added**: {new packages, if any}
+- **Patterns followed**: {existing patterns in the codebase this feature should match}
+
+## End Conditions (Definition of Done)
+{Machine-verifiable conditions that mean the feature/app is complete.}
+- [ ] {condition 1: e.g., "Landing page renders at localhost:3000"}
+- [ ] {condition 2: e.g., "User can create account and log in"}
+- [ ] {condition 3: e.g., "Core feature X works end-to-end"}
+
+{In feature mode, ALWAYS include these regression conditions:}
+- [ ] Existing tests pass with 0 new failures
+- [ ] Typecheck passes with 0 new errors
+
+## Open Questions
+{Anything the PRD author couldn't decide. These become questions
+for the user before the campaign starts.}
 ```
 
-`$ARGUMENTS` is the feature, initiative, or problem statement. If empty, ask for it before doing anything else.
+### Step 4: REVIEW
 
-## Phase 1 — Forcing Questions (before any drafting)
+Present: core features, tech stack decisions, out of scope, end conditions. Ask if it matches. On approval: PRD is ready for Archon. On changes: update and re-present changed sections only.
 
-Walk these one at a time. Do not batch them. Each answer feeds a required PRD section.
+## Contextual Gates
 
-1. **Problem** — What user problem does this solve, and how do you know it exists? (Evidence: support tickets, interview quotes, funnel data — "the CEO wants it" is not evidence.)
-2. **User** — Who specifically has this problem? (Segment, role, frequency of pain. "Everyone" is a non-answer.)
-3. **Metric** — What single number moves if this works, by how much, measured where?
-4. **Alternatives** — What do these users do today instead? Why is that not good enough?
-5. **Non-goals** — What adjacent asks are explicitly out of scope for v1?
+**Disclosure:** "Generating PRD for [description]. Creates `.planning/prd-{name}.md`."
+**Reversibility:** green — creates `.planning/prd-{slug}.md` only; undo by deleting the file.
+**Trust gates:**
+- Any: full PRD generation, clarifying questions, review cycle.
 
-## Drafting Gate (hard refusal)
+## Quality Gates
 
-**Refuse to draft the PRD if the answer to question 1 (problem), 2 (user), or 3 (metric) is unknown, circular, or "we'll figure it out later."** Instead, output the open questions and the cheapest way to answer each (e.g., 5 customer interviews, a funnel query, a fake-door test). A PRD without a problem, a user, and a metric is a feature wish, not a requirements document.
+- Every Core Feature is one sentence
+- Every technical decision has a reasoning ("because")
+- End conditions are machine-verifiable
+- Out of Scope has at least 2 items
+- No more than 5 core features for v1
 
-## Phase 2 — Draft (required-sections checklist)
+## Fringe Cases
 
-Every PRD must contain all of these sections — emit the checklist at the end and mark each:
+**Vague description**: Ask up to 3 clarifying questions. Never produce a PRD with placeholder end conditions.
 
-- [ ] Problem statement (with the evidence from Q1)
-- [ ] Target user and segment (from Q2)
-- [ ] Goals and explicit non-goals (from Q5)
-- [ ] User stories with acceptance criteria
-- [ ] Success metric + threshold + measurement source (from Q3)
-- [ ] Alternatives considered / "do nothing" baseline (from Q4)
-- [ ] Scope, dependencies, and timeline assumptions
-- [ ] Open questions and risks
+**Feature mode but no existing code**: Confirm with the user — switch to greenfield if confirmed.
 
-Keep it to ~2 pages. Use the repo template as the skeleton.
+**User says "skip the PRD"**: Even a minimal PRD is needed. Offer a 1-page express PRD (Tier 4 style).
 
-## Phase 3 — Prioritization hook (optional)
+**If .planning/ does not exist**: Create it before writing. If not possible, present inline and suggest `/do setup`.
 
-If the user has multiple candidate features, offer to RICE-score them before committing the PRD:
+## Exit Protocol
 
-```bash
-python3 product-team/skills/product-manager-toolkit/scripts/rice_prioritizer.py features.csv --capacity 20
+```
+---HANDOFF---
+- PRD: {app name}
+- Document: .planning/prd-{slug}.md
+- Status: {approved | needs-revision}
+- Next: Run `/do build {app name}` or `/archon` with the PRD as direction
+- Reversibility: green — delete .planning/prd-{slug}.md to undo
+---
 ```
 
-## Repo Assets (verified paths)
+## Stack Selection Principles
 
-- Skill: `product-team/skills/product-manager-toolkit/SKILL.md`
-- PRD template: `product-team/skills/product-manager-toolkit/assets/prd_template.md`
-- PRD patterns reference: `product-team/skills/product-manager-toolkit/references/prd_templates.md`
-- RICE tool: `product-team/skills/product-manager-toolkit/scripts/rice_prioritizer.py`
+Make opinionated recommendations with reasoning. Defaults: Next.js + Tailwind + shadcn/ui for web; Node/Express for JS backends, FastAPI for Python; SQLite for simple, PostgreSQL for multi-user; simplest auth for the stack. Always explain why.
 
-## Related
-
-- `/code-to-prd` — reverse-engineer a PRD from an existing codebase
-- `/rice` — standalone RICE prioritization
+Deployment defaults: static → Vercel/Netlify; full-stack with DB → Railway; API only → Railway or Fly.io; not deploying yet → local only. See `.planning/_templates/deploy/` for platform details.

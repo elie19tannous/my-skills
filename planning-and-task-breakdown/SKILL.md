@@ -1,6 +1,13 @@
 ---
 name: planning-and-task-breakdown
 description: Breaks work into ordered tasks. Use when you have a spec or clear requirements and need to break work into implementable tasks. Use when a task feels too large to start, when you need to estimate scope, or when parallel work is possible.
+risk: none
+source: https://github.com/addyosmani/agent-skills/tree/main/skills/planning-and-task-breakdown
+source_repo: addyosmani/agent-skills
+source_type: community
+date_added: 2026-07-01
+license: MIT
+license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
 ---
 
 # Planning and Task Breakdown
@@ -30,7 +37,7 @@ Before writing any code, operate in read-only mode:
 - Map dependencies between components
 - Note risks and unknowns
 
-**Do NOT write code during planning.** The output is a plan document saved to `tasks/plan.md` and a task list saved to `tasks/todo.md`, not implementation.
+**Do NOT write code during planning.** The output is a plan document, not implementation.
 
 ### Step 2: Identify the Dependency Graph
 
@@ -140,13 +147,6 @@ If a task is L or larger, it should be broken into smaller tasks. An agent perfo
 - It touches two or more independent subsystems (e.g., auth and billing)
 - You find yourself writing "and" in the task title (a sign it is two tasks)
 
-## Output Files
-
-- **Plan document:** Save the implementation plan to `tasks/plan.md`.
-- **Task list:** Save the checklist-style task list to `tasks/todo.md`.
-
-Create the `tasks/` directory if it does not exist. These paths are the convention expected by the `/build` command and other downstream tooling.
-
 ## Plan Document Template
 
 ```markdown
@@ -232,3 +232,9 @@ Before starting implementation, confirm:
 ## See Also
 
 Acceptance criteria are per-task and answer "did we build the right thing?". They sit on top of the project-wide Definition of Done, the standing bar every task clears before it counts as done. See `references/definition-of-done.md`.
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

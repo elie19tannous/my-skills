@@ -5,6 +5,7 @@ Complete reference for render.yaml Blueprint files. Blueprints define your infra
 ## Overview
 
 A Blueprint is a YAML file (typically `render.yaml`) placed in your repository root that describes:
+
 - Services (web, worker, cron, static, private)
 - Databases (PostgreSQL, Redis)
 - Environment variables and secrets
@@ -15,12 +16,12 @@ A Blueprint is a YAML file (typically `render.yaml`) placed in your repository r
 
 ```yaml
 # Top-level fields
-services: []         # Array of service definitions
-databases: []        # Array of PostgreSQL databases
-envVarGroups: []     # Reusable environment variable groups (optional)
-projects: []         # Project organization (optional)
-ungrouped: []        # Resources outside projects (optional)
-previews:            # Preview environment configuration (optional)
+services: [] # Array of service definitions
+databases: [] # Array of PostgreSQL databases
+envVarGroups: [] # Reusable environment variable groups (optional)
+projects: [] # Project organization (optional)
+ungrouped: [] # Resources outside projects (optional)
+previews: # Preview environment configuration (optional)
   generation: auto_preview | manual | none
 ```
 
@@ -31,6 +32,7 @@ previews:            # Preview environment configuration (optional)
 HTTP services, APIs, and web applications. Publicly accessible via HTTPS.
 
 **Required fields:**
+
 - `name`: Unique service identifier
 - `type`: Must be `web`
 - `runtime`: Language/environment (see Runtimes section)
@@ -38,6 +40,7 @@ HTTP services, APIs, and web applications. Publicly accessible via HTTPS.
 - `startCommand`: Command to start the server
 
 **Common optional fields:**
+
 - `plan`: Instance type (default: `free`)
 - `region`: Deployment region (default: `oregon`)
 - `branch`: Git branch to deploy (default: `main`)
@@ -48,6 +51,7 @@ HTTP services, APIs, and web applications. Publicly accessible via HTTPS.
 - `scaling`: Autoscaling configuration
 
 **Example:**
+
 ```yaml
 services:
   - type: web
@@ -70,6 +74,7 @@ services:
 Background job processors, queue consumers. Not publicly accessible.
 
 **Required fields:**
+
 - `name`: Unique service identifier
 - `type`: Must be `worker`
 - `runtime`: Language/environment
@@ -77,11 +82,13 @@ Background job processors, queue consumers. Not publicly accessible.
 - `startCommand`: Command to start worker process
 
 **Key differences from web services:**
+
 - No public URL
 - No health checks
 - No port binding required
 
 **Example:**
+
 ```yaml
 services:
   - type: worker
@@ -102,6 +109,7 @@ services:
 Scheduled tasks that run on a cron schedule.
 
 **Required fields:**
+
 - `name`: Unique service identifier
 - `type`: Must be `cron`
 - `runtime`: Language/environment
@@ -112,17 +120,19 @@ Scheduled tasks that run on a cron schedule.
 **Schedule format:** Standard cron syntax (minute hour day month weekday)
 
 **Examples:**
+
 - `0 0 * * *` - Daily at midnight UTC
 - `*/15 * * * *` - Every 15 minutes
 - `0 9 * * 1` - Every Monday at 9 AM UTC
 
 **Example:**
+
 ```yaml
 services:
   - type: cron
     name: daily-backup
     runtime: node
-    schedule: "0 2 * * *"
+    schedule: '0 2 * * *'
     buildCommand: npm ci
     startCommand: node scripts/backup.js
     envVars:
@@ -137,6 +147,7 @@ services:
 Serve static HTML/CSS/JS files via CDN.
 
 **Required fields:**
+
 - `name`: Unique service identifier
 - `type`: `web`
 - `runtime`: `static`
@@ -144,11 +155,13 @@ Serve static HTML/CSS/JS files via CDN.
 - `staticPublishPath`: Path to built files (e.g., `./build`, `./dist`)
 
 **Optional configuration:**
+
 - `routes`: Routing rules for SPAs
 - `headers`: Custom HTTP headers
 - `buildFilter`: Path filters for build triggers
 
 **Example:**
+
 ```yaml
 services:
   - type: web
@@ -171,6 +184,7 @@ services:
 Internal services accessible only within your Render account.
 
 **Required fields:**
+
 - `name`: Unique service identifier
 - `type`: Must be `pserv`
 - `runtime`: Language/environment
@@ -178,11 +192,13 @@ Internal services accessible only within your Render account.
 - `startCommand`: Command to start
 
 **Use cases:**
+
 - Internal APIs
 - Database proxies
 - Microservices not exposed to internet
 
 **Example:**
+
 ```yaml
 services:
   - type: pserv
@@ -198,30 +214,36 @@ services:
 ### Native Runtimes
 
 **Node.js (`runtime: node`):**
+
 - Versions: 14, 16, 18, 20, 21
 - Default version: 20
 - Specify version in `package.json` engines field
 
 **Python (`runtime: python`):**
+
 - Versions: 3.8, 3.9, 3.10, 3.11, 3.12
 - Default version: 3.11
 - Specify version in `runtime.txt` or `Pipfile`
 
 **Go (`runtime: go`):**
+
 - Versions: 1.20, 1.21, 1.22, 1.23
 - Uses go modules
 - Version from `go.mod`
 
 **Ruby (`runtime: ruby`):**
+
 - Versions: 3.0, 3.1, 3.2, 3.3
 - Uses Bundler
 - Version from `.ruby-version` or `Gemfile`
 
 **Rust (`runtime: rust`):**
+
 - Latest stable version
 - Uses Cargo
 
 **Elixir (`runtime: elixir`):**
+
 - Latest stable version
 - Uses Mix
 
@@ -231,10 +253,12 @@ services:
 Build from a Dockerfile in your repository.
 
 **Additional fields:**
+
 - `dockerfilePath`: Path to Dockerfile (default: `./Dockerfile`)
 - `dockerContext`: Build context directory (default: `.`)
 
 **Example:**
+
 ```yaml
 services:
   - type: web
@@ -249,10 +273,12 @@ services:
 Deploy pre-built Docker images from a registry.
 
 **Additional fields:**
+
 - `image`: Image URL (e.g., `registry.com/image:tag`)
 - `registryCredential`: Credentials for private registries
 
 **Example:**
+
 ```yaml
 services:
   - type: web
@@ -266,13 +292,13 @@ services:
 
 Available instance types:
 
-| Plan | RAM | CPU | Price |
-|------|-----|-----|-------|
-| `free` | 512 MB | 0.5 | Free (750 hrs/mo) |
-| `starter` | 512 MB | 0.5 | $7/month |
-| `standard` | 2 GB | 1 | $25/month |
-| `pro` | 4 GB | 2 | $85/month |
-| `pro_plus` | 8 GB | 4 | $175/month |
+| Plan       | RAM    | CPU | Price             |
+| ---------- | ------ | --- | ----------------- |
+| `free`     | 512 MB | 0.5 | Free (750 hrs/mo) |
+| `starter`  | 512 MB | 0.5 | $7/month          |
+| `standard` | 2 GB   | 1   | $25/month         |
+| `pro`      | 4 GB   | 2   | $85/month         |
+| `pro_plus` | 8 GB   | 4   | $175/month        |
 
 **Always default to `plan: free` unless user specifies otherwise.**
 
@@ -287,6 +313,7 @@ Available deployment regions:
 - `singapore` (Asia)
 
 **Example:**
+
 ```yaml
 services:
   - type: web
@@ -358,6 +385,7 @@ envVars:
 ```
 
 **Available properties:**
+
 - `connectionString`: Full connection URL
 - `host`: Database host
 - `port`: Database port
@@ -412,17 +440,19 @@ databases:
     databaseName: myapp_prod
     user: myapp_user
     plan: free
-    postgresMajorVersion: "15"
+    postgresMajorVersion: '15'
     ipAllowList: []
 ```
 
 **Plans:**
+
 - `free`: 1 GB storage, 97 MB RAM, 0.1 CPU
 - `basic-256mb`, `basic-512mb`, `basic-1gb`, `basic-4gb`
 - `pro-4gb`, `pro-8gb`, `pro-16gb`, etc.
 - `accelerated-4gb`, `accelerated-8gb`, etc. (SSD-backed)
 
 **Key fields:**
+
 - `name`: Identifier for references
 - `databaseName`: Actual PostgreSQL database name
 - `user`: Database username
@@ -431,6 +461,7 @@ databases:
 - `diskSizeGB`: Storage size (paid plans only)
 
 **High Availability (paid plans):**
+
 ```yaml
 databases:
   - name: postgres
@@ -440,6 +471,7 @@ databases:
 ```
 
 **Read Replicas (paid plans):**
+
 ```yaml
 databases:
   - name: postgres
@@ -465,6 +497,7 @@ databases:
 **Plans:** Same as PostgreSQL
 
 **maxmemoryPolicy options:**
+
 - `allkeys-lru`: Evict least recently used keys
 - `volatile-lru`: Evict LRU keys with TTL
 - `allkeys-random`: Evict random keys
@@ -505,6 +538,7 @@ services:
 ```
 
 **Notes:**
+
 - Autoscaling disabled in preview environments
 - Preview environments run `minInstances` count
 - Requires Professional or higher workspace
@@ -543,6 +577,7 @@ services:
 ```
 
 **Behavior:**
+
 - If `paths` specified: Build only when files in those paths change
 - If `ignoredPaths` specified: Don't build when only ignored files change
 
@@ -584,6 +619,7 @@ projects:
 ```
 
 **Environment features:**
+
 - `networking.isolation`: Enable network isolation between environments
 - `permissions.protection`: Require approval for environment changes
 
@@ -593,10 +629,11 @@ Configure automatic preview environments for pull requests:
 
 ```yaml
 previews:
-  generation: auto_preview  # auto_preview | manual | none
+  generation: auto_preview # auto_preview | manual | none
 ```
 
 **Options:**
+
 - `auto_preview`: Create preview environment for each PR automatically
 - `manual`: User manually triggers preview creation
 - `none`: Disable preview environments
@@ -649,7 +686,7 @@ services:
   - type: cron
     name: daily-cleanup
     runtime: node
-    schedule: "0 3 * * *"
+    schedule: '0 3 * * *'
     buildCommand: npm ci
     startCommand: node scripts/cleanup.js
     envVars:
@@ -674,7 +711,7 @@ databases:
     databaseName: app_production
     user: app_user
     plan: free
-    postgresMajorVersion: "15"
+    postgresMajorVersion: '15'
     ipAllowList: []
 
   - name: redis
@@ -692,6 +729,7 @@ render blueprint validate
 ```
 
 **Common validation errors:**
+
 - Missing required fields
 - Invalid runtime values
 - Incorrect environment variable references

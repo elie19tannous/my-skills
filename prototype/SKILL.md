@@ -1,62 +1,97 @@
 ---
 name: prototype
-description: Build a throwaway prototype to flesh out a design — a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route.
-disable-model-invocation: true
-category: "development"
-risk: "safe"
-source: "community"
-source_repo: "mattpocock/skills"
-source_type: "community"
-date_added: "2026-06-19"
-author: "Matt Pocock"
-license: "MIT"
-license_source: "https://github.com/mattpocock/skills/blob/main/LICENSE"
-tags:
-  - engineering
-  - workflow
-  - coding-agents
-tools:
-  - claude-code
-  - codex-cli
-  - cursor
+description: Quick prototype workflow — minimal viable implementation, no production standards, README with hypothesis. Code goes in prototypes/, never imported from src/.
 ---
 
-# Prototype
+# /prototype — Rapid Prototyping Workflow
 
-## When to Use
+## Delegate to: luau-gameplay-programmer or luau-systems-programmer (depending on scope)
 
-Use when this workflow matches the user request: Build a throwaway prototype to flesh out a design — a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route.
+## Purpose
+Prototypes are throwaway code to test an idea quickly. They are NOT production code.
 
+## Rules
+- Prototypes live in `prototypes/<prototype-name>/`
+- Prototypes NEVER import from `src/`
+- Prototype code does NOT need to meet production standards
+- Prototypes require a README.md explaining the hypothesis
+- Prototypes are NOT graduated directly to `src/` — if the idea is good, rewrite cleanly
 
-_Source: [mattpocock/skills](https://github.com/mattpocock/skills) (MIT)._
+## Steps
 
-A prototype is **throwaway code that answers a question**. The question decides the shape.
+### 1. Define the Hypothesis
+Ask the user:
+- "What are we testing?"
+- "What's the question this prototype answers?"
+- "What would 'success' look like?"
+- "What's the time budget?" (default: 2-4 hours)
 
-## Pick a branch
+### 2. Scope Ruthlessly
+- Only build what's needed to test the hypothesis
+- Skip: polished UI, data persistence, multiplayer (unless core to hypothesis)
+- Focus: the thing that's being questioned
 
-Identify which question is being answered — from the user's prompt, the surrounding code, or by asking if the user is around:
+### 3. Set Up Prototype Directory
+```
+prototypes/
+└── <prototype-name>/
+    ├── README.md        # Hypothesis, how to run, findings
+    ├── src/             # Prototype Luau files
+    └── assets/          # Any placeholder assets
+```
 
-- **"Does this logic / state model feel right?"** → [LOGIC.md](LOGIC.md). Build a tiny interactive terminal app that pushes the state machine through cases that are hard to reason about on paper.
-- **"What should this look like?"** → [UI.md](UI.md). Generate several radically different UI variations on a single route, switchable via a URL search param and a floating bottom bar.
+### 4. Build the Minimum
+Write code that answers the question. Do NOT:
+- Add type annotations (unless they help)
+- Wrap in pcall (unless necessary for the question)
+- Write tests
+- Worry about cleanup
+- Optimize performance
 
-The two branches produce very different artifacts — getting this wrong wastes the whole prototype. If the question is genuinely ambiguous and the user isn't reachable, default to whichever branch better matches the surrounding code (a backend module → logic; a page or component → UI) and state the assumption at the top of the prototype.
+DO:
+- Use clear variable names (so future-you understands)
+- Comment the KEY decisions
+- Make it runnable (Rojo or manual Studio import)
 
-## Rules that apply to both
+### 5. Document Findings
+After running, update the README:
+```markdown
+# Prototype: [Name]
 
-1. **Throwaway from day one, and clearly marked as such.** Locate the prototype code close to where it will actually be used (next to the module or page it's prototyping for) so context is obvious — but name it so a casual reader can see it's a prototype, not production. For throwaway UI routes, obey whatever routing convention the project already uses; don't invent a new top-level structure.
-2. **One command to run.** Whatever the project's existing task runner supports — `pnpm <name>`, `python <path>`, `bun <path>`, etc. The user must be able to start it without thinking.
-3. **No persistence by default.** State lives in memory. Persistence is the thing the prototype is _checking_, not something it should depend on. If the question explicitly involves a database, hit a scratch DB or a local file with a clear "PROTOTYPE — wipe me" name.
-4. **Skip the polish.** No tests, no error handling beyond what makes the prototype _runnable_, no abstractions. The point is to learn something fast and then delete it.
-5. **Surface the state.** After every action (logic) or on every variant switch (UI), print or render the full relevant state so the user can see what changed.
-6. **Delete or absorb when done.** When the prototype has answered its question, either delete it or fold the validated decision into the real code — don't leave it rotting in the repo.
+## Hypothesis
+[What we were testing]
 
-## When done
+## How to Run
+1. [Setup steps]
+2. [Run steps]
 
-The _answer_ is the only thing worth keeping from a prototype. Capture it somewhere durable (commit message, ADR, issue, or a `NOTES.md` next to the prototype) along with the question it was answering. If the user is around, that capture is a quick conversation; if not, leave the placeholder so they (or you, on the next pass) can fill in the verdict before deleting the prototype.
+## What We Learned
+- [Finding 1]
+- [Finding 2]
+- [Unexpected result]
 
+## Go / No-Go
+**Verdict**: [Good idea / bad idea / needs more research]
 
-## Limitations
+## If Go, Next Steps
+1. [How to translate this into production]
+2. [What specialists are needed]
+3. [What systems it affects]
 
-- Requires the upstream tool, account, API key, or local setup when the workflow names one.
-- Does not authorize destructive, production, paid, or external-message actions without explicit user approval.
-- Validate generated artifacts or recommendations against the user's real sources before treating them as final.
+## If No-Go
+- [Why it didn't work]
+- [Alternative approaches to consider]
+```
+
+### 6. Decide
+User decides:
+- **Good idea**: Schedule proper implementation (rewrite, not copy-paste)
+- **Good idea with tweaks**: Iterate the prototype OR move to production planning
+- **Bad idea**: Document learnings, archive the prototype, move on
+- **Inconclusive**: Decide if more prototyping is worth the time
+
+## Anti-Patterns
+- Prototype sprawl (spending weeks on a "prototype")
+- Importing prototype code into production without rewrite
+- Skipping the README and losing the findings
+- Testing multiple hypotheses in one prototype (hard to learn from)

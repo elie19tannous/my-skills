@@ -1,144 +1,113 @@
 ---
-name: "promote"
-description: "Graduate a proven pattern from auto-memory (MEMORY.md) to CLAUDE.md or .claude/rules/ for permanent enforcement. Use when the user runs /si:promote or asks to make a learned behavior permanent."
+name: promote
+description: Generate X/Twitter release promotion posts with ASCII tables and CodeSnap rendering. Use when writing release posts, promotion tweets, plugin announcements, or preparing social media content for new versions.
+effort: medium
 ---
 
-# /si:promote — Graduate Learnings to Rules
+# /promote — Release Promotion Post Generator
 
-Moves a proven pattern from Claude's auto-memory into the project's rule system, where it becomes an enforced instruction rather than a background note.
+Generate data-driven X/Twitter posts for plugin releases with ASCII cards ready for CodeSnap screenshots.
 
-## Usage
+## When to use
+
+Run `/promote vX.Y.Z` after tagging a release. Optionally add a title: `/promote v2.8.0 "LiveView Streams Overhaul"`.
+
+## Output
+
+All files go to `scratchpad/x-posts/{version}-release.md` (create directory if needed).
+
+The output file contains three sections:
+1. **ASCII Card** — box-drawing table for CodeSnap screenshot
+2. **Tweet Thread** — 3-5 tweets in proven format
+3. **CodeSnap Command** — exact CLI command to render the card
+4. **Fact-Check** — every claim with verifiable data source
+
+## Execution Flow
+
+### Step 1: Gather Data
+
+Collect these metrics (all are verifiable commands — run them, don't estimate):
+
+| Metric | How to get it |
+|--------|---------------|
+| File count + insertions/deletions | `git diff --stat {prev-tag}..{tag}` |
+| Skill count | `ls plugins/elixir-phoenix/skills/ \| wc -l` |
+| Agent count | `ls plugins/elixir-phoenix/agents/*.md \| wc -l` |
+| Iron Law count | Grep for numbered Iron Laws in CLAUDE.md |
+| Eval scores | `make eval-all` (run it, report actual numbers) |
+| Changelog entries | Read CHANGELOG.md for this version's section |
+| Before/after metrics | Depends on release — look for quantifiable changes |
+
+The strongest posts have **before/after comparisons**. Look for changes in CHANGELOG.md that have measurable deltas (line counts, counts of affected files, error rates, coverage numbers).
+
+### Step 2: Write the ASCII Card
+
+The card is the visual centerpiece — it gets screenshotted via CodeSnap and attached to tweet 1.
+
+Rules:
+- **Exactly 72 characters wide** (including borders) — consistent with past posts
+- Use Unicode box-drawing: `┌─┐│└┘╞═╡╤╪╧` for borders and separators
+- Include: version + title, headline stats, before/after table, repo URL
+- The table content comes from Step 1 data — pick the 3-5 most impressive changes
+- **VERIFY ALIGNMENT**: After writing the table, run a Python script to check every line has the same visual width. Off-by-one errors are the most common problem — em dashes (`—`) and arrows (`→`) are single-width but easy to miscount. Every line between the top `┌` and bottom `└` borders must be exactly 72 visual characters
+
+Also save the ASCII card as a separate `.txt` file at `scratchpad/x-posts/{version}-table.txt` for CodeSnap input.
+
+See `${CLAUDE_SKILL_DIR}/references/templates.md` for the proven card format and past examples.
+
+### Step 3: Write the Tweet Thread
+
+Follow the **hook → findings → details → CTA** structure. Read `${CLAUDE_SKILL_DIR}/references/templates.md` for proven tweet patterns.
+
+**Thread rules (from analytics on 7 posts, 6.9K-9.9K views):**
+
+- **Tweet 1 (Hook)**: Version + one compelling sentence about what changed. Include headline stats (files changed, skills, agents). Repo link here — not in a reply. Add `#ElixirLang #ClaudeCode` hashtags.
+- **Tweet 2-3 (Findings)**: The specific changes with numbers. Use numbered lists. Before/after metrics are the highest-performing content type.
+- **Tweet 4-5 (Details/CTA)**: Additional changes + soft CTA ("Try it and let me know how it feels"). Link to release page.
+- **Max 5 tweets** — casual readers drop off after 4-6. If you have more content, cut the least impactful items.
+
+**Voice and tone:**
+- Data-heavy, transparent, no-hype — this is the proven #1 strength
+- Write like a builder sharing real numbers, not a marketer
+- Concrete numbers over adjectives ("32/40 descriptions rewritten" not "improved many descriptions")
+- Never mention API costs or token prices — subscription user, cost per call is irrelevant
+
+### Step 4: CodeSnap Command
+
+Output the exact command to render the ASCII card as an image. The card `.txt` file from Step 2 is the input.
+
+Use the config file at `scratchpad/x-posts/codesnap-claude-dark.json` (dark gradient, tight margins, no watermark):
 
 ```
-/si:promote <pattern description>                    # Auto-detect best target
-/si:promote <pattern> --target claude.md             # Promote to CLAUDE.md
-/si:promote <pattern> --target rules/testing.md      # Promote to scoped rule
-/si:promote <pattern> --target rules/api.md --paths "src/api/**/*.ts"  # Scoped with paths
+codesnap -f scratchpad/x-posts/{version}-table.txt \
+  -o scratchpad/x-posts/{version}-card.png \
+  --config scratchpad/x-posts/codesnap-claude-dark.json \
+  --title "claude-elixir-phoenix {version}" \
+  -l text
 ```
 
-## Workflow
+Then render and verify the image looks correct by reading the output PNG.
 
-### Step 1: Understand the pattern
+### Step 5: Fact-Check
 
-Parse the user's description. If vague, ask one clarifying question:
-- "What specific behavior should Claude follow?"
-- "Does this apply to all files or specific paths?"
+Every claim in the tweets must have a corresponding entry in the fact-check section:
 
-### Step 2: Find the pattern in auto-memory
-
-```bash
-# Search MEMORY.md for related entries
-MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory"
-grep -ni "<keywords>" "$MEMORY_DIR/MEMORY.md"
-```
-
-Show the matching entries and confirm they're what the user means.
-
-### Step 3: Determine the right target
-
-| Pattern scope | Target | Example |
-|---|---|---|
-| Applies to entire project | `./CLAUDE.md` | "Use pnpm, not npm" |
-| Applies to specific file types | `.claude/rules/<topic>.md` | "API handlers need validation" |
-| Applies to all your projects | `~/.claude/CLAUDE.md` | "Prefer explicit error handling" |
-
-If the user didn't specify a target, recommend one based on scope.
-
-### Step 4: Distill into a concise rule
-
-Transform the learning from auto-memory's note format into CLAUDE.md's instruction format:
-
-**Before** (MEMORY.md — descriptive):
-> The project uses pnpm workspaces. When I tried npm install it failed. The lock file is pnpm-lock.yaml. Must use pnpm install for dependencies.
-
-**After** (CLAUDE.md — prescriptive):
 ```markdown
-## Build & Dependencies
-- Package manager: pnpm (not npm). Use `pnpm install`.
+## Fact-Check
+
+- File stats: `git diff --stat {prev}..{tag}` (output: N files, +X/-Y)
+- Eval scores: `make eval-all` output — N skills avg X.XXX, N agents X.XXX
+- [claim]: [exact command or file:line that proves it]
 ```
 
-**Rules for distillation:**
-- One line per rule when possible
-- Imperative voice ("Use X", "Always Y", "Never Z")
-- Include the command or example, not just the concept
-- No backstory — just the instruction
+If a claim can't be verified with a command or file reference, flag it as **UNVERIFIED** and suggest rewording.
 
-### Step 5: Write to target
+## Bundling Strategy
 
-**For CLAUDE.md:**
-1. Read existing CLAUDE.md
-2. Find the appropriate section (or create one)
-3. Append the new rule under the right heading
-4. If file would exceed 200 lines, suggest using `.claude/rules/` instead
+When deciding whether a release warrants its own post:
 
-**For `.claude/rules/`:**
-1. Create the file if it doesn't exist
-2. Add YAML frontmatter with `paths` if scoped
-3. Write the rule content
+- **Standalone post**: Major features, impressive before/after metrics, new capabilities
+- **Bundle with next release**: Bug fixes, description tweaks, minor config changes
+- **Skip entirely**: Patch releases with <5 files changed and no user-facing changes
 
-```markdown
----
-paths:
-  - "src/api/**/*.ts"
-  - "tests/api/**/*"
----
-
-# API Development Rules
-
-- All endpoints must validate input with Zod schemas
-- Use `ApiError` class for error responses (not raw Error)
-- Include OpenAPI JSDoc comments on handler functions
-```
-
-### Step 6: Clean up auto-memory
-
-After promoting, remove or mark the original entry in MEMORY.md:
-
-```bash
-# Show what will be removed
-grep -n "<pattern>" "$MEMORY_DIR/MEMORY.md"
-```
-
-Ask the user to confirm removal. Then edit MEMORY.md to remove the promoted entry. This frees space for new learnings.
-
-### Step 7: Confirm
-
-```
-✅ Promoted to {{target}}
-
-Rule: "{{distilled rule}}"
-Source: MEMORY.md line {{n}} (removed)
-MEMORY.md: {{lines}}/200 lines remaining
-
-The pattern is now an enforced instruction. Claude will follow it in all future sessions.
-```
-
-## Promotion Decision Guide
-
-### Promote when:
-- Pattern appeared 3+ times in auto-memory
-- You corrected Claude about it more than once
-- It's a project convention that any contributor should know
-- It prevents a recurring mistake
-
-### Don't promote when:
-- It's a one-time debugging note (leave in auto-memory)
-- It's session-specific context (session memory handles this)
-- It might change soon (e.g., during a migration)
-- It's already covered by existing rules
-
-### CLAUDE.md vs .claude/rules/
-
-| Use CLAUDE.md for | Use .claude/rules/ for |
-|---|---|
-| Global project rules | File-type-specific patterns |
-| Build commands | Testing conventions |
-| Architecture decisions | API design rules |
-| Team conventions | Framework-specific gotchas |
-
-## Tips
-
-- Keep CLAUDE.md under 200 lines — use rules/ for overflow
-- One rule per line is easier to maintain than paragraphs
-- Include the concrete command, not just the concept
-- Review promoted rules quarterly — remove what's no longer relevant
+The v2.6.1 post (37 likes, 1.4K views) vs v2.6.0 (150 likes, 5.5K views) demonstrates this — back-to-back releases dilute signal. When in doubt, wait and bundle.

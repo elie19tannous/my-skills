@@ -1,216 +1,282 @@
 ---
 name: react-patterns
-description: "Modern React patterns and principles. Hooks, composition, performance, TypeScript best practices."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: React 19 patterns including Server Components, Actions, Suspense, hooks, and component composition
 ---
 
 # React Patterns
 
-> Principles for building production-ready React applications.
+## use() Hook (React 19)
 
----
+`use()` reads values from Promises and Context directly in render. Unlike other hooks, it can be called inside conditionals and loops.
 
-## 1. Component Design Principles
+```tsx
+import { use } from 'react';
 
-### Component Types
+function UserProfile({ userPromise }: { userPromise: Promise<User> }) {
+  const user = use(userPromise);
+  return <h1>{user.name}</h1>;
+}
 
-| Type | Use | State |
-|------|-----|-------|
-| **Server** | Data fetching, static | None |
-| **Client** | Interactivity | useState, effects |
-| **Presentational** | UI display | Props only |
-| **Container** | Logic/state | Heavy state |
+function ThemeButton() {
+  const theme = use(ThemeContext);
+  return <button style={{ background: theme.primary }}>Click</button>;
+}
+```
 
-### Design Rules
+Wrap components that use `use()` with a Promise in a `<Suspense>` boundary.
 
-- One responsibility per component
-- Props down, events up
-- Composition over inheritance
-- Prefer small, focused components
+## Server Components
 
----
+```tsx
+// app/users/page.tsx - Server Component (default, no directive needed)
+import { UserList } from './UserList';
 
-## 2. Hook Patterns
+export default async function UsersPage() {
+  const users = await fetch('https://api.example.com/users', {
+    next: { revalidate: 60 },
+  }).then(r => r.json());
 
-### When to Extract Hooks
+  return <UserList users={users} />;
+}
 
-| Pattern | Extract When |
-|---------|-------------|
-| **useLocalStorage** | Same storage logic needed |
-| **useDebounce** | Multiple debounced values |
-| **useFetch** | Repeated fetch patterns |
-| **useForm** | Complex form state |
+// app/users/UserList.tsx - Still a Server Component
+export function UserList({ users }: { users: User[] }) {
+  return (
+    <ul>
+      {users.map(u => (
+        <li key={u.id}>
+          {u.name}
+          <DeleteButton userId={u.id} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
 
-### Hook Rules
+Push `'use client'` as deep as possible. Only leaves that need interactivity should be Client Components.
 
-- Hooks at top level only
-- Same order every render
-- Custom hooks start with "use"
-- Clean up effects on unmount
+## Server Actions
 
----
+```tsx
+// app/actions.ts
+'use server';
 
-## 3. State Management Selection
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
-| Complexity | Solution |
-|------------|----------|
-| Simple | useState, useReducer |
-| Shared local | Context |
-| Server state | React Query, SWR |
-| Complex global | Zustand, Redux Toolkit |
+export async function createPost(formData: FormData) {
+  const title = formData.get('title') as string;
+  const body = formData.get('body') as string;
 
-### State Placement
+  await db.insert(posts).values({ title, body });
 
-| Scope | Where |
-|-------|-------|
-| Single component | useState |
-| Parent-child | Lift state up |
-| Subtree | Context |
-| App-wide | Global store |
+  revalidatePath('/posts');
+  redirect('/posts');
+}
+```
 
----
+```tsx
+// app/posts/new/page.tsx
+import { createPost } from '../actions';
 
-## 4. React 19 Patterns
+export default function NewPostPage() {
+  return (
+    <form action={createPost}>
+      <input name="title" required />
+      <textarea name="body" required />
+      <button type="submit">Create</button>
+    </form>
+  );
+}
+```
 
-### New Hooks
+## useActionState (React 19)
 
-| Hook | Purpose |
-|------|---------|
-| **useActionState** | Form submission state |
-| **useOptimistic** | Optimistic UI updates |
-| **use** | Read resources in render |
+```tsx
+'use client';
 
-### Compiler Benefits
+import { useActionState } from 'react';
+import { createUser } from './actions';
 
-- Automatic memoization
-- Less manual useMemo/useCallback
-- Focus on pure components
+function SignupForm() {
+  const [state, formAction, isPending] = useActionState(createUser, {
+    errors: {},
+    message: '',
+  });
 
----
+  return (
+    <form action={formAction}>
+      <input name="email" />
+      {state.errors.email && <p>{state.errors.email}</p>}
+      <button disabled={isPending}>
+        {isPending ? 'Creating...' : 'Sign Up'}
+      </button>
+      {state.message && <p>{state.message}</p>}
+    </form>
+  );
+}
+```
 
-## 5. Composition Patterns
+## useOptimistic (React 19)
 
-### Compound Components
+```tsx
+'use client';
 
-- Parent provides context
-- Children consume context
-- Flexible slot-based composition
-- Example: Tabs, Accordion, Dropdown
+import { useOptimistic } from 'react';
+import { likePost } from './actions';
 
-### Render Props vs Hooks
+function LikeButton({ count, postId }: { count: number; postId: string }) {
+  const [optimisticCount, addOptimistic] = useOptimistic(count);
 
-| Use Case | Prefer |
-|----------|--------|
-| Reusable logic | Custom hook |
-| Render flexibility | Render props |
-| Cross-cutting | Higher-order component |
+  async function handleLike() {
+    addOptimistic(prev => prev + 1);
+    await likePost(postId);
+  }
 
----
+  return (
+    <form action={handleLike}>
+      <button type="submit">{optimisticCount} Likes</button>
+    </form>
+  );
+}
+```
 
-## 6. Performance Principles
+## Suspense Boundaries
 
-### When to Optimize
+```tsx
+import { Suspense } from 'react';
 
-| Signal | Action |
-|--------|--------|
-| Slow renders | Profile first |
-| Large lists | Virtualize |
-| Expensive calc | useMemo |
-| Stable callbacks | useCallback |
+function Dashboard() {
+  return (
+    <div>
+      <Suspense fallback={<StatsSkeleton />}>
+        <StatsPanel />
+      </Suspense>
+      <div className="grid grid-cols-2">
+        <Suspense fallback={<ChartSkeleton />}>
+          <RevenueChart />
+        </Suspense>
+        <Suspense fallback={<ListSkeleton />}>
+          <RecentActivity />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+```
 
-### Optimization Order
+Place Suspense boundaries around independent data-fetching units. Avoid wrapping the entire page in a single boundary (defeats the purpose of streaming).
 
-1. Check if actually slow
-2. Profile with DevTools
-3. Identify bottleneck
-4. Apply targeted fix
+## Error Boundaries
 
----
+```tsx
+'use client';
 
-## 7. Error Handling
+import { Component, type ReactNode } from 'react';
 
-### Error Boundary Usage
+class ErrorBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
 
-| Scope | Placement |
-|-------|-----------|
-| App-wide | Root level |
-| Feature | Route/feature level |
-| Component | Around risky component |
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
 
-### Error Recovery
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    reportError(error, info.componentStack);
+  }
 
-- Show fallback UI
-- Log error
-- Offer retry option
-- Preserve user data
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
+```
 
----
+Or use Next.js `error.tsx` convention for route-level error handling.
 
-## 8. TypeScript Patterns
+## Custom Hooks
 
-### Props Typing
+```tsx
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
 
-| Pattern | Use |
-|---------|-----|
-| Interface | Component props |
-| Type | Unions, complex |
-| Generic | Reusable components |
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
 
-### Common Types
+  return debounced;
+}
 
-| Need | Type |
-|------|------|
-| Children | ReactNode |
-| Event handler | MouseEventHandler |
-| Ref | RefObject<Element> |
+function useLocalStorage<T>(key: string, initial: T) {
+  const [value, setValue] = useState<T>(() => {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : initial;
+  });
 
----
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
 
-## 9. Testing Principles
+  return [value, setValue] as const;
+}
+```
 
-| Level | Focus |
-|-------|-------|
-| Unit | Pure functions, hooks |
-| Integration | Component behavior |
-| E2E | User flows |
+Rules for custom hooks:
+- Prefix with `use`
+- Extract when logic is shared between 2+ components
+- Keep hooks focused on a single concern
+- Return tuples `[value, setter]` or objects `{ data, error, loading }`
 
-### Test Priorities
+## Compound Components
 
-- User-visible behavior
-- Edge cases
-- Error states
-- Accessibility
+```tsx
+function Tabs({ children }: { children: ReactNode }) {
+  const [active, setActive] = useState(0);
+  return (
+    <TabsContext value={{ active, setActive }}>
+      <div role="tablist">{children}</div>
+    </TabsContext>
+  );
+}
 
----
+Tabs.Tab = function Tab({ index, children }: { index: number; children: ReactNode }) {
+  const { active, setActive } = use(TabsContext);
+  return (
+    <button
+      role="tab"
+      aria-selected={active === index}
+      onClick={() => setActive(index)}
+    >
+      {children}
+    </button>
+  );
+};
 
-## 10. Anti-Patterns
+Tabs.Panel = function Panel({ index, children }: { index: number; children: ReactNode }) {
+  const { active } = use(TabsContext);
+  if (active !== index) return null;
+  return <div role="tabpanel">{children}</div>;
+};
 
-| ❌ Don't | ✅ Do |
-|----------|-------|
-| Prop drilling deep | Use context |
-| Giant components | Split smaller |
-| useEffect for everything | Server components |
-| Premature optimization | Profile first |
-| Index as key | Stable unique ID |
+// Usage
+<Tabs>
+  <Tabs.Tab index={0}>Profile</Tabs.Tab>
+  <Tabs.Tab index={1}>Settings</Tabs.Tab>
+  <Tabs.Panel index={0}><ProfileForm /></Tabs.Panel>
+  <Tabs.Panel index={1}><SettingsForm /></Tabs.Panel>
+</Tabs>
+```
 
----
+## Performance Rules
 
-## 11. File Structure
-
-<img width="1150" height="1438" alt="image" src="https://github.com/user-attachments/assets/10369698-472c-4695-a494-2c0672103aa1" />
-
-Use this image as a reference for a better file structure of the project
-
----
-
-> **Remember:** React is about composition. Build small, combine thoughtfully.
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- Avoid creating objects/arrays in JSX props (causes re-renders)
+- Use `React.memo` only after profiling confirms unnecessary re-renders
+- Prefer `useMemo`/`useCallback` for expensive computations or stable references passed to memoized children
+- Use `key` to reset component state intentionally
+- Colocate state: keep state as close to where it is used as possible
+- Avoid prop drilling beyond 2 levels; use Context or composition instead

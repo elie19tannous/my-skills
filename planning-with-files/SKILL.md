@@ -1,79 +1,110 @@
 ---
 name: planning-with-files
-description: "Work like Manus: Use persistent markdown files as your \"working memory on disk.\""
-risk: unknown
-source: community
-date_added: "2026-02-27"
+description: >-
+  Implements file-based planning for complex multi-step tasks. Creates
+  task_plan.md, findings.md, and progress.md as persistent working memory. Use
+  when starting tasks requiring >5 tool calls, multi-phase projects, research,
+  or any work where losing track of goals and progress would be costly.
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
 ---
 
 # Planning with Files
 
-Work like Manus: Use persistent markdown files as your "working memory on disk."
-
-## Important: Where Files Go
-
-When using this skill:
-
-- **Templates** are stored in the skill directory at `${CLAUDE_PLUGIN_ROOT}/templates/`
-- **Your planning files** (`task_plan.md`, `findings.md`, `progress.md`) should be created in **your project directory** — the folder where you're working
-
-| Location | What Goes There |
-|----------|-----------------|
-| Skill directory (`${CLAUDE_PLUGIN_ROOT}/`) | Templates, scripts, reference docs |
-| Your project directory | `task_plan.md`, `findings.md`, `progress.md` |
-
-This ensures your planning files live alongside your code, not buried in the skill installation folder.
+Use persistent markdown files as working memory on disk.
 
 ## Quick Start
 
-Before ANY complex task:
+1. **Create planning files** -- use `/plan` or create manually from
+   [templates](references/templates.md)
+2. **Create `task_plan.md`** with goal, phases, and key questions
+3. **Create `findings.md`** for research and decisions
+4. **Create `progress.md`** for session logging
+5. **Re-read the plan before decisions** -- refreshes goals in attention
+6. **Update after each phase** -- mark status, log errors
 
-1. **Create `task_plan.md`** in your project — Use [templates/task_plan.md](templates/task_plan.md) as reference
-2. **Create `findings.md`** in your project — Use [templates/findings.md](templates/findings.md) as reference
-3. **Create `progress.md`** in your project — Use [templates/progress.md](templates/progress.md) as reference
-4. **Re-read plan before decisions** — Refreshes goals in attention window
-5. **Update after each phase** — Mark complete, log errors
+## When to Use
 
-> **Note:** All three planning files should be created in your current working directory (your project root), not in the skill's installation folder.
+- Multi-step tasks (3+ phases)
+- Research projects requiring many searches
+- Building or creating projects with multiple files
+- Tasks spanning many tool calls (>10)
+- Any work where losing track of goals would be costly
+- Tasks that may span multiple sessions
 
-## The Core Pattern
+## When NOT to Use
+
+- Simple questions or quick lookups
+- Single-file edits with obvious scope
+- Tasks completable in under 5 tool calls
+- Conversational exchanges without implementation
+
+## Core Pattern
 
 ```
 Context Window = RAM (volatile, limited)
-Filesystem = Disk (persistent, unlimited)
+Filesystem     = Disk (persistent, unlimited)
 
-→ Anything important gets written to disk.
+Anything important gets written to disk.
 ```
+
+After many tool calls, the original goal drifts out of the attention
+window. Reading `task_plan.md` brings it back. This is the single
+most important pattern in file-based planning.
 
 ## File Purposes
 
 | File | Purpose | When to Update |
 |------|---------|----------------|
-| `task_plan.md` | Phases, progress, decisions | After each phase |
-| `findings.md` | Research, discoveries | After ANY discovery |
-| `progress.md` | Session log, test results | Throughout session |
+| `task_plan.md` | Phases, progress, decisions | After each phase completes |
+| `findings.md` | Research, discoveries, decisions | After ANY discovery |
+| `progress.md` | Session log, test results | Throughout the session |
+
+All three files go in the **project root**, not the plugin directory.
 
 ## Critical Rules
 
 ### 1. Create Plan First
-Never start a complex task without `task_plan.md`. Non-negotiable.
+
+Never start a complex task without `task_plan.md`. This is
+non-negotiable. The plan is your persistent memory.
 
 ### 2. The 2-Action Rule
-> "After every 2 view/browser/search operations, IMMEDIATELY save key findings to text files."
 
-This prevents visual/multimodal information from being lost.
+After every 2 search, browse, or read operations, immediately save
+key findings to `findings.md`. Multimodal content (images, browser
+results, PDF contents) does not persist in context -- capture it as
+text before it is lost.
 
 ### 3. Read Before Decide
-Before major decisions, read the plan file. This keeps goals in your attention window.
+
+Before any major decision, re-read `task_plan.md`. This pushes
+goals and context back into the recent attention window, counteracting
+the "lost in the middle" effect that occurs after ~50 tool calls.
+
+```
+[Original goal -- far away in context, forgotten]
+...many tool calls...
+[Recently read task_plan.md -- gets ATTENTION]
+→ Now make the decision with goals fresh in context
+```
 
 ### 4. Update After Act
+
 After completing any phase:
-- Mark phase status: `in_progress` → `complete`
-- Log any errors encountered
-- Note files created/modified
+
+- Mark phase status: `in_progress` -> `complete`
+- Log any errors encountered in the Errors table
+- Note files created or modified in `progress.md`
 
 ### 5. Log ALL Errors
-Every error goes in the plan file. This builds knowledge and prevents repetition.
+
+Every error goes in `task_plan.md`. Include the attempt number and
+resolution. This builds knowledge and prevents repeating failures.
 
 ```markdown
 ## Errors Encountered
@@ -84,106 +115,78 @@ Every error goes in the plan file. This builds knowledge and prevents repetition
 ```
 
 ### 6. Never Repeat Failures
+
+If an action failed, the next action must be different. Track what
+you tried and mutate the approach.
+
 ```
 if action_failed:
     next_action != same_action
 ```
-Track what you tried. Mutate the approach.
 
-## The 3-Strike Error Protocol
+## 3-Strike Error Protocol
 
 ```
 ATTEMPT 1: Diagnose & Fix
-  → Read error carefully
-  → Identify root cause
-  → Apply targeted fix
+  -> Read error carefully
+  -> Identify root cause
+  -> Apply targeted fix
 
 ATTEMPT 2: Alternative Approach
-  → Same error? Try different method
-  → Different tool? Different library?
-  → NEVER repeat exact same failing action
+  -> Same error? Try a different method
+  -> Different tool? Different library?
+  -> NEVER repeat the exact same failing action
 
 ATTEMPT 3: Broader Rethink
-  → Question assumptions
-  → Search for solutions
-  → Consider updating the plan
+  -> Question assumptions
+  -> Search for solutions
+  -> Consider updating the plan
 
 AFTER 3 FAILURES: Escalate to User
-  → Explain what you tried
-  → Share the specific error
-  → Ask for guidance
+  -> Explain what you tried (with attempt log)
+  -> Share the specific error
+  -> Ask for guidance
 ```
 
 ## Read vs Write Decision Matrix
 
 | Situation | Action | Reason |
 |-----------|--------|--------|
-| Just wrote a file | DON'T read | Content still in context |
-| Viewed image/PDF | Write findings NOW | Multimodal → text before lost |
+| Just wrote a file | Don't read it | Content still in context |
+| Viewed image/PDF | Write findings NOW | Multimodal content doesn't persist |
 | Browser returned data | Write to file | Screenshots don't persist |
-| Starting new phase | Read plan/findings | Re-orient if context stale |
+| Starting new phase | Read plan/findings | Re-orient if context is stale |
 | Error occurred | Read relevant file | Need current state to fix |
-| Resuming after gap | Read all planning files | Recover state |
+| Resuming after gap | Read all planning files | Recover full state |
 
-## The 5-Question Reboot Test
+## 5-Question Reboot Test
 
-If you can answer these, your context management is solid:
+If you can answer these from your planning files, context is solid:
 
 | Question | Answer Source |
-|----------|---------------|
-| Where am I? | Current phase in task_plan.md |
+|----------|--------------|
+| Where am I? | Current phase in `task_plan.md` |
 | Where am I going? | Remaining phases |
 | What's the goal? | Goal statement in plan |
-| What have I learned? | findings.md |
-| What have I done? | progress.md |
-
-## When to Use This Pattern
-
-**Use for:**
-- Multi-step tasks (3+ steps)
-- Research tasks
-- Building/creating projects
-- Tasks spanning many tool calls
-- Anything requiring organization
-
-**Skip for:**
-- Simple questions
-- Single-file edits
-- Quick lookups
-
-## Templates
-
-Copy these templates to start:
-
-- [templates/task_plan.md](templates/task_plan.md) — Phase tracking
-- [templates/findings.md](templates/findings.md) — Research storage
-- [templates/progress.md](templates/progress.md) — Session logging
-
-## Scripts
-
-Helper scripts for automation:
-
-- `scripts/init-session.sh` — Initialize all planning files
-- `scripts/check-complete.sh` — Verify all phases complete
-
-## Advanced Topics
-
-- **Manus Principles:** See [reference.md](reference.md)
-- **Real Examples:** See [examples.md](examples.md)
+| What have I learned? | `findings.md` |
+| What have I done? | `progress.md` |
 
 ## Anti-Patterns
 
 | Don't | Do Instead |
 |-------|------------|
-| Use TodoWrite for persistence | Create task_plan.md file |
 | State goals once and forget | Re-read plan before decisions |
-| Hide errors and retry silently | Log errors to plan file |
+| Hide errors and retry silently | Log every error to plan file |
 | Stuff everything in context | Store large content in files |
 | Start executing immediately | Create plan file FIRST |
 | Repeat failed actions | Track attempts, mutate approach |
-| Create files in skill directory | Create files in your project |
+| Create files in plugin directory | Create files in project root |
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+## References
+
+- [Templates](references/templates.md) -- starter templates for all
+  three planning files
+- [Principles](references/principles.md) -- context engineering
+  principles behind this approach
+- [Examples](references/examples.md) -- concrete examples and error
+  recovery patterns

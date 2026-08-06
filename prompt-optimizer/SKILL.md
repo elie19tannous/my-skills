@@ -1,122 +1,180 @@
 ---
 name: prompt-optimizer
-description: Creates, optimizes, and iteratively refines agent prompts, system prompts, developer prompts, and reusable prompt templates. Use when asked to improve a prompt, optimize a system prompt, rewrite an agent prompt, tune prompt wording, make a prompt more reliable, port prompts between OpenAI, Claude, or Gemini, or build prompt evals.
+description: Analyse et améliore un prompt existant pour obtenir de meilleurs résultats avec un LLM. À utiliser quand l'utilisateur a un prompt qui ne donne pas les résultats voulus ou veut l'améliorer. Se déclenche aussi avec "améliore mon prompt", "optimise ce prompt", "mon prompt ne marche pas", "meilleur prompt", "prompt engineering", ou toute demande d'amélioration de prompt.
 ---
 
 # Prompt Optimizer
 
-Optimize prompts with evals. Keep every instruction, example, and external context reference causal.
+## Étape 1 — Collecte d'infos (si manquantes)
 
-## Load Only What You Need
+Avant d'analyser, vérifie que tu as :
+- **Le prompt brut** à optimiser (obligatoire).
+- **Le LLM cible** : GPT-4o, Claude, Gemini, Llama 3, Mistral… (influence les délimiteurs et la longueur optimale).
+- **Le problème observé** : sortie trop vague, format non respecté, hallucinations, trop longue, hors-sujet.
+- **L'usage** : system prompt, one-shot, few-shot, chain, RAG, agent.
 
-| Need | Read |
-|------|------|
-| New prompt | `references/core-patterns.md`, `references/model-family-notes.md`, `references/transformed-examples.md` |
-| Existing prompt | `references/meta-optimization-loop.md`, `references/core-patterns.md`, `references/model-family-notes.md` |
-| Model-family port | `references/model-family-notes.md`, `references/core-patterns.md` |
-| Repeated failures | `references/meta-optimization-loop.md`, `references/core-patterns.md` |
-| Weak or ambiguous draft | `references/transformed-examples.md` |
-| Provenance | `SOURCES.md` |
+Si rien n'est précisé, optimise pour Claude Sonnet et documente les hypothèses.
 
-## Step 1: Capture Contract
+---
 
-Record before editing:
+## Étape 2 — Audit (grille 7 critères)
 
-- task type: new, refine, port, or debug
-- target model family and snapshot, if known
-- prompt surface: `system`, `developer`, `user`, tool descriptions, examples, schemas
-- layer owners: platform, deployer/persona, retrieved context, user payload
-- objective and non-goals
-- inputs, tools, and external files available
-- required output shape
-- success criteria and failure cases
-- hard constraints: latency, verbosity, safety, budget, tool use, style
+Score rapide 1-5 ; ne justifie que les cases ≤ 3.
 
-If success criteria or examples are missing, create a small eval set first.
-If the bottleneck is model choice, retrieval, tool schema, or missing evals, say so before rewriting.
+| Critère | Score | Problème identifié |
+|---------|-------|--------------------|
+| Clarté de la tâche | | |
+| Spécificité / périmètre | | |
+| Contexte (rôle, audience, domaine) | | |
+| Exemples few-shot (0 = aucun) | | |
+| Contraintes / garde-fous | | |
+| Format de sortie défini | | |
+| Longueur / densité adaptée | | |
 
-## Step 2: Inventory External Context
+**Seuils d'action** :
+- Score moyen < 3 → réécriture complète.
+- 1-2 critères ≤ 2 → réécriture ciblée.
+- Tous ≥ 4 → micro-ajustements + variante.
 
-For repo or agent prompts, list stable context by exact path:
+---
 
-| Context type | Examples |
-|--------------|----------|
-| Agent rules | `AGENTS.md`, `CLAUDE.md` |
-| Specs | `specs/*.md`, `docs/api.md` |
-| Policies | `SECURITY.md`, `docs/releasing.md` |
-| Examples | `examples/`, `tests/fixtures/` |
+## Étape 3 — Techniques disponibles (choisir selon diagnostic)
 
-Rules:
+### Rôle + contexte
+```
+Tu es un [rôle expert] travaillant pour [contexte]. 
+Ton audience est [profil]. Ton objectif est [but précis].
+```
 
-- Reference stable files by repo-relative path instead of copying them.
-- Paste only excerpts needed for the prompt or eval case.
-- Mark whether a file is `loaded`, `referenced`, or `out of scope`.
-- Avoid vague context pointers such as "read the docs".
+### Few-shot (2-3 exemples structurés)
+```
+Entrée : [exemple 1]
+Sortie : [sortie attendue 1]
 
-## Step 3: Choose Model Strategy
+Entrée : [exemple 2]
+Sortie : [sortie attendue 2]
 
-Read `references/model-family-notes.md`.
+Entrée : {{USER_INPUT}}
+Sortie :
+```
+> Règle : les exemples doivent couvrir des cas-limites, pas seulement le cas nominal.
 
-- Known family: optimize for that family.
-- Unknown family: write a portable base plus short adapter notes.
-- Snapshot changes: rerun evals.
-- Cross-family divergence: specialize only the failing layer.
+### Chain-of-thought
+```
+Avant de répondre, raisonne étape par étape dans un bloc <thinking>…</thinking>.
+Fournis uniquement la réponse finale hors de ce bloc.
+```
 
-## Step 4: Shape Prompt
+### Contraintes négatives
+```
+Ne génère PAS de code commenté en français si les noms de variables sont en anglais.
+Ne dépasse PAS 200 mots.
+N'invente JAMAIS de référence bibliographique.
+```
 
-Read `references/core-patterns.md`.
+### Format de sortie explicite
+```
+Réponds UNIQUEMENT en JSON valide, sans markdown, avec ce schéma :
+{"titre": string, "score": number, "recommandations": string[]}
+```
 
-- Put stable policy in `system` or `developer`.
-- Put task-local facts, retrieved context, and variables in user-facing sections.
-- Keep one owner per behavior rule.
-- Use headings or tags only to separate content types.
-- Put tool policy in prompt text; keep schemas in provider-native tools.
-- Keep persona light unless it changes behavior.
-- Use the shortest wording that preserves the constraint.
-- Cut filler, repeated reminders, dead examples, and rationale that does not affect evals.
+### Délimiteurs XML (recommandés pour Claude)
+```xml
+<context>…</context>
+<instructions>…</instructions>
+<examples>…</examples>
+<input>{{USER_INPUT}}</input>
+```
 
-## Step 5: Optimize
+### Décomposition (prompts longs)
+Découpe en sous-prompts enchaînés : extraction → analyse → formatage.
+Utilise un prompt de coordination si c'est un agent.
 
-Read `references/meta-optimization-loop.md` for refinements.
+---
 
-1. Baseline the current prompt on the same eval slice.
-2. Cluster failures by root cause.
-3. Write concrete edit criticisms.
-4. Generate two to four candidates:
-   - minimal-diff repair
-   - structure-first rewrite
-   - examples-first or tool-rule variant
-   - provider adapter when needed
-5. Compare candidates on the same cases.
-6. Keep a short optimization log.
-7. Validate the winner on holdout cases.
-8. Stop on plateau, oscillation, overfit, excessive cost, or non-prompt bottleneck.
+## Étape 4 — Prompt optimisé
 
-## Step 6: Return Package
+Produis le prompt réécrit **en bloc de code copiable**, puis annote chaque section avec `// → raison`.
 
-Return:
+Exemple de structure annotée :
+```
+Tu es un expert en sécurité applicative (OWASP Top 10). // → rôle ancré
+Analyse le code suivant et identifie les vulnérabilités. // → tâche précise
 
-1. `Target`
-2. `Success Criteria`
-3. `External Context`
-4. `Optimized Prompt`
-5. `Adapter Notes`
-6. `Eval Set`
-7. `Optimization Log`
-8. `Residual Risks`
+<code>
+{{CODE}}
+</code>
 
-For existing prompts, include a concise diff-style note of the main behavioral changes.
+Pour chaque vulnérabilité trouvée :
+1. Nom (CWE si disponible) // → format structuré
+2. Ligne concernée
+3. Risque (critique/haut/moyen/faible)
+4. Correction recommandée (max 3 lignes de code)
 
-## Failure Modes
+Ne signale PAS les warnings de style ou de linting. // → contrainte négative
+```
 
-- editing before defining the eval target
-- mixing policy, examples, and raw context without boundaries
-- duplicating rules across layers
-- putting durable policy in user payloads
-- asking for chain-of-thought
-- keeping contradictory legacy instructions
-- overfitting to one or two examples
-- retaining examples that no longer improve evals
-- fixing tool-use failures only in prompt text when tool descriptions or schemas are weak
-- adding markup that does not reduce ambiguity
-- using persona as a substitute for behavior rules
+---
+
+## Étape 5 — Variantes
+
+Fournis systématiquement deux versions :
+
+**Version minimale** — efficace en tokens, idéale pour API à coût par token :
+```
+[version courte — ≤ 5 lignes, essentiel uniquement]
+```
+
+**Version complète** — contrôle maximal, idéale pour production / system prompt :
+```
+[version longue — rôle + contexte + exemples + contraintes + format]
+```
+
+---
+
+## Étape 6 — Validation
+
+Propose 3 inputs de test couvrant :
+1. **Cas nominal** — entrée standard.
+2. **Cas limite** — entrée ambiguë ou incomplète.
+3. **Cas adversarial** — entrée qui pourrait faire dérailler le prompt original.
+
+Indique le comportement attendu pour chacun.
+
+---
+
+## Garde-fous et anti-patterns
+
+| Anti-pattern | Symptôme | Correction |
+|---|---|---|
+| Prompt "mille-feuille" | > 10 instructions mélangées | Décomposer en sous-prompts |
+| Rôle générique | "Tu es un assistant utile" | Spécifier le domaine et le niveau d'expertise |
+| Format implicite | Le LLM choisit markdown ou prose aléatoirement | Toujours déclarer le format de sortie attendu |
+| Few-shot biaisé | Tous les exemples sont du même type | Diversifier (cas limites inclus) |
+| Contraintes en double négatif | "Ne pas ne pas faire X" | Reformuler en positif clair |
+| Température ignorée | Créativité vs déterminisme non contrôlée | Mentionner `temperature=0` pour tâches déterministes |
+| Variables non balisées | `{input}` confondu avec texte littéral | Utiliser `{{double_accolades}}` ou balises XML |
+
+---
+
+## Bonnes pratiques 2026
+
+- **Claude Sonnet / Opus** : préférer les balises XML aux triples backticks pour délimiter les blocs de données.
+- **GPT-4o** : les instructions system + user séparées surpassent un prompt unique long.
+- **Llama 3 / Mistral** : éviter les instructions imbriquées profondes ; privilégier les listes numérotées.
+- **RAG** : toujours isoler le contexte récupéré dans une balise dédiée (`<retrieved_context>`) pour éviter la contamination du raisonnement.
+- **Agents** : chaque tool call doit avoir une instruction de fallback explicite en cas d'échec.
+- **Coût** : un prompt few-shot bien construit réduit souvent les tokens de sortie de 30-50 % (moins de reformulations inutiles).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

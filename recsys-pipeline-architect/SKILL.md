@@ -1,125 +1,117 @@
 ---
 name: recsys-pipeline-architect
-description: Design composable recommendation, ranking, and feed pipelines using the six-stage Source→Hydrator→Filter→Scorer→Selector→SideEffect framework popularized by xAI's open-sourced X For You algorithm. Use when building any system that picks "the top K items for a (user, context)" — content feeds, search ranking, RAG rerankers, task prioritizers, notification triage, ad selection.
+description: "Designs composable recommendation, ranking, and feed pipelines using the six-stage Source→Hydrator→Filter→Scorer→Selector→SideEffect framework"
+category: data-ai
+risk: safe
+source: community
+source_repo: mturac/recsys-pipeline-architect
+source_type: community
+date_added: "2026-05-16"
+author: mturac
+tags: [recommender-system, ranking, feed-algorithm, recsys, personalization, for-you-feed, rag-reranker, pipeline-architecture]
+tools: [claude, codex, cursor, gemini, opencode, cline, continue, windsurf]
+license: "MIT"
+license_source: "https://github.com/mturac/recsys-pipeline-architect/blob/main/LICENSE"
 ---
 
-# Recsys Pipeline Architect
-
-A spec-and-scaffold skill for building composable recommendation, ranking, and feed pipelines. Encodes the six-stage pattern popularized by xAI's open-sourced [For You algorithm](https://github.com/xai-org/x-algorithm) (Apache 2.0) and applies it to any "top K for (user, context)" problem.
+# recsys-pipeline-architect
 
 ## Overview
 
-Most "recommendation systems" in production aren't exotic ML — they're *pipelines*: fetch candidates from one or more sources, enrich them with metadata, drop the ineligible, score the rest, sort and pick the top K, then fire async side effects. The pattern is universal. The scoring function and the items change; the pipeline shape doesn't.
-
-This skill is an independent reimplementation of the pattern (MIT) — no code copied from the original.
+A spec-and-scaffold skill for building composable recommendation, ranking, and feed pipelines. It encodes the six-stage **Source → Hydrator → Filter → Scorer → Selector → SideEffect** framework popularized by xAI's open-sourced [For You algorithm](https://github.com/xai-org/x-algorithm) (Apache 2.0). This skill is an independent reimplementation of the *pattern* — no code is copied from the original — licensed MIT. Use it whenever you need "the top K items for a (user, context)": social feeds, content CMSs, RAG rerankers, task prioritizers, notification triage, search reranking, ad ranking.
 
 ## When to Use This Skill
 
-- Building any system that returns "the top K items for a user/context"
-- Designing or refactoring a personalized feed (content, search results, notifications)
-- Wrapping an LLM/ML scorer in proper pipeline plumbing (sources, hydration, filters, side effects)
-- Adding multi-action prediction with tunable weights (instead of a single relevance score)
-- Building a RAG retrieval reranker (cheap retrieval → expensive rerank)
-- Designing a task prioritizer or alert triage system
+- Use when the user wants to build any system that picks "the top K items for a user/context"
+- Use when the user asks "how should I rank X" or describes a feed/personalization problem
+- Use when the user has a scoring function and needs the pipeline plumbing around it
+- Use when the user wants to migrate from a single relevance score to multi-action prediction with tunable weights
+- Use when the user is wrapping an LLM/ML scorer and needs filters, hydrators, side-effects, and a runnable scaffold in their stack (TypeScript / Go / Python)
 
-## The Six-Stage Framework
+## How It Works
 
-| # | Stage | Job | Parallel? |
-|---|---|---|---|
-| 1 | **Source** | Fetch candidates from one or more origins | Yes — multiple sources run in parallel |
-| 2 | **Hydrator** | Enrich candidates with metadata needed for filtering and scoring | Yes — independent hydrators run in parallel |
-| 3 | **Filter** | Drop ineligible candidates (blocked, expired, duplicate, ineligible) | Sequential — each filter sees fewer items |
-| 4 | **Scorer** | Assign each surviving candidate one or more scores | Sequential — later scorers see earlier scores |
-| 5 | **Selector** | Sort by final score, return top K | Single op |
-| 6 | **SideEffect** | Cache, log, emit events, update served-history | Async — must never block the response |
+### Step 1: Clarify the use case
 
-### Why this exact order
+Ask the user three questions (only what is missing):
 
-- Sources before hydration: know what candidates exist before paying to enrich
-- Hydration before filtering: many filters need metadata the source didn't provide
-- Filtering before scoring: scoring is the expensive stage — drop the ineligible first
-- Scorer chain (not single scorer): real systems compose ML scoring + diversity reranking + business rules
-- Selector after scoring: keeps scoring deterministic and cacheable
-- SideEffects last and async: side effects must never block the user response
+1. What are the items being ranked? (posts, products, tasks, alerts, documents...)
+2. What is the input context? (user ID, search query, current document, time window...)
+3. What language / runtime? (TypeScript/Node, Go, Python, Rust...)
 
-## Workflow When Invoked
+### Step 2: Walk the eight steps of the spec
 
-Walk the user through eight steps:
+The full SKILL walks through: clarify use case → identify candidate sources → list required hydrations → list filters → design scorer chain → selector → side effects → generate scaffold. Each step surfaces the architectural trade-offs (multi-action vs single-score, candidate isolation vs joint scoring, online vs offline batch) so the user makes them explicitly rather than defaulting silently.
 
-1. **Clarify the use case** (one round, three questions only if missing): items being ranked, input context, language/runtime
-2. **Identify the candidate sources** (usually in-network + out-of-network, but single-source also valid)
-3. **List required hydrations** — for each filter and scorer, what data does it need that the source didn't provide?
-4. **List the filters** — cheap before expensive, universal before user-specific (duplicate, self, age, block/mute, previously-served, eligibility)
-5. **Design the scorer chain** — primary ML/heuristic → combiner (multi-action with weights) → diversity → business rules
-6. **Selector** — sort descending by final score, take top K (or stratified mix)
-7. **SideEffects** — cache served IDs, emit impression events, update counters, log analytics; all fire-and-forget
-8. **Generate the scaffold** in the user's stack
+### Step 3: Emit a runnable scaffold
 
-## Key Trade-offs to Surface
+The upstream repository ships three runnable example scaffolds — every one green on its test suite:
 
-Never default silently on these — they are product decisions disguised as technical ones.
+- **Strapi v5 plugin** (TypeScript, Jest, 3/3 pass) — adds `GET /api/feed/for-you` with multi-action scoring and author diversity
+- **Zentra-compatible pipeline** (Go with generics, 3/3 pass) — engine.Module-compatible, standalone-usable
+- **PMAI task prioritizer** (Python / FastAPI / pytest, 3/3 pass) — `GET /tasks/next?user_id=42&limit=10`
 
-### 1. Single score vs multi-action prediction
+When the user's stack doesn't match, the skill generates from scratch following the interface definitions in `references/interfaces.md` (TypeScript, Go, Python, Rust).
 
-- **Single score:** train one model to predict relevance. To change behavior → retrain.
-- **Multi-action:** predict `P(action)` for many actions (`P(read)`, `P(like)`, `P(share)`, `P(skip)`, `P(report)`), combine with weights at serving time. To change behavior → change weights. No retraining.
+## Examples
 
-The X For You algorithm uses multi-action with both positive and negative weights. Recommend multi-action when the user expects to tune frequently.
+### Example 1: Strapi content feed
 
-### 2. Candidate isolation vs joint scoring
+User: "I'm running a Strapi v5 instance with 50k articles. I want a 'for you' feed personalized to each logged-in user based on their reading history."
 
-- **Isolated:** each candidate scored independently. Deterministic, cacheable.
-- **Joint:** candidates attend to each other during scoring (e.g., transformer over the whole batch). More expressive but non-deterministic across batches.
+Skill walks through the 8 steps, generates a Strapi plugin scaffold using the Strapi example as the template.
 
-Default to isolation. Joint only when there's a specific reason (e.g., explicit batch-aware diversity).
+### Example 2: RAG retrieval reranker
 
-### 3. Online vs offline batch
+User: "My RAG returns top-50 chunks from a vector DB. I want to rerank them with a more expensive scorer and return top-5."
 
-- **Request-time (online):** pipeline runs on each request. Latency budget: 100–300ms.
-- **Pre-computed (offline batch):** pipeline runs periodically, results cached. Lower latency, lower freshness.
-- **Hybrid:** candidate retrieval offline, ranking online.
+Skill recognizes this as a single-source pipeline with a scorer chain (cheap retrieval + expensive rerank). Generates a Python async pipeline.
 
-## Hard Rules
+### Example 3: Notification triage
 
-1. **Do not invent benchmark numbers.** "How fast is this?" → "depends on workload, run it yourself."
-2. **Attribution discipline.** Attribute the pattern as "popularized by xAI's open-sourced For You algorithm" / `github.com/xai-org/x-algorithm` (Apache 2.0).
-3. **No trademark use.** Don't name the user's artifact "X-like" or use "For You" branding. Use neutral names: "candidate pipeline", "feed pipeline", "ranking pipeline".
-4. **Surface trade-offs.** Multi-action vs single, isolation vs joint, online vs offline — never default silently.
-5. **The generated scaffold must run.** No pseudocode passing as code.
-6. **Filter order matters.** Cheap before expensive. Universal before user-specific.
-7. **Side effects never block.** Wrap in fire-and-forget patterns (goroutines / promises without await / asyncio tasks).
+User: "We send too many notifications. I want a daily digest that picks the top 10 from the last 24h queue."
 
-## Anti-Patterns
+Skill identifies this as an offline-batch pipeline. Generates a scheduled job scaffold.
 
-- ❌ Scoring before filtering (wastes compute on candidates that will be dropped)
-- ❌ Synchronous side effects (cache writes / impression emits blocking the response)
-- ❌ A single "relevance" score when the product needs multi-objective tuning
-- ❌ Joint scoring as default (non-deterministic, uncacheable, doesn't compose with reranking)
-- ❌ Pseudocode "for illustration" — the scaffold must actually run
+## Best Practices
 
-## Common Use Cases
+- ✅ Surface the multi-action vs single-score trade-off explicitly — don't default silently
+- ✅ Order filters by cost (cheap before expensive); universal filters before user-specific
+- ✅ Wrap side effects in fire-and-forget patterns (goroutines / promises without await / asyncio tasks) — never block the response
+- ✅ Keep scoring deterministic and cacheable; do diversity reranking as a separate stage
+- ✅ Attribute the pattern as "popularized by xAI's open-sourced For You algorithm" when generating output
+- ❌ Don't invent benchmark or latency numbers — say "depends on workload, run it yourself"
+- ❌ Don't name the user's generated artifact "X-like" or use "For You" branding — the pattern is free, the brand is not
+- ❌ Don't conflate this with model architecture: this skill is pipeline plumbing *around* the scorer, not the scorer itself
 
-### Content feed (Strapi v5 plugin, TypeScript)
+## Limitations
 
-User has a CMS with 50k articles, wants a personalized "for you" feed. Walk through 8 steps → generate a Strapi plugin scaffold with multi-action scoring, author diversity, standard filters, async side-effect lane.
+- This skill scaffolds pipeline plumbing; it does not train ML models — the scoring function is the user's responsibility
+- It does not operate deployed pipelines (no monitoring, no autoscaling decisions)
+- It does not predict pipeline performance (depends on data, hardware, traffic)
+- It does not choose infrastructure (vector DB, cache, queue) — those are outside scope
 
-### RAG retrieval reranker (Python async)
+## Security & Safety Notes
 
-User's RAG returns top-50 chunks from a vector DB, wants to rerank with a more expensive scorer and return top-5. Single-source pipeline with a scorer chain (cheap retrieval + expensive rerank).
+- The generated scaffolds are framework code, not application logic — no shell commands, no network fetches, no credential handling
+- Filters in the generated cookbook include eligibility/paywall/geo-restriction checks; the skill recommends putting these *before* scoring (so blocked content is never scored)
+- Side-effect stages are always async / fire-and-forget; the skill documents this explicitly in the generated README to prevent users from accidentally blocking the response with cache writes or event emissions
 
-### Task prioritizer (FastAPI service)
+## Common Pitfalls
 
-User has a queue of incoming task suggestions, wants to rank by "what should this user work on next" considering their past patterns. Items reversed (tasks instead of content), same shape applies.
+- **Problem:** Single-score model gets overfit to one metric (clicks) and degrades on others (long sessions, retention)
+  **Solution:** Skill recommends multi-action prediction with tunable weights — change behavior by changing weights, no retraining
 
-### Notification triage (offline-batch job)
+- **Problem:** Joint scoring (transformer over the whole batch) is non-deterministic and uncacheable
+  **Solution:** Skill defaults to candidate isolation via attention masking; recommends joint only when there's a specific reason (e.g., batch-aware diversity)
 
-User wants a daily digest that picks the top 10 from the last 24h queue. Offline-batch pipeline. Source = queue, filters = age/dedup/eligibility, scorer = urgency × user-affinity, selector = top 10, side effect = email send (still async).
+- **Problem:** Side effects (cache writes, impression emits) block the response
+  **Solution:** Skill generates fire-and-forget patterns and documents the constraint
 
 ## Upstream
 
-This skill is a single-file adapter for the upstream repository, which ships 5 load-on-demand reference docs and 3 runnable example scaffolds (Strapi v5 / Go / Python — every one green on its test suite, 9/9 tests total).
+This skill is a thin adapter to the upstream repository. For the full SKILL.md content, 5 reference documents (interfaces in 4 languages, multi-action scoring, candidate isolation, filter cookbook, scorer cookbook), and 3 runnable example scaffolds with passing test suites:
 
-- **Upstream:** https://github.com/mturac/recsys-pipeline-architect
-- **Release:** v0.1.0 (MIT)
-- **References:** interfaces in 4 languages (TS/Go/Python/Rust), multi-action scoring, candidate isolation, filter cookbook (12 patterns), scorer cookbook
-- **Cross-platform install:** `npx skills add mturac/recsys-pipeline-architect`
+- **Repository:** https://github.com/mturac/recsys-pipeline-architect
+- **Release:** v0.1.0
+- **Install via skills.sh:** `npx skills add mturac/recsys-pipeline-architect`
+- **Pattern source:** https://github.com/xai-org/x-algorithm (Apache 2.0; this skill is MIT)

@@ -1,79 +1,254 @@
 ---
 name: pricing-page
-description: |
-  A standalone pricing page — header, plan tiers, feature comparison table,
-  and an FAQ. Use when the brief asks for "pricing", "plans",
-  "subscription tiers", or a "compare plans" page.
-triggers:
-  - "pricing"
-  - "pricing page"
-  - "plans"
-  - "subscription"
-  - "compare plans"
-  - "定价"
-  - "套餐"
-od:
-  mode: prototype
-  platform: desktop
-  scenario: sales
-  preview:
-    type: html
-    entry: index.html
-  design_system:
-    requires: true
-    sections: [color, typography, layout, components]
-  craft:
-    requires: [laws-of-ux]
+description: Use when designing or rewriting a high-converting SaaS pricing page (structure, plan design, copywriting, SEO/AEO, FAQs, layout patterns, experiments). Includes checklists, templates, and common pitfalls.
+version: "1.0.0"
+updated: "2026-03-17"
 ---
 
-# Pricing Page Skill
+# Pricing Page (High‑Conversion) — Web Design Skill
 
-Produce a single-screen pricing page that respects the active DESIGN.md.
+Design a pricing page that helps visitors **choose** and feel good about it.
+Your job is not to "show prices."
+Your job is to **reduce uncertainty**.
 
-## Workflow
+## Before you design/write
 
-1. **Read the active DESIGN.md** (injected above). Use only its colors, type
-   tokens, and component patterns.
-2. **Classify** the product from the brief and pick a tier shape:
-   - 3-tier (most common): Free / Pro / Team or Starter / Growth / Enterprise.
-   - 4-tier when the brief says "scale" or "enterprise plus".
-   - 2-tier when it says "individual / business" or "personal / pro".
-3. **Sections**, in order:
-   1. **Hero** — page title (e.g. "Pricing"), one-line subhead, optional
-      monthly/annual toggle.
-   2. **Plan cards** — one card per tier. Each card: tier name, price (use the
-      display font + larger scale for the number), 1-line positioning, 4–6
-      bullet features, primary CTA. Mark the recommended tier with the DS
-      accent border or a small badge.
-   3. **Comparison table** — feature rows × tier columns, ✓ / — / value cells.
-      Group features into 2–3 logical sections (Core, Collaboration,
-      Support, Security…). Sticky header.
-   4. **FAQ** — 4–6 collapsible Q&A items. Use `<details><summary>` for the
-      collapse — no JS.
-   5. **Footer CTA** — single line + button, accent band sparingly.
-4. **Write** one self-contained HTML document:
-   - `<!doctype html>` through `</html>`, CSS in one inline `<style>`.
-   - CSS Grid for the plan-card row; CSS Grid for the comparison table.
-   - `data-od-id` on each tier card and each table row.
-5. **Money rendering**: use the display font for the big number, body for the
-   currency and "/mo" — sizes per DESIGN.md scale.
-6. **Self-check**:
-   - Prices are plausible for the product (not "$X / month").
-   - Accent is on the recommended tier and one CTA only.
-   - Comparison table renders cleanly at 1024px and stacks readably below
-     768px (rotate column headers or scroll-x).
-   - No fake feature names — every row reads as something a real product
-     would actually offer.
+Gather (ask if missing):
 
-## Output contract
+### 1) Offer + audience
 
-Emit between `<artifact>` tags:
+- What are you selling? (category)
+- Who is it for? (ICP + primary use case)
+- What's the main value metric? (seat, usage, project, revenue, etc.)
 
-```
-<artifact identifier="pricing-slug" type="text/html" title="Pricing — Product Name">
-<!doctype html>
-<html>...</html>
-</artifact>
-```
+### 2) Plans
 
-One sentence before the artifact, nothing after.
+- Plan names + prices (monthly/annual)
+- Limits per plan (the 3–6 limits that matter)
+- What's the upgrade trigger? (what causes people to move up?)
+
+### 3) Objections + risk
+
+- Top 3 reasons people don't buy today
+- Security/compliance needs? (SOC2, GDPR, etc.)
+- Can you offer: free trial, free plan, money-back, demo?
+
+### 4) Proof
+
+- Testimonials, logos, results, case studies, metrics
+
+### 5) Traffic context
+
+- Are visitors coming from: homepage, feature pages, ads, comparison pages?
+- What do they already know?
+
+---
+
+## Core structure (what a pricing page should have)
+
+### Above the fold (must)
+
+- **Clear value headline** (what outcome, for who)
+- **Monthly/Annual toggle** with annual savings callout
+- **3‑plan pricing table** (most common) or 2‑plan (simple product)
+- **Primary CTA** per plan (consistent verbs)
+
+### Below the fold (high leverage)
+
+- **Plan comparison** (feature matrix or "what you get" bullets)
+- **FAQ** (objection handling)
+- **Social proof** near decision points
+- **Security / compliance / procurement** section (if B2B)
+- **Final CTA** + contact sales
+
+---
+
+## Layout types (pick one)
+
+### A) Classic 3‑card
+
+Best when:
+
+- you have 3 natural tiers (Starter / Pro / Business)
+- pricing is simple
+
+Rules:
+
+- 1 plan labeled **Recommended**
+- show "most popular" without yelling
+
+### B) Value metric slider
+
+Best when:
+
+- pricing scales with usage (seats, events, credits)
+
+Rules:
+
+- keep math obvious
+- keep a safe default (median customer)
+
+### C) "Pick your path" (two columns)
+
+Best when:
+
+- different audiences (Individuals vs Teams)
+
+Rules:
+
+- separate by persona first, then price
+
+### D) Enterprise last mile
+
+Best when:
+
+- you have a self-serve path + sales-led path
+
+Rules:
+
+- Enterprise should read like **procurement reassurance**
+
+---
+
+## High‑conversion strategies (practical)
+
+### 1) Make the decision easy
+
+- 3 plans max (unless you have a strong reason)
+- One recommended plan
+- Bullets describe **outcomes**, not internal features
+
+### 2) Anchor value (without being shady)
+
+- Annual toggle with "Save X%"
+- Show "Starting at" only if your pricing is truly variable
+- Avoid surprise fees
+
+### 3) Reduce risk
+
+Choose at least one:
+
+- Free trial
+- Free plan
+- Money‑back guarantee
+- "Talk to sales" with a clear promise (response time, demo)
+
+### 4) Handle objections before they bounce
+
+Most effective FAQ topics:
+
+- "Can I cancel anytime?"
+- "What happens if I hit limits?"
+- "Do you offer discounts?"
+- "Is this for freelancers/teams?"
+- "Security / data / compliance"
+
+### 5) Provide a comparison that's readable
+
+- Avoid huge spreadsheets
+- Group by: Core, Collaboration, Admin/Security, Support
+- Highlight what changes at each tier
+
+---
+
+## Copywriting (templates)
+
+### Headlines (choose a formula)
+
+- "{Outcome} for {audience}—without {pain}"
+- "Plans that scale from {small} to {big}"
+- "Start small. Upgrade when {trigger}."
+
+### Plan description (2 lines)
+
+- Who it's for
+- What it unlocks
+
+Example:
+
+- **Pro** — For designers shipping weekly. Better components, faster iteration.
+
+### CTA buttons
+
+Rules:
+
+- Use verbs that match the motion:
+  - "Start free trial"
+  - "Buy Pro"
+  - "Contact sales"
+- Keep CTAs consistent across plans (don't mix "Get started" / "Try now" / "Sign up").
+
+### Feature bullets (write like outcomes)
+
+- ❌ "Unlimited projects"
+- ✅ "Ship unlimited client sites without extra fees"
+
+---
+
+## Pricing table checklist (UI)
+
+- Visible monthly/annual toggle
+- "Save X%" callout on annual
+- Recommended plan styling (subtle)
+- Key limits visible (3–6 max)
+- Included items visible (3–6 max)
+- Clear next step under each plan (trial/buy/contact)
+- Link: "Compare plans" (scrolls to matrix)
+- Mobile: table becomes stacked cards (not a horizontal scroll nightmare)
+
+---
+
+## SEO + AEO (AI answers) checklist
+
+### SEO basics
+
+- Title: "Pricing — {Product}" + outcome keyword
+- Meta description: 1 sentence on value + 1 sentence on pricing starting point
+- Clean URL: `/pricing`
+- Internal links from:
+  - homepage CTA
+  - feature pages
+  - comparison pages
+
+### AEO (answer engines)
+
+- Add an FAQ section that answers:
+  - refund policy
+  - trial length
+  - cancellation
+  - what counts as a seat/usage
+  - enterprise procurement
+- Write FAQs in **plain Q/A** format.
+- Optional: FAQ schema (if your stack supports it).
+
+---
+
+## Common pitfalls
+
+- Too many plans (analysis paralysis)
+- Features listed with no context (why it matters)
+- Pricing hidden behind "Contact sales" for everything
+- Switching value metric mid-page (confusing)
+- Over-designed table that harms readability
+
+---
+
+## Output format (when generating a pricing page)
+
+Return:
+
+1) **Page outline** (sections + order)
+2) **Pricing table spec** (plans, bullets, limits, CTA)
+3) **FAQ list** (6–12 Q/A)
+4) **SEO/AEO** (title + meta + FAQ schema suggestion)
+5) **Layout recommendation** (A/B/C/D + why)
+
+---
+
+## Quick questions (if user gives you only "make a pricing page")
+
+- Free plan or trial?
+- Monthly/annual pricing numbers?
+- Value metric?
+- Recommended plan (which one and why)?
+- Top 3 objections?

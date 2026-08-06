@@ -1,0 +1,95 @@
+---
+name: recipe-plan
+description: Create work plan from design document and obtain plan approval
+disable-model-invocation: true
+---
+
+Execute Skill: llm-friendly-context before writing Agent prompts, handoffs, or generated artifacts.
+Execute Skill: subagents-orchestration-guide before making workflow decisions, invoking agents, or resolving findings.
+
+**Context**: Dedicated to the planning phase.
+
+## Orchestrator Definition
+
+**Core Identity**: "I am an orchestrator." (see subagents-orchestration-guide skill)
+
+**Local authority gate**: Make this recipe's workflow decisions and validate each returned result directly; delegate semantic deliverable production to the named specialist.
+
+**Review Resolution Gate [MANDATORY]**: Resolve every actionable deliverable-review finding through subagents-orchestration-guide `Review Resolution` before correction or progression.
+Before the first finding disposition, read `references/review-resolution.md` from the loaded subagents-orchestration-guide skill.
+
+**Execution Protocol**:
+1. **Invoke named specialists for deliverable production** — pass data between them and validate their results
+2. **Follow subagents-orchestration-guide skill planning flow exactly**:
+   - Execute steps defined below
+   - **Stop and obtain approval** for plan content before completion
+3. **Scope**: See Scope Boundaries below
+
+At each Agent invocation below, build the prompt as a mechanical extraction: copy the named source values into the exact fields, apply only the declared serialization, then invoke immediately.
+
+**CRITICAL**: When the user requests test generation, always execute acceptance-test-generator first — it provides the test skeleton that work-planner depends on.
+
+## Scope Boundaries
+
+**Included in this skill**:
+- Design document selection
+- Test skeleton generation with acceptance-test-generator
+- Work plan creation with work-planner
+- Work plan review with document-reviewer
+- Plan approval obtainment
+
+**Responsibility Boundary**: This skill completes with work plan approval.
+
+Follow the planning process below:
+
+## Execution Process
+
+### Step 1: Design Document Selection
+   ! ls -la docs/design/*.md | head -10
+   - Check for existence of design documents, notify user if none exist
+   - Present options if multiple exist (can be specified with $ARGUMENTS)
+
+### Step 2: Test Skeleton Generation Confirmation
+   - Confirm with user whether to generate test skeletons (integration + E2E lanes) first
+   - If user wants generation: invoke acceptance-test-generator
+   - Pass generation results to next process according to subagents-orchestration-guide skill coordination specification
+
+### Step 3: Work Plan Creation
+Invoke work-planner using Agent tool:
+- `subagent_type`: "dev-workflows:work-planner"
+- `description`: "Work plan creation"
+- If test skeletons were generated in Step 2, build the prompt by listing every lane's status:
+  - Always include: "Integration test file: [path or 'not generated']"
+  - For each E2E lane (`fixtureE2e`, `serviceE2e`):
+    - When `generatedFiles.<lane>` is not null: "[lane] test file: [path]"
+    - When `generatedFiles.<lane>` is null: "No [lane] skeleton generated (reason: [e2eAbsenceReason.<lane>])"
+  - Append placement guidance: "Integration tests are created simultaneously with each phase implementation. fixture-e2e tests are created alongside the UI feature phase. service-integration-e2e tests are executed only in the final phase."
+- If test skeletons were not generated:
+  `prompt`: "Create work plan from Design Doc at [path]."
+
+- Follow subagents-orchestration-guide Prompt Construction Rule for additional prompt parameters
+
+### Step 4: Work Plan Review
+Invoke document-reviewer to review the work plan:
+- `subagent_type`: "dev-workflows:document-reviewer"
+- `description`: "Work plan review"
+- `prompt`: "doc_type: WorkPlan target: docs/plans/[plan-name].md. Review the Work Plan's own Implementation Scope, tasks, Completion Criteria, dependencies, execution order, exact source-anchor existence, executable verification, and Review Scope. Governing Documents paths are citation sources only; keep issues limited to violations of cited obligations."
+- Run the Review Resolution Gate through its correction re-review, escalation, and convergence transitions, using work-planner in update mode for rerouted corrections. Present the plan for approval only at its convergence condition.
+
+### Step 5: Present for Approval
+- Present the reviewed work plan to the user for batch approval. If the user requests changes, re-invoke work-planner with the user's requested changes verbatim and re-run Step 4.
+- Highlight steps with unclear scope or external dependencies and ask the user to confirm
+
+## Response at Completion
+
+**Recommended**: After plan approval, output the standard block below.
+
+```
+Planning phase completed.
+- Work plan: docs/plans/[plan-name].md
+- Status: Approved
+
+Please provide separate instructions for implementation.
+```
+
+When findings were declined during Work Plan review, append their IDs, governing reasons, and evidence to this completion response.
