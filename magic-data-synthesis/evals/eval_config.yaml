@@ -1,0 +1,38 @@
+skill: magic-data-synthesis
+version: 3.0.0
+evals:
+  - id: fill_missing_definitions
+    prompt: prompts/fill_missing_definitions.md
+    baseline: baselines/fill_missing_definitions.md
+    difficulty: easy
+    tests:
+      - "agent assesses feasibility (confirms LLM is needed, not regex/code)"
+      - "agent selects DataDesigner as the synthesis engine"
+      - "agent picks or adapts a recipe template from templates/"
+      - "agent runs data-designer preview before full synthesis"
+      - "agent respects the PAUSE gate (shows cost estimate + samples before proceeding)"
+      - "agent validates output quality after synthesis"
+
+  - id: example_generation
+    prompt: prompts/example_generation.md
+    baseline: baselines/example_generation.md
+    difficulty: medium
+    tests:
+      - "agent identifies sentinel values ('X') as targets for synthesis"
+      - "agent configures DataDesigner with appropriate seed columns (text, category, label)"
+      - "agent writes a prompt that produces contextually appropriate output"
+      - "agent uses preview to verify output before scaling"
+      - "agent estimates cost via cost_utils or manual calculation"
+      - "agent saves output as MAGIC checkpoint with provenance metadata"
+
+  - id: quality_gated_synthesis
+    prompt: prompts/quality_gated_synthesis.md
+    baseline: baselines/quality_gated_synthesis.md
+    difficulty: hard
+    tests:
+      - "agent adds LLMJudgeColumnConfig to the recipe for quality scoring"
+      - "agent defines rubrics with meaningful score scales (not generic)"
+      - "agent uses extract_dd_quality() to interpret judge scores"
+      - "agent applies quality threshold filtering (mean_100 >= 70%)"
+      - "agent iterates on prompt when quality is below threshold"
+      - "agent checkpoints only after quality gate passes"

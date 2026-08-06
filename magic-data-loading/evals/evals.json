@@ -1,0 +1,613 @@
+{
+  "skill_name": "magic-data-loading",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_csv_load",
+      "prompt": "You have a CSV file at `data/sales_q4.csv` containing quarterly sales data. The file has 2,500 rows and columns: date, product_id, region, quantity, unit_price, total_revenue. Load it into a pandas DataFrame, verify the data loaded correctly, and save a checkpoint.\n\nContext:\n- The file is 1.2MB (small, no chunking needed)\n- The file extension is `.csv` but you haven't verified the actual format yet\n- You don't know the encoding or delimiter",
+      "expected_output": "Should: (1) detect format before loading rather than assuming CSV based on extension alone; (2) auto-detect encoding and delimiter; (3) load the file into a DataFrame; (4) validate after loading by checking row count, column types, and null patterns; (5) report basic statistics including row count, column count, and dtypes; (6) save a checkpoint with a descriptive name",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "detect format",
+            "sniff",
+            "chardet",
+            "detect encoding"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "read_csv",
+            "load",
+            "DataFrame"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify",
+            "row count",
+            "shape"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "checkpoint",
+            "save",
+            "to_parquet",
+            "to_csv"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "always assume UTF-8",
+            "just use comma",
+            "skip the detection step",
+            "no need to detect"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "cjk_encoding",
+      "prompt": "You have a file at `data/product_catalog_tw.csv` exported from a Taiwanese e-commerce platform. It contains 8,000 rows with columns: product_id, product_name (Traditional Chinese), category, price_twd, description (Traditional Chinese), supplier. Load it into a pandas DataFrame and verify that Chinese characters render correctly.\n\nContext:\n- The file is 3.5MB\n- The file extension is `.csv` but the encoding is unknown \u2014 it could be UTF-8, Big5, or GB2312\n- Previous attempts to load with `pd.read_csv()` using default UTF-8 produced mojibake in the product_name and description columns (e.g., `\"\u8336\u8449\"` became `\"\u00e8\u0152\u00b6\u00e8'\u2030\"`)\n- The delimiter might be comma or tab",
+      "expected_output": "Should: (1) not assume UTF-8 and consider Big5 and GB2312 as likely encodings for Taiwanese data; (2) use content-based encoding detection such as chardet rather than relying on file extension; (3) validate encoding correctness by inspecting a sample of CJK text after loading; (4) apply encoding fallback chain if first attempt produces garbled text; (5) report the detected encoding and confidence level; (6) validate the loaded DataFrame including row count and null patterns in CJK columns",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Big5",
+            "big5",
+            "GB2312",
+            "gb2312"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "chardet",
+            "charset",
+            "content-based",
+            "detect encoding"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "mojibake",
+            "garbled",
+            "inspect sample",
+            "validate CJK"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "fallback",
+            "fallback chain",
+            "try encoding"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "confidence",
+            "detected encoding",
+            "encoding report"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "assume UTF-8",
+            "default encoding"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "multi_source_merge",
+      "prompt": "You have 3 directories of parquet files from different content sources:\n- `data/source_a/` \u2014 news articles (schema: `id`, `title`, `content`, `date`, 5 shards)\n- `data/source_b/` \u2014 wiki articles (schema: `article_id`, `title`, `body`, `publish_date`, 3 shards)\n- `data/source_c/` \u2014 forum posts (schema: `post_id`, `subject`, `text`, `created_at`, 4 shards)\n\nLoad all three sources into a unified dataset with consistent column names: `article_id`, `title`, `content`, `date`, `source`. Sample 500 records with balanced representation from each source.\n\nContext:\n- Total data: ~45,000 records across 12 parquet shards\n- Schemas differ across sources \u2014 column names and semantics overlap but don't match\n- Some records may appear in multiple sources (same article syndicated to news and wiki)\n- The `id`/`article_id`/`post_id` columns serve the same purpose across sources",
+      "expected_output": "Should: (1) normalize schemas across sources mapping id->article_id, body->content, subject->title, text->content, publish_date/created_at->date; (2) track source provenance per record by adding a source field; (3) deduplicate by normalized primary key (article_id) if same record appears in multiple sources; (4) produce a balanced sample of 500 records across the 3 sources; (5) validate the merged dataset checking total row count, nulls across normalized columns, and source distribution; (6) save the unified dataset as a checkpoint with provenance metadata",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "rename",
+            "schema normalization",
+            "column mapping"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "source",
+            "provenance",
+            "origin"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "deduplicate",
+            "drop_duplicates",
+            "dedup",
+            "duplicate",
+            "duplicated",
+            "remove duplicate"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "balanced",
+            "sample",
+            "stratified",
+            "proportional",
+            "equal representation"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify",
+            "distribution",
+            "check",
+            "confirm",
+            "inspect",
+            "ensure",
+            "count"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "only use head(500)",
+            "head(500) is sufficient",
+            "random sample without stratif",
+            "no need to balance"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "encoding-failure-recovery",
+      "difficulty": "hard",
+      "prompt": "I'm trying to load a file at data/input/chinese_text.csv but pandas gives me UnicodeDecodeError. The file has Traditional Chinese text. How do I fix this?",
+      "expected_output": "Should: (1) recommend trying multiple encodings appropriate for Traditional Chinese \u2014 Big5, UTF-8-BOM, GB2312 \u2014 not default to latin-1; (2) use content-based detection (e.g., chardet) rather than guessing from the file extension; (3) apply an encoding fallback chain: try detected encoding first, then Big5, then GB2312; (4) NOT suggest errors='ignore' or errors='replace' as a fix \u2014 those silently corrupt data; (5) validate that Chinese characters render correctly after loading",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Big5",
+            "big5",
+            "GB2312",
+            "gb2312",
+            "UTF-8-BOM"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "chardet",
+            "content-based",
+            "detect encoding",
+            "charset"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "fallback",
+            "try encoding",
+            "encoding chain",
+            "attempt"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify",
+            "inspect sample",
+            "render correctly",
+            "check",
+            "confirm",
+            "test"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "latin-1",
+            "ignore errors",
+            "errors='replace'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "ambiguous-format",
+      "difficulty": "edge",
+      "prompt": "I have a file called 'data.txt' that's 50MB. I don't know if it's CSV, TSV, or fixed-width. Help me load it.",
+      "expected_output": "Should: (1) detect the file format before attempting a full load \u2014 do NOT load the entire 50MB to determine format; (2) sample a small portion of the file first (e.g., read first 100 lines) to inspect delimiters and structure; (3) check the delimiter (comma vs tab vs fixed-width pattern) and encoding from the sample; (4) only load the full file after format and encoding are confirmed; (5) not assume CSV based on intent or context \u2014 the extension is .txt which gives no format signal",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sample",
+            "sample first",
+            "read first",
+            "peek",
+            "head"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "detect format",
+            "format detection",
+            "sniff",
+            "inspect delimiter"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "delimiter",
+            "comma",
+            "tab",
+            "fixed-width",
+            "sep"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "encoding",
+            "chardet",
+            "detect encoding"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "load entire",
+            "read_csv('data.txt')",
+            "assume CSV",
+            "assume TSV"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "database_connection",
+      "prompt": "I have a PostgreSQL database with customer data. The connection details are in the DATABASE_URL environment variable. Connect to the database, list all tables, and show me the schema of the 'customers' table. I want to see column names, types, and any foreign keys.\n\nContext:\n- The env var DATABASE_URL is already set\n- This is a production database so I need read-only access\n- The database has about 20 tables",
+      "expected_output": "Should: (1) read the connection string from the DATABASE_URL env var, never hardcode credentials; (2) establish a read-only connection; (3) use SQLAlchemy Inspector to list tables and inspect schema; (4) show columns with types and foreign key relationships; (5) sanitize the connection string before logging; (6) mention or use connect_database.py or the patterns from SKILL.md",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "DATABASE_URL",
+            "env var",
+            "environment variable"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "read-only",
+            "read_only",
+            "readonly"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "SQLAlchemy",
+            "sqlalchemy",
+            "create_engine",
+            "Inspector"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "foreign key",
+            "FK",
+            "relationship",
+            "foreign_keys"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sanitize",
+            "mask",
+            "credential",
+            "never hardcode",
+            "password",
+            "secure",
+            "not log",
+            "hide"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "hardcode the password",
+            "paste the connection string",
+            "skip read-only"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "database_extract",
+      "prompt": "I need to extract data from my SQLite database at /data/analytics.db. I want all orders from the last 30 days joined with customer names. The orders table has about 500K rows total but I only need the recent ones. Save the results as a checkpoint for further processing.\n\nContext:\n- The database has tables: customers, orders, products, order_items\n- The orders table has a 'created_at' date column\n- I'll be profiling and cleaning this data after extraction\n- I want to avoid pulling the full 500K rows into memory",
+      "expected_output": "Should: (1) use a filtered query with WHERE clause on created_at, not SELECT * from 500K rows; (2) use a JOIN between orders and customers; (3) use parameterized queries, not string interpolation for the date filter; (4) save to a checkpoint file (parquet preferred) for downstream processing; (5) report row count and column info after extraction; (6) consider chunked reads or row limits for safety",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "WHERE",
+            "filter",
+            "created_at",
+            "date"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "JOIN",
+            "join",
+            "merge"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "parameterized",
+            "params",
+            "parameter",
+            ":date",
+            "?"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "checkpoint",
+            "parquet",
+            "save",
+            "to_parquet"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "row count",
+            "rows",
+            "shape",
+            "len("
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "SELECT * FROM orders",
+            "f-string",
+            "f\"SELECT",
+            "format(",
+            ".format("
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "hf_dataset_inspect",
+      "prompt": "I want to explore the HuggingFace dataset 'stanfordnlp/imdb' before downloading it. Tell me what's in it \u2014 the splits, schema, and a few sample rows. I have HF_TOKEN set in my environment.",
+      "expected_output": "Should: (1) use the Datasets Server API or inspect_hf_dataset.py to inspect remotely without downloading; (2) report the available configs and splits; (3) show the schema (column names and types); (4) show sample rows from the dataset; (5) report file sizes for download planning; (6) NOT download the full dataset just to inspect it",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "inspect",
+            "Datasets Server",
+            "inspect_hf_dataset",
+            "remote",
+            "without download",
+            "explore",
+            "examine"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "splits",
+            "train",
+            "test",
+            "split",
+            "config",
+            "subset",
+            "partition"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "schema",
+            "columns",
+            "features",
+            "dtype",
+            "text",
+            "label",
+            "fields",
+            "structure",
+            "types"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sample",
+            "rows",
+            "preview",
+            "first-rows",
+            "example",
+            "peek",
+            "head",
+            "records"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "snapshot_download",
+            "download the entire",
+            "download first",
+            "pull the full"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "hf_dataset_download",
+      "prompt": "Download only the parquet files from 'username/my-dataset' on HuggingFace Hub to data/input/hf_data/. I have HF_TOKEN set. After downloading, load it and show me what we got.",
+      "expected_output": "Should: (1) use download_hf_dataset.py or snapshot_download with allow_patterns for selective download; (2) filter to only *.parquet files using patterns; (3) resolve token from HF_TOKEN env var; (4) download to the specified output directory; (5) report what was downloaded (file count, total size, row count); (6) load the parquet files and show schema/sample",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "download_hf_dataset",
+            "snapshot_download",
+            "download"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "parquet",
+            "allow_patterns",
+            "patterns",
+            "*.parquet",
+            "filter"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "HF_TOKEN",
+            "token",
+            "resolve_hf_token",
+            "authenticate"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "row count",
+            "rows",
+            "shape",
+            "columns",
+            "schema"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "download everything",
+            "download all files",
+            "no filter"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "callable_tool_direct",
+      "difficulty": "easy",
+      "prompt": "What format is the file at `data/mystery_file.dat`? I'm not sure if it's CSV, JSON, or something else.",
+      "expected_output": "Should call detect_format.py directly (callable tool \u2014 no custom mode exists). This is a standardized operation: content-sniffing format detection. The agent should NOT write custom format detection code.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "detect_format.py",
+            "detect_format",
+            "format detection"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def detect_format(",
+            "write custom detection",
+            "magic bytes check",
+            "implement.*detection"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "reference_impl_read_adapt",
+      "difficulty": "medium",
+      "prompt": "I have a custom log file at `data/server_logs.txt`. Each record starts with a line like `=== REQUEST #1234 ===`, followed by key: value pairs (method, path, status, duration), and ends with `=== END ===`. Parse this into a structured DataFrame.",
+      "expected_output": "Should read text_parser.py source (reference implementation) for state-machine parsing patterns, then write CUSTOM parsing code with the specific markers (=== REQUEST, key: value, === END). The text_parser.py script can't be called directly because parsing rules are always data-specific.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "text_parser",
+            "state machine",
+            "parse",
+            "marker"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "REQUEST",
+            "END",
+            "custom",
+            "pattern"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "python3 text_parser.py data/server_logs.txt"
+          ]
+        }
+      ]
+    }
+  ]
+}

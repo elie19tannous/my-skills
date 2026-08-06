@@ -1,0 +1,72 @@
+{
+  "$schema": "Plan Template v1.0 — MAGIC Data Agent Skills",
+  "$description": "Template for Mode 2 guided generation plans. The agent generates a plan JSON following this structure, which is consumed by an executor script (e.g., execute_cleaning_plan.py).",
+  "version": "1.0",
+  "generated_for": "<skill-name>",
+  "description": "<human-readable description of what this plan does>",
+  "input_path": "<path to input data file>",
+  "output_path": "<path for output data file>",
+
+  "columns": {
+    "<column_name>": {
+      "dtype": "<numeric|text|categorical|datetime|boolean>",
+      "issue": "<description of the issue detected>",
+      "strategy": "<strategy to apply>",
+      "params": {
+        "<param_name>": "<param_value>"
+      }
+    }
+  },
+
+  "global_operations": [
+    {
+      "operation": "<operation_name>",
+      "description": "<what this operation does>",
+      "params": {}
+    }
+  ],
+
+  "_valid_strategies": {
+    "data-cleaning": [
+      "median_imputation",
+      "mean_imputation",
+      "mode_imputation",
+      "knn_imputation",
+      "drop_rows",
+      "drop_column",
+      "fill_empty_string",
+      "fuzzy_match",
+      "parse_formats",
+      "custom_mapping",
+      "trim_whitespace",
+      "fix_encoding",
+      "remove_duplicates"
+    ],
+    "data-transformation": [
+      "pivot",
+      "melt",
+      "aggregate",
+      "merge",
+      "derive_column",
+      "type_cast",
+      "bin_numeric",
+      "one_hot_encode",
+      "text_to_features"
+    ],
+    "data-validation": [
+      "range_check",
+      "pattern_match",
+      "uniqueness_check",
+      "referential_integrity",
+      "cross_column_constraint"
+    ]
+  },
+
+  "_notes": [
+    "Agent generates this JSON, NOT arbitrary Python code",
+    "Executor scripts read and apply the plan",
+    "Each column entry describes ONE issue + ONE strategy",
+    "Global operations apply to the entire DataFrame",
+    "Generated plans are saved to workspace, not skill directory"
+  ]
+}

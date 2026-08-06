@@ -1,0 +1,44 @@
+{
+  "skill_name": "magic-linguistic-lexicon",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "sense-split-vs-lump",
+      "prompt": "I'm building a Yoruba word-sense-disambiguation eval set. Should I use granular senses (every nuance gets its own entry) or lumped (broad senses)?",
+      "expected_output": "Should: (1) corpus-design decision based on use case; (2) granular for fine-grained WSD eval; (3) lumped for easier inter-annotator agreement; (4) cite Atkins & Rundell for methodology; (5) explicit policy MUST be documented; (6) NEVER mix conventions within same lexicon.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["use case", "depends", "corpus-design"]},
+        {"type": "must_contain_one", "values": ["Atkins", "Rundell", "policy"]},
+        {"type": "must_contain_one", "values": ["consistent", "explicit policy", "document"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "mwe-glossary-rag",
+      "prompt": "We're building a RAG system for Hindi technical documents. Should we extract MWEs into a glossary?",
+      "expected_output": "Should: (1) YES — MWE / technical-term inventory drives glossary injection; (2) literal mistranslation of MWEs is dominant failure mode; (3) PARSEME Hindi data exists; (4) cross-reference magic-linguistic-semantics MWE handling; (5) variant handling for spelling / dialectal variants; (6) note technical vocabulary often pre-reform spellings.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["YES", "yes", "MWE", "glossary"]},
+        {"type": "must_contain_one", "values": ["literal mistranslation", "literal translation", "dominant failure"]},
+        {"type": "must_contain_one", "values": ["PARSEME", "magic-linguistic-semantics"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "wiktionary-as-gold-trap",
+      "prompt": "Wiktionary has Arabic dictionary entries. Can I treat them as gold for production?",
+      "expected_output": "Should: (1) NO — Wiktionary quality varies wildly; useful as starting source, not production gold; (2) recommend curator pass + native-speaker review; (3) DBnary as structured wrap; (4) PanLex bridges many bilingual dictionaries; (5) Arabic-specific: per-dialect coverage gaps; (6) ethics + community partnership for serious work.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "starting point", "varies"]},
+        {"type": "must_contain_one", "values": ["curator", "native-speaker", "review"]},
+        {"type": "must_contain_one", "values": ["DBnary", "PanLex", "alternative source"]}
+      ]
+    }
+  ]
+}

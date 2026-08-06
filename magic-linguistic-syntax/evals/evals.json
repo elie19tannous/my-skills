@@ -1,0 +1,47 @@
+{
+  "skill_name": "magic-linguistic-syntax",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pud-eval-leak-trap",
+      "prompt": "I have the Yoruba YTB UD treebank (~100 sentences). Can I fine-tune a parser on it and report parsing accuracy?",
+      "expected_output": "Should: (1) NO — YTB is too small for training and is essentially a test/eval resource; fine-tuning on it = leaked eval; (2) recommend cross-lingual transfer (English with Trankit) zero-shot; (3) report YTB as eval, not training; (4) note this is a common rookie mistake; (5) suggest agreement probes as alternative LLM eval since parser-on-LLM-output measures parsability not grammatical knowledge.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not", "don't", "leaked"]},
+        {"type": "must_contain_one", "values": ["cross-lingual transfer", "Trankit", "zero-shot"]},
+        {"type": "must_contain_one", "values": ["agreement probe", "BLiMP-style", "minimal pair"]},
+        {"type": "must_not_contain", "values": ["fine-tune YTB and report", "100 sentences is enough"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "transfer-source-by-typology",
+      "prompt": "I want to parse Khmer. Should I transfer from English (huge UD) or Vietnamese (12K UD)?",
+      "expected_output": "Should: (1) recommend Vietnamese — typological/geographic neighbor; (2) explain URIEL distance dominates over treebank size; (3) Vietnamese SEA contact + tone-adjacent; (4) Trankit > stanza for low-resource quality; (5) zero-shot from En likely ~45 UAS; from Vi likely ~55-60 UAS.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["Vietnamese", "vi"]},
+        {"type": "must_contain_one", "values": ["URIEL", "typolog"]},
+        {"type": "must_contain_one", "values": ["Trankit", "trankit"]},
+        {"type": "must_not_contain", "values": ["English is the better choice", "size matters more"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "agreement-probe-yoruba-tone",
+      "prompt": "How do I evaluate whether my Yoruba LLM has actually learned grammar (not just lexical patterns)?",
+      "expected_output": "Should: (1) recommend agreement probes / BLiMP-style minimal pairs; (2) Yoruba-specific phenomena: tone-marked semantics (preserve diacritics!), aspect, subject-verb agreement; (3) construct ≥ 100 minimal pairs per phenomenon; (4) compute log-likelihood difference; >0 = correct preference; (5) target >0.85 accuracy = solid; (6) note no published BLiMP-Yoruba — must build; (7) flag diacritic preservation requirement.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["agreement probe", "BLiMP", "minimal pair"]},
+        {"type": "must_contain_one", "values": ["tone", "diacritic"]},
+        {"type": "must_contain_one", "values": ["100", "log-likelihood", "log probability"]},
+        {"type": "must_contain_one", "values": ["build your own", "must build", "no published BLiMP"]}
+      ]
+    }
+  ]
+}

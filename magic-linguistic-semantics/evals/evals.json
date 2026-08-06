@@ -1,0 +1,44 @@
+{
+  "skill_name": "magic-linguistic-semantics",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "wordnet-coverage-yoruba",
+      "prompt": "I'm building a RAG system that uses WordNet synonym expansion for query broadening. Will it work for Yoruba documents?",
+      "expected_output": "Should: (1) NO — Yoruba OMW coverage is ~5K synsets vs Princeton's 117K (~4%); (2) synonym expansion will silently fail on most queries; (3) recommend cross-lingual embedding similarity (LaBSE / SONAR) instead; (4) note the same gap applies to most class 0-2 OMW entries.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not", "won't work", "will fail"]},
+        {"type": "must_contain_one", "values": ["LaBSE", "SONAR", "cross-lingual embedding"]},
+        {"type": "must_not_contain", "values": ["WordNet works for most languages", "OMW is comprehensive"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "mwe-idiom-mt-failure",
+      "prompt": "Our En-Es MT model translates 'kick the bucket' literally to 'patear el cubo'. How do I fix this?",
+      "expected_output": "Should: (1) diagnose as MWE / idiom problem (compositional translation fails); (2) recommend PARSEME-tagged MT data; (3) pre-tokenize idiomatic MWEs as units OR inline tag during training; (4) target Spanish equivalent: 'estirar la pata'; (5) note this is the dominant low-resource MT failure mode for idiomatic text; (6) mention bilingual idiom dictionary as supplementary fix.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["MWE", "idiom", "multi-word"]},
+        {"type": "must_contain_one", "values": ["PARSEME", "pre-tokenize", "tag"]},
+        {"type": "must_contain_one", "values": ["dominant", "common", "frequent"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "cross-lingual-srl-alignment",
+      "prompt": "I want to compare semantic-role-labeling output between my English and Spanish MT systems. Can I just use English PropBank frames on the Spanish output?",
+      "expected_output": "Should: (1) NO — English PropBank frames don't 1:1 align with Spanish AnCora-style frames; (2) recommend Predicate Matrix for cross-lingual alignment; (3) note frame-element labels may differ; (4) explain that reporting 'SRL F1' cross-lingually without alignment is misleading; (5) Spanish has Spanish FrameNet (~150 frames) — use it directly; (6) AnCora SRL is the Spanish PropBank equivalent.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "don't", "do not"]},
+        {"type": "must_contain_one", "values": ["Predicate Matrix", "alignment", "AnCora"]},
+        {"type": "must_contain_one", "values": ["F1 cross-lingually", "comparable", "alignment scheme", "misleading"]}
+      ]
+    }
+  ]
+}

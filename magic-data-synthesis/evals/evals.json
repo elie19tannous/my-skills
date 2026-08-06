@@ -1,0 +1,140 @@
+{
+  "skill_name": "magic-data-synthesis",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "fill_missing_definitions",
+      "prompt": "You have a CSV file at `workspace/data/input/items.csv` with 100 rows:\n- `text` (string, complete — product items)\n- `category` (string, complete)\n- `label` (string, complete)\n- `description` (string, 30 rows are null/empty)\n\nThe `description` column has 30 missing values. You need to generate English descriptions for these items based on the text, category, and label.\n\nUse the MAGIC data synthesis skill to fill in the missing descriptions.",
+      "expected_output": "Should: (1) assess feasibility and confirm LLM synthesis is appropriate (not regex/code); (2) select DataDesigner as the synthesis engine; (3) pick or adapt a recipe template from templates/; (4) run data-designer preview before full synthesis; (5) respect the PAUSE gate by showing cost estimate and samples before proceeding; (6) validate output quality after synthesis to confirm no nulls or sentinels remain",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["DataDesigner", "data-designer", "data_designer"]},
+        {"type": "must_contain_one", "values": ["preview", "sample", "dry-run"]},
+        {"type": "must_contain_one", "values": ["cost estimate", "cost", "budget"]},
+        {"type": "must_contain_one", "values": ["template", "recipe"]},
+        {"type": "must_contain_one", "values": ["validate", "quality check", "non-empty"]},
+        {"type": "must_not_contain", "values": ["use regex to fill", "regex replace", "hardcoded values", "manual fill"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "example_generation",
+      "prompt": "You have a structured dataset at `workspace/data/checkpoints/items.csv` with 500 rows:\n- `text` (string — item text entry)\n- `category` (string — category)\n- `label` (string — label)\n- `description` (string — English description, complete)\n- `summary` (string — 85 rows contain \"X\" sentinel placeholder)\n\nThe `summary` column has 85 rows with \"X\" (sentinel value meaning \"placeholder — needs generation\"). You need to generate natural example summaries for these rows.\n\nEach summary should demonstrate natural usage of the item in context.\n\nUse the MAGIC data synthesis skill to generate the missing examples.",
+      "expected_output": "Should: (1) identify 'X' as a sentinel value (not NaN) requiring synthesis; (2) configure DataDesigner with seed columns text, category, label; (3) write a prompt that explicitly requests contextually appropriate output; (4) use preview to verify output before scaling; (5) estimate cost and present at PAUSE gate; (6) save output as MAGIC checkpoint with provenance metadata",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["sentinel", "\"X\"", "placeholder"]},
+        {"type": "must_contain_one", "values": ["DataDesigner", "data-designer"]},
+        {"type": "must_contain_one", "values": ["preview", "verify", "sample"]},
+        {"type": "must_contain_one", "values": ["checkpoint", "provenance", "metadata"]},
+        {"type": "must_not_contain", "values": ["use fill-missing mode", "generate in English only", "skip sentinel detection"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "quality_gated_synthesis",
+      "prompt": "You have a dataset at `workspace/data/checkpoints/items_to_describe.csv` with 50 rows:\n- `text` (string — item text entry)\n- `category` (string — category)\n- `label` (string — label)\n- `domain` (string — one of: \"daily\", \"formal\", \"technical\", \"informal\")\n\nYou need to generate HIGH-QUALITY English descriptions with quality scoring. Requirements:\n1. Generate a `description` column with English descriptions\n2. Add quality scoring with rubrics for: accuracy, completeness, register-appropriateness\n3. Only accept descriptions scoring >= 70% across all rubrics\n4. Re-generate any rows that fail the quality threshold\n\nUse the MAGIC data synthesis skill with DataDesigner's LLMJudge capability.",
+      "expected_output": "Should: (1) add LLMJudgeColumnConfig to the recipe for quality scoring; (2) define rubrics with meaningful score scales (accuracy, completeness, register) not generic 'quality'; (3) use extract_dd_quality() to interpret judge scores; (4) apply quality threshold filtering mean_100 >= 70%; (5) iterate on prompt when quality is below threshold; (6) checkpoint only after quality gate passes",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["LLMJudge", "judge", "LLMJudgeColumnConfig"]},
+        {"type": "must_contain_one", "values": ["rubric", "accuracy", "completeness"]},
+        {"type": "must_contain_one", "values": ["extract_dd_quality", "mean_100", "threshold"]},
+        {"type": "must_contain_one", "values": ["70%", "0.7", "pass rate"]},
+        {"type": "must_contain_one", "values": ["iterate", "re-generate", "retry"]},
+        {"type": "must_not_contain", "values": ["skip quality", "no judge", "generic quality"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "fill_missing_values",
+      "prompt": "You have a CSV file at `data/input/products.csv` with 500 rows and the following columns:\n- `product_id` (integer, complete)\n- `name` (string, complete)\n- `category` (string, complete — values: \"Electronics\", \"Clothing\", \"Home\", \"Food\")\n- `description` (string, 120 rows are null/empty)\n- `price` (float, complete)\n\nThe `description` column has 120 missing values (NaN). You need to generate plausible product descriptions for these missing rows based on the product name, category, and price.\n\nUse the MAGIC data synthesis skill to fill in the missing descriptions.",
+      "expected_output": "Should: (1) assess feasibility and confirm LLM synthesis is needed; (2) use fill-missing mode since values are NaN; (3) declare depends_on context columns (name, category, price); (4) run sample preview before full synthesis; (5) present cost estimate before proceeding; (6) validate output and produce metadata columns with synthesis provenance",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["fill-missing", "fill_missing", "NaN", "null"]},
+        {"type": "must_contain_one", "values": ["depends_on", "seed column", "context column", "reference column", "based on", "input column", "name, category", "using the", "name", "category", "price", "existing columns", "other columns", "product name"]},
+        {"type": "must_contain_one", "values": ["preview", "sample", "dry-run"]},
+        {"type": "must_contain_one", "values": ["cost", "estimate", "budget"]},
+        {"type": "must_contain_one", "values": ["validate", "checkpoint", "metadata"]},
+        {"type": "must_not_contain", "values": ["fill-sentinels", "transform mode", "skip preview"]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "generate_new_column",
+      "prompt": "You have a CSV file at `data/input/articles.csv` with 2,000 rows and the following columns:\n- `article_id` (integer, complete)\n- `title` (string, complete)\n- `body` (string, complete — full article text, 200-5000 characters)\n- `author` (string, complete)\n- `publish_date` (string, complete — ISO 8601 dates)\n- `tags` (string, 800 rows contain \"TBD\" or \"N/A\" as placeholder values, 200 rows are null)\n\nYou need to:\n1. Replace the sentinel values (\"TBD\", \"N/A\") and nulls in `tags` with appropriate tags based on article content\n2. Generate a new `summary` column (does not exist yet) containing a 2-3 sentence summary of each article\n\nBoth columns should be generated using LLM synthesis.",
+      "expected_output": "Should: (1) identify tags has both sentinel values and nulls and use fill-sentinels mode; (2) identify summary is a new column requiring transform mode; (3) declare correct depends_on for both columns; (4) configure sentinel patterns for TBD and N/A; (5) run dry-run to estimate cost before proceeding; (6) validate output quality after synthesis",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["fill-sentinels", "sentinel", "TBD"]},
+        {"type": "must_contain_one", "values": ["transform", "new column", "all rows", "generate", "summary column", "create a", "add a", "every row", "2000 rows", "entire"]},
+        {"type": "must_contain_one", "values": ["depends_on", "title", "body"]},
+        {"type": "must_contain_one", "values": ["dry-run", "cost estimate", "budget"]},
+        {"type": "must_contain_one", "values": ["validate", "quality", "sample"]},
+        {"type": "must_not_contain", "values": ["fill-missing for tags", "ignore sentinels", "skip dry-run"]}
+      ]
+    },
+    {
+      "id": 6,
+      "name": "batch_synthesis_pipeline",
+      "prompt": "You have a complex dataset at `data/input/real_estate.csv` with 10,000 rows:\n- `listing_id`, `address`, `city`, `state`, `zip_code`, `bedrooms`, `bathrooms`, `sqft`, `price` (all complete)\n- `listing_description` (string, 3,000 rows are null, 500 rows contain \"TBD\")\n- `neighborhood_score` (float, null for all rows — new column)\n- `property_type` (string, 1,000 rows contain \"???\" or \"N/A\")\n\nYou also have `data/reference/neighborhoods.csv` with: `zip_code`, `neighborhood_name`, `walkability_score`, `school_rating`, `crime_index`.\n\nRequirements:\n1. Enrich `neighborhood_score` from the reference dataset first (join on zip_code, compute as walkability_score * 0.4 + school_rating * 0.3 + (10 - crime_index) * 0.3)\n2. Fill `property_type` sentinels using LLM classification\n3. Generate `listing_description` for missing/sentinel rows using LLM\n4. Budget: maximum $15.00 for the entire pipeline\n5. Validate all synthesized columns",
+      "expected_output": "Should: (1) use reference lookup / expression strategy (not LLM) for neighborhood_score since it is deterministic; (2) build multi-column config with correct dependency ordering; (3) use fill-sentinels mode with patterns TBD, ???, N/A; (4) set max-cost budget and run dry-run first; (5) run preview before full 10K run; (6) configure resume capability for cost limit interruption",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["expression", "deterministic", "formula", "enrich_from_reference"]},
+        {"type": "must_contain_one", "values": ["fill-sentinels", "???", "TBD"]},
+        {"type": "must_contain_one", "values": ["max-cost", "budget", "$15"]},
+        {"type": "must_contain_one", "values": ["dry-run", "preview", "sample", "test run", "small batch", "test first", "trial", "estimate"]},
+        {"type": "must_contain_one", "values": ["resume", "checkpoint", "partial"]},
+        {"type": "must_not_contain", "values": ["LLM for neighborhood_score", "skip budget", "no resume"]}
+      ]
+    },
+    {
+      "id": 7,
+      "name": "local_reasoning_model_trap",
+      "difficulty": "hard",
+      "prompt": "I'm running LM Studio with Qwen3-8B locally. I want to use it to generate example summaries for my dataset at workspace/data/input/items.csv (500 rows, columns: text, category, label). Configure the synthesis to use my local model at http://localhost:1234/v1.",
+      "expected_output": "Should: (1) configure DataDesigner with OpenAI-compatible endpoint at localhost:1234; (2) set extract_reasoning_content=True because Qwen is a reasoning model that puts output in the thinking field; (3) set max_tokens >= 2048 because reasoning models use 3000+ tokens internally before producing the answer; (4) verify output in preview; (5) NOT assume enable_thinking:false works — LM Studio Qwen ignores this flag",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["localhost:1234", "local model", "LM Studio", "OpenAI-compatible"]},
+        {"type": "must_contain_one", "values": ["extract_reasoning_content", "reasoning", "thinking field"]},
+        {"type": "must_contain_one", "values": ["max_tokens", "2048", "token limit", "reasoning tokens"]},
+        {"type": "must_contain_one", "values": ["preview", "verify", "sample"]},
+        {"type": "must_not_contain", "values": ["enable_thinking: false is sufficient", "default max_tokens", "skip reasoning config"]}
+      ]
+    },
+    {
+      "id": 8,
+      "name": "datadesigner_not_installed_fallback",
+      "difficulty": "edge",
+      "prompt": "I need to generate English descriptions for 50 items in workspace/data/input/items.csv. The file has columns: text, category, label. The description column is entirely empty. Generate the descriptions.",
+      "expected_output": "Should: (1) identify this as a synthesis task requiring LLM; (2) check if DataDesigner is installed and find it missing; (3) provide clear install instructions (pip install data-designer); (4) check for API key availability; (5) NOT crash, give up, or attempt regex/hardcoded definitions; (6) offer a clear recovery path — install DD then proceed with the standard workflow",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["DataDesigner", "data-designer", "not installed", "missing"]},
+        {"type": "must_contain_one", "values": ["pip install", "install", "pip install data-designer"]},
+        {"type": "must_contain_one", "values": ["API key", "GOOGLE_API_KEY", "environment variable", "configure"]},
+        {"type": "must_not_contain", "values": ["cannot help", "impossible", "hardcode definitions", "use regex"]}
+      ]
+    },
+    {
+      "id": 9,
+      "name": "llm_backend_failure_recovery",
+      "difficulty": "hard",
+      "prompt": "I was generating English descriptions for items using DataDesigner with a local LM Studio model (Qwen 3.5-35B). After generating 3 of 10 rows, I got 'Failed to load model' errors — LM Studio seems to have unloaded the model. The data-designer create command exited with error code 1. What should I do?",
+      "expected_output": "Should: (1) suggest checking for partial results in tmp-partial-parquet-files/; (2) guide saving/recovering the 3 already-generated rows; (3) suggest restarting or reloading the model in LM Studio; (4) offer Gemini as a fallback if GOOGLE_API_KEY is available; (5) explain how to resume for the remaining 7 rows; (6) NOT suggest starting over from scratch",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["partial", "already generated", "save", "checkpoint", "tmp-partial", "recover", "batch"]},
+        {"type": "must_contain_one", "values": ["restart", "reload", "LM Studio", "re-load", "load the model", "start LM Studio"]},
+        {"type": "must_contain_one", "values": ["Gemini", "cloud", "fallback", "alternative provider", "GOOGLE_API_KEY", "switch provider"]},
+        {"type": "must_contain_one", "values": ["resume", "remaining", "7 rows", "re-run", "rest of", "continue"]},
+        {"type": "must_not_contain", "values": ["start over from scratch", "lose all progress", "cannot recover", "impossible to resume"]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "skill_name": "magic-linguistic-transfer",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "close-pair-cantonese-from-mandarin",
+      "prompt": "I want to extend Qwen-2 (Mandarin-strong) to Cantonese. What's the LoRA config?",
+      "expected_output": "Should: (1) note URIEL Mandarin-Cantonese ≈ 0.20 — close pair; (2) recommend LoRA r=8-16 (NOT high rank — pair is close); (3) attention-only or attention+all-linear OK; (4) source-mix 10-15% Mandarin to prevent forgetting; (5) Unsloth single-GPU recommended; (6) note Han-vocab overlap large — vocab extension may be unnecessary; (7) brief — close-pair is the easy case.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["r=8", "r=16", "rank 8", "rank 16", "low rank"]},
+        {"type": "must_contain_one", "values": ["URIEL", "0.20", "close pair"]},
+        {"type": "must_contain_one", "values": ["10%", "15%", "source-mix", "source-language"]},
+        {"type": "must_not_contain", "values": ["r=128", "r=64", "very distant"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "distant-pair-inuktitut-from-english",
+      "prompt": "I want to fine-tune Llama-3 for Inuktitut. Config?",
+      "expected_output": "Should: (1) flag URIEL English-Inuktitut ~0.78 — VERY DISTANT; (2) recommend NOT single-source from English; (3) multilingual base (NLLB-200) + HyperOfa vocab extension + LoRA r=64+; (4) all-linear target modules; (5) save embed_tokens (vocab extended); (6) source-mix 15-20%; (7) note continued pretraining is NOT viable (insufficient target data); (8) flag polysynthetic morphology — fertility audit + length-ratio in bitext.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["distant", "DISTANT", "0.78", "polysynth"]},
+        {"type": "must_contain_one", "values": ["multilingual base", "NLLB", "BLOOM"]},
+        {"type": "must_contain_one", "values": ["r=64", "r=128", "rank 64", "high rank"]},
+        {"type": "must_contain_one", "values": ["HyperOfa", "vocab extension"]},
+        {"type": "must_not_contain", "values": ["just use English", "r=8", "attention-only"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "polysynthetic-no-data",
+      "prompt": "I have ~5K En-Cherokee parallel pairs and basically no Cherokee monolingual. How do I fine-tune?",
+      "expected_output": "Should: (1) flag Class 0-1 + minimal data — extreme low-resource case; (2) HyperOfa vocab extension on multilingual base (NLLB / BLOOM); (3) LoRA r=64+; (4) NOT continued pretraining (overfits with that little data); (5) acknowledge ceiling on quality — set expectations; (6) recommend community partnership for more data; (7) heavy ethics routing (Cherokee Nation language program + AmericasNLP).",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["HyperOfa", "vocab extension"]},
+        {"type": "must_contain_one", "values": ["multilingual base", "NLLB", "BLOOM"]},
+        {"type": "must_not_contain_one", "values": ["continued pretrain", "full fine-tune"]},
+        {"type": "must_contain_one", "values": ["Cherokee Nation", "community", "AmericasNLP", "ethics"]},
+        {"type": "must_contain_one", "values": ["ceiling", "limitations", "modest", "expectations"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "multilingual-fine-tune-african",
+      "prompt": "I'm fine-tuning Llama-3 on 8 African languages simultaneously (Swahili, Yoruba, Igbo, Hausa, Twi, Wolof, Amharic, Kinyarwanda). Config?",
+      "expected_output": "Should: (1) recommend LLaMA-Factory > Unsloth (multi-GPU + complex multilingual sampling); (2) sampling-weight tuning α=0.3-0.5 (upweight low-resource); (3) AfroLM or NLLB-200 base preferable to vanilla Llama-3 (better African coverage); (4) per-language vocab-extension audit (AfroLM may already cover); (5) source-mix English ~15%; (6) per-language eval cadence; (7) recommend LoRA r=32 (moderate distances across pairs); (8) language tags `<lang_xx>` as user-defined symbols.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["LLaMA-Factory", "multi-GPU"]},
+        {"type": "must_contain_one", "values": ["sampling-weight", "α=", "alpha=", "upweight"]},
+        {"type": "must_contain_one", "values": ["AfroLM", "NLLB", "Aya"]},
+        {"type": "must_contain_one", "values": ["per-language eval", "monitor per", "language tags"]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "commercial-forgetting-protection",
+      "prompt": "We're adding Vietnamese to our commercial English chatbot (Llama-3-8B). English quality must NOT degrade. Strategy?",
+      "expected_output": "Should: (1) flag commercial constraint = strong forgetting mitigation; (2) Fisher-weighted regularization (EWC) — strongest mitigation; (3) source-language mix 20% English (not just 10-15%); (4) per-step English eval; (5) LoRA (NOT full fine-tune — too forgetting-prone); (6) URIEL En-Vi distance ~0.58 — moderate, LoRA r=32; (7) Unsloth viable single-GPU; (8) explicit checkpoint-tagging by English perplexity to allow rollback.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["EWC", "Fisher", "regularization"]},
+        {"type": "must_contain_one", "values": ["20%", "20 percent"]},
+        {"type": "must_contain_one", "values": ["LoRA", "adapter"]},
+        {"type": "must_not_contain_one", "values": ["full fine-tune is fine", "skip mitigation"]},
+        {"type": "must_contain_one", "values": ["English perplexity", "monitor source", "source eval"]}
+      ]
+    }
+  ]
+}

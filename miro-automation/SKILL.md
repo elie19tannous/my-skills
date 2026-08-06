@@ -1,14 +1,16 @@
 ---
 name: miro-automation
 description: "Automate Miro tasks via Rube MCP (Composio): boards, items, sticky notes, frames, sharing, connectors. Always search tools first for current schemas."
-risk: critical
-source: community
-date_added: "2026-02-27"
+requires:
+  mcp: [rube]
+category: design
 ---
 
 # Miro Automation via Rube MCP
 
 Automate Miro whiteboard operations through Composio's Miro toolkit via Rube MCP.
+
+**Toolkit docs**: [composio.dev/toolkits/miro](https://composio.dev/toolkits/miro)
 
 ## Prerequisites
 
@@ -205,10 +207,5 @@ Automate Miro whiteboard operations through Composio's Miro toolkit via Rube MCP
 | Get members | MIRO_GET_BOARD_MEMBERS | board_id |
 | Get connectors | MIRO_GET_CONNECTORS2 | board_id |
 
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*

@@ -1,156 +1,307 @@
 ---
 name: learn
-description: Help a user learn a topic through adaptive tutoring, lesson planning, practice, retrieval checks, explanations, study guides, or exercises. Use when the user asks to learn, understand, practice, drill, review, study, or be tutored on something.
-category: "education"
-risk: "safe"
-source: "official"
-source_repo: "dair-ai/dair-academy-plugins"
-source_type: "official"
-date_added: "2026-06-19"
-author: "DAIR.AI"
-license: "MIT"
-license_source: "https://github.com/dair-ai/dair-academy-plugins/blob/main/README.md#license"
-tags:
-  - dair-academy
-  - ai
-  - workflow
-tools:
-  - claude-code
-  - codex-cli
-  - cursor
+license: MIT
+description: >-
+  Knowledge compiler. Extracts patterns, decisions, and anti-patterns from
+  completed campaigns and evolve cycles, then compiles them into structured wiki
+  pages that integrate with existing knowledge rather than appending isolated
+  files. Implements flush→compile→lint pipeline. Auto-triggered by /postmortem
+  and /evolve Phase 6.
+user-invocable: true
+auto-trigger: false
+trigger_keywords:
+  - learn
+  - extract patterns
+  - learn from that
+  - save what worked
+  - patterns from campaign
+last-updated: 2026-05-07
 ---
 
-## When to Use
+# /learn — Knowledge Compiler
 
-Use when this workflow matches the user request: Help a user learn a topic through adaptive tutoring, lesson planning, practice, retrieval checks, explanations, study guides, or exercises. Use when the user asks to learn, understand, practice, drill, review, study, or be tutored on something.
+## Orientation
 
+**Use when:** You have a completed campaign or evolve cycle and want to compile
+its findings into the project's growing knowledge wiki — so future sessions
+start smarter, not from scratch.
 
-_Source: [dair-ai/dair-academy-plugins](https://github.com/dair-ai/dair-academy-plugins) (MIT)._Use this skill when the user wants to learn a topic or improve a skill. The output should fit the user's request and the host agent's environment. Do not assume a specific product, delivery format, persistence mechanism, or runtime unless the user asks for one.
+**Don't use when:** You want a structured incident analysis first (use `/postmortem`
+— run it before `/learn`); you haven't finished any campaigns (nothing to compile);
+you want a context transfer only (use `/session-handoff`).
 
-## Core Workflow
+**Key difference from appending:** `/learn` doesn't create isolated per-campaign
+files. It integrates new findings into existing wiki pages — updating evidence
+lists, raising confidence where a pattern is confirmed again, and flagging
+contradictions. A wiki is a compiler; a log is an interpreter.
 
-1. Diagnose the learner's current level and goal.
-2. Choose a small next learning objective.
-3. Teach with concrete examples before abstractions.
-4. Give the learner an active task, question, or exercise.
-5. Provide immediate feedback and correction.
-6. Record or summarize the next recommended step when useful.
+## Invocation Forms
 
-For very small questions, answer directly and include one quick check for understanding. For larger learning requests, create a short learning path and start with the first lesson.
+```
+/learn                              — most recently completed campaign
+/learn {slug}                       — specific campaign by slug
+/learn {file-path}                  — specific campaign file path
+/learn --from-evolve {target}       — compile from /evolve pattern library
+/learn --from-evolve {target} --cycle {n}  — specific evolve cycle only
+/learn --lint                       — lint-only pass (no new extraction)
+/learn --compile                    — re-compile staging area into wiki (no new extraction)
+/learn --memory                     — compile semantic memory blocks from planning artifacts
+/learn --doc-sync                   — process doc-sync queue into .planning/doc-sync/latest.md
+```
 
-## Diagnostic
+## Inputs
 
-Before building a full plan, infer what you can from the user's prompt. Ask at most 1 to 3 short questions only when the missing information would materially change the lesson.
+1. A campaign slug, file path, evolve target, or "most recent" resolution
+2. Corresponding postmortem in `.planning/postmortems/` (optional)
+3. `.planning/telemetry/audit.jsonl` filtered to this campaign (optional)
+4. For `--from-evolve`: `.planning/evolve/{target}/pattern-library.md`
 
-Useful diagnostic dimensions:
+## Protocol
 
-- Current familiarity
-- Goal or use case
-- Preferred depth
-- Time available
-- Format preference, if the user has one
+### Step 1: RESOLVE TARGET
 
-If the user wants to begin immediately, make a reasonable assumption and state it briefly.
+**If `/learn` (no argument):**
+- Glob `.planning/campaigns/completed/*.md` or `.planning/campaigns/*.md`
+  where `Status: completed`
+- Sort by modification time descending, take most recent
+- If none found: "No completed campaigns found. Run /learn after a campaign completes." Stop.
 
-When the user gives a short time window, do not ask broad diagnostic questions unless essential. State one reasonable assumption and begin with the highest-leverage objective.
+**If `/learn {slug}`:**
+- Search `.planning/campaigns/` for a file whose name contains `{slug}`
+- Check `.planning/campaigns/completed/` if not found in active
+- If still not found: "No campaign found matching '{slug}'."
 
-## Learning Design
+**If `/learn --from-evolve {target}`:**
+- Read `.planning/evolve/{target}/pattern-library.md` — this is the source
+- If `--cycle {n}`: filter to sections beginning with `## Cycle {n}` only
+- If file not found: "No evolve pattern library for '{target}'." Stop.
 
-Keep the learner in the right difficulty band:
+**If `/learn --doc-sync`:** Run:
+```
+node hooks_src/doc-sync.js
+```
+Then review `.planning/doc-sync/latest.md`. Stop after reporting the queue count,
+files surfaced, skipped deleted files, and report path. Do not run campaign
+extraction unless the user separately asks for it.
 
-- Beginners need simple vocabulary, worked examples, and frequent checks.
-- Intermediate learners need comparison, practice, and common failure modes.
-- Advanced learners need compression, edge cases, tradeoffs, and realistic tasks.
+**If `/learn --lint`, `/learn --compile`, or `/learn --memory`:** Skip to Step 4, 5, or 5.5 respectively.
 
-Teach one useful concept at a time. Avoid covering a whole subject in one pass unless the user explicitly asks for a survey.
+### Step 2: GATHER SOURCES
 
-Use active learning:
+For campaign-based runs only (skip for `--from-evolve`):
 
-- Retrieval questions
-- Prediction prompts
-- Worked examples followed by a similar problem
-- Debugging or critique tasks
-- Short applied exercises
-- Spaced review of earlier ideas
+**Campaign file (required):**
+- Full content — direction, phases, Decision Log, circuit breaker activations
 
-Make feedback specific. Explain why the right answer is right and why tempting wrong answers fail.
+**Postmortem (optional):**
+- Search `.planning/postmortems/` for files matching `*{slug}*`
+- If not found: note "Postmortem not found — proceeding without it" and continue
 
-## Output Formats
+**Audit telemetry (optional):**
+- Read last 200 lines of `.planning/telemetry/audit.jsonl`
+- Filter entries that match the campaign slug or its active period
+- If none: note "No audit telemetry found for this campaign"
 
-Choose the lightest format that satisfies the request:
+### Step 3: FLUSH
 
-- Conversational lesson for quick tutoring
-- Study plan for multi-session learning
-- Markdown notes for durable reference
-- Exercises or quizzes for practice
-- Code examples for programming topics
-- Diagrams or tables when they clarify relationships
-- Files, notebooks, slides, or web pages only when requested or clearly useful
+Extract raw findings and write to staging.
 
-Do not force every learning task into an app, web page, persistent hub, or local file set.
+**For campaign sources:**
 
-For multi-day plans, include cadence, daily focus, active practice, and review checkpoints. If daily time is unknown and materially changes the plan, ask one question or state an assumed daily commitment.
+Extract four categories:
 
-## Lesson Structure
+**A. Successful Patterns** — approaches that demonstrably worked (phases completed without rework, postmortem positives, no reverts).
+Per pattern: `name`, `mechanism` (what caused success), `evidence` (phase/commit/entry), `topic` (infer from subject matter), `applicability`.
 
-A strong lesson usually includes:
+**B. Anti-patterns** — what was tried and failed (rework phases, circuit breaker trips, quality gate blocks, reverts).
+Per pattern: `name`, `what-was-tried`, `failure-mode`, `evidence`, `topic`, `avoidance`.
 
-- A short objective
-- A concrete example or scenario
-- The principle behind the example
-- A guided practice step
-- A knowledge check
-- Feedback or answer key
-- A next step
+**C. Key Decisions** — from Decision Log or inferred from phase descriptions.
+Per decision: `what`, `rationale`, `outcome` (completed or rework).
 
-Keep explanations concise. Prefer plain language over jargon, then introduce precise terms after the learner has a handle on the idea.
+**D. Quality Rule Candidates** — only generate if: specific regex, applies to a specific file pattern, occurred more than once or was severe. Per candidate: regex, file pattern, trigger message, confidence (`high`/`medium`/`low` — skip `low`).
 
-## Practice And Assessment
+**For evolve sources:**
 
-Every substantial lesson should include at least one way for the learner to test themselves.
+Parse the pattern library's sections. For each pattern record:
+- `name`: section heading
+- `mechanism`: "**Mechanism:**" field
+- `delta`: "**Delta:**" field
+- `topic`: infer from "**Axis class:**" (e.g., `orientation_precision` → `skill-orientation`)
+- `applies-to`: "**Applies to:**" field
+- `confidence`: "**Confidence:**" field
+- `evidence`: source file + cycle number
 
-For explicit practice requests, lead with a task before a long explanation, then provide targeted feedback or an answer key.
+**Staging write:**
 
-Good checks include:
+Create `.planning/wiki/_staging/` if it does not exist.
+Write staged findings to `.planning/wiki/_staging/{source-slug}-{timestamp}.jsonl` —
+one JSON record per finding (newline-delimited).
 
-- Multiple-choice questions with unambiguous distractors
-- Short answer prompts
-- Fill-in-the-blank exercises
-- Explain-the-mistake questions
-- Code tracing or prediction
-- Mini projects with clear success criteria
+If zero findings are extractable: write staging file with a single `{"type":"empty","source":"{slug}"}` record and note "Campaign may have been too brief."
 
-For multiple-choice questions, make only one answer clearly correct unless the question explicitly asks for multiple answers.
+### Step 4: COMPILE
 
-For programming topics, avoid pretending to execute arbitrary code unless the environment actually runs it. Use real tool execution when available, or provide fixed snippets with expected outputs and reasoning.
+Integrate staged findings into wiki pages.
 
-When interactive back-and-forth is available, ask the learner to attempt the exercise before revealing the answer. For self-contained responses, include the answer key after the task.
+Create `.planning/wiki/` if it does not exist.
 
-## Adaptation
+For each staged finding:
+1. Determine the wiki page: `.planning/wiki/{topic}.md` where `topic` is the finding's `topic` field (normalized to kebab-case).
+2. Read the wiki page if it exists.
+3. **If the page exists and contains a section for this pattern** (match on `## {name}`):
+   - Append the new source to the `**Evidence:**` list
+   - Update `**Last confirmed:**` to today
+   - If new confidence >= existing confidence: raise it
+   - If new evidence contradicts the existing mechanism: add a `**Conflict:**` field — do not silently overwrite
+4. **If the page exists but has no section for this pattern:**
+   - Append a new section with the full finding
+5. **If the page does not exist:**
+   - Create it with the frontmatter template (see below) and the finding as the first section
 
-Use the learner's answers and mistakes to adjust:
+**Wiki page format:**
+```markdown
+---
+topic: {slug}
+last-compiled: {ISO date}
+sources: {N}
+---
 
-- Slow down and add examples when confusion appears.
-- Increase difficulty when answers are consistently correct.
-- Revisit misconceptions explicitly.
-- Connect new material to the learner's stated goal.
+# {Topic Title}
 
-When continuing from earlier work, preserve useful context from existing notes, files, chat history, or user-provided progress. Do not assume a specific persistence mechanism.
+## {Pattern Name}
+**Mechanism:** {what causes success/failure}
+**Evidence:** {source-1 (date)}, {source-2 (date)}, ...
+**Confidence:** high/medium/low
+**Last confirmed:** {ISO date}
+**Applies to:** {scope}
+```
 
-## Quality Bar
+After compiling all findings: update `.planning/wiki/index.md` —
+one line per wiki page: `- [{topic}]({topic}.md) — {one-line description}`.
+Create `index.md` if it does not exist.
 
-Before finishing, check that:
+### Step 5: LINT
 
-- The lesson matches the learner's level and goal.
-- The explanation has a concrete example.
-- The practice task is solvable from the lesson.
-- The answer or feedback is included when appropriate.
-- The next step is clear.
-- Any generated files or code are actually usable in the target environment.
+Scan all `.planning/wiki/*.md` pages (skip `index.md`).
 
+**Contradiction check:** For each page, if two sections contain opposing directives
+("always X" vs "never X", "prefer X" vs "avoid X"), flag as:
+`CONFLICT: [{page}] {section-A} contradicts {section-B} — requires human resolution`
 
-## Limitations
+**Staleness check:** Sections with `**Last confirmed:**` older than 60 days are flagged as:
+`STALE: [{page}] {section} — last confirmed {date}, consider re-testing`
 
-- Requires the upstream tool, account, API key, or local setup when the workflow names one.
-- Does not authorize destructive, production, paid, or external-message actions without explicit user approval.
-- Validate generated artifacts or recommendations against the user's real sources before treating them as final.
+**Coverage check:** Warn if a wiki page has fewer than 2 sections — single-entry pages are fragile.
+
+Lint results are reported in the summary. Lint does not modify wiki pages.
+
+### Step 5.5: COMPILE SEMANTIC MEMORY BLOCKS
+
+Run a safe deterministic memory compile pass:
+
+```
+node scripts/memory-compile.js compile
+```
+
+This writes compact semantic blocks to `.planning/memory/blocks/` and updates
+`.planning/memory/index.json`. Blocks must include `id`, `type`, `scope`,
+`owner`, `confidence`, `last_verified`, `sources`, and `body`.
+
+For lint-only memory checks, run:
+
+```
+node scripts/memory-compile.js lint
+```
+
+For agent context loading, use scoped listing instead of rereading full
+histories:
+
+```
+node scripts/memory-compile.js list --scope verification
+node scripts/memory-compile.js list --query "Fleet readiness"
+```
+
+Memory block lint must pass before calling the compile successful. Missing
+source paths, stale blocks, missing required block types, and contradictions are
+reported as actionable failures.
+
+### Step 6: APPEND QUALITY RULES
+
+For each high/medium-confidence rule candidate in the staged findings:
+1. Read `.claude/harness.json` (create with `{}` if missing)
+2. Initialize `qualityRules.custom` to `[]` if absent
+3. Skip if a rule with the same `pattern` already exists
+4. Append: `{ "name": "auto-{slug}-{N}", "pattern": "{regex}", "filePattern": "{glob}", "message": "Learned from {slug}: {message}" }`
+5. Write updated harness.json
+
+Skip low-confidence rules.
+
+### Step 7: OUTPUT SUMMARY
+
+```
+=== /learn: {Source} ===
+Mode: {campaign | evolve-{target} | lint-only | compile-only}
+Sources: {campaign path | evolve path} | postmortem {path or "not found"} | {N} audit entries
+Staged: {N} findings → .planning/wiki/_staging/{file}
+Compiled: {N} patterns integrated | {M} new wiki sections | {K} existing sections updated
+Wiki pages: .planning/wiki/{topic-1}.md, ...
+Lint: {conflicts found | clean} | {stale entries} | {coverage warnings}
+Memory blocks: {N} compiled | lint {PASS|FAIL} | .planning/memory/index.json
+Rules added to harness.json: {M} ({K} skipped — already exist)
+Next: review .planning/wiki/index.md — promote stable patterns to CLAUDE.md for permanent enforcement.
+```
+
+## Fringe Cases
+
+**No completed campaigns:** Output message and stop.
+
+**`.planning/` does not exist:** Output "Run /do setup first to initialize the harness state directory." Stop.
+
+**No Decision Log:** Extract decisions from phase descriptions; note "inferred from phase descriptions."
+
+**harness.json missing:** Create with only the qualityRules section; do not invent other fields.
+
+**Duplicate quality rule:** Skip silently; count in "skipped — already exist."
+
+**Postmortem missing:** Proceed without it; note in summary.
+
+**Large telemetry file:** Read last 200 lines only.
+
+**Zero extractable findings:** Write staging file noting source was empty. Do not skip wiki/index update.
+
+**Wiki page conflict detected at compile time:** Add a `**Conflict:**` field to the section. Never silently overwrite the existing mechanism.
+
+**Memory compile has missing sources:** Report the missing source paths and keep
+the existing memory blocks untouched until the source issue is resolved.
+
+**Doc-sync queue empty:** Output "No doc-sync work is queued." Stop.
+
+**Doc-sync queue has only surfaced entries:** Output "All doc-sync items are already surfaced." Stop.
+
+**evolve pattern-library.md missing:** "No evolve pattern library for '{target}'. Run /evolve {target} first to generate patterns." Stop.
+
+## Contextual Gates
+
+**Disclosure:** "Compiling findings into .planning/wiki/. Modifies wiki pages in-place; creates staging files."
+**Reversibility:** green — all writes are to `.planning/wiki/` and `.planning/wiki/_staging/`; `git restore .planning/wiki/` or delete the directory to undo. Quality rule additions to harness.json can be manually removed.
+**Trust gates:**
+- Any: run on any completed campaign or evolve target
+
+## Quality Gates
+
+- Never invent patterns not supported by evidence in the source files
+- Never write a quality rule with confidence < medium
+- Never duplicate an existing quality rule (check before appending)
+- Wiki index must be updated on every compile run
+- Lint must run after every compile (not skipped)
+- Memory block lint must pass after `--memory` or the Step 5.5 compile pass
+- `/learn --doc-sync` must leave no `pending` or `needs-review` entries for
+  processed queue items unless run with `--dry-run`
+- Conflicts must be flagged, never silently resolved
+- Summary output must include counts for all phases
+
+## Exit Protocol
+
+/learn does not produce a full HANDOFF block (it is a utility, not a campaign).
+It outputs the summary block in Step 7 and waits for the next command.

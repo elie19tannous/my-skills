@@ -1,0 +1,48 @@
+{
+  "skill_name": "magic-workspace-init",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_workspace_setup",
+      "prompt": "You are starting a new data processing project. The user has a CSV file with 5,000 rows of customer transaction data they want to clean and analyze. Set up a MAGIC workspace in the current directory, verify the environment is ready, and guide the user on next steps.\n\nContext:\n- This is a fresh directory with no existing files\n- The user has Python 3.11 with pandas and numpy installed\n- The data file has not been provided yet — the user will add it after setup\n- This is a standard analysis task, not a quick one-off",
+      "expected_output": "Should: (1) run init_workspace.py or equivalent to create directory structure; (2) verify Python environment by checking required packages; (3) create standard workspace directories (data/input, data/checkpoints, data/output, configs, reports, charts, logs, scripts); (4) report workspace_status; (5) guide user to place data file in data/input/; (6) not create .env files automatically",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["init_workspace", "workspace init", "directory structure", "create director", "mkdir", "set up", "folder structure", "workspace structure"]},
+        {"type": "must_contain_one", "values": ["Python environment", "verify environment", "packages installed", "check python", "pip install", "dependencies", "import pandas", "python version"]},
+        {"type": "must_contain_one", "values": ["data/input", "input directory", "place your file", "input", "data directory", "csv", "add the file", "copy the file", "data folder"]},
+        {"type": "must_contain_one", "values": ["workspace_status", "workspace ready", "setup complete", "ready to", "environment is ready", "good to go", "verified", "next step", "once", "after setup", "then you can"]},
+        {"type": "must_not_contain", "values": [".env file", "create .env", "environment file"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "multi_dataset_project",
+      "prompt": "You are setting up a workspace for a project that involves three separate data sources:\n- `sales/` — monthly CSV exports from the sales system (12 files, ~50MB total)\n- `inventory/` — daily inventory snapshots in Parquet format (365 files, ~200MB total)\n- `returns/` — customer returns data in JSONL format (1 file, ~5MB)\n\nThe user wants to merge these into a unified dataset for analysis. Set up an appropriate workspace structure.\n\nContext:\n- The directory is empty\n- All three data sources are on the user's local machine\n- The user expects to run this analysis once (not a recurring pipeline)\n- Total data volume is ~255MB — fits in memory but warrants checkpoints",
+      "expected_output": "Should: (1) recognize this as a multi-dataset project and create per-dataset subdirectories under data/input/ (data/input/sales/, data/input/inventory/, data/input/returns/); (2) set up data/checkpoints/ for intermediate merge results; (3) not add ETL-specific directories (staging/, archive/) since this is a one-off; (4) verify pyarrow is available for Parquet; (5) advise on data placement",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["data/input/sales", "per-dataset subdirectory", "input/sales/", "sales/", "separate director", "subdirector", "each source", "three source", "organized by"]},
+        {"type": "must_contain_one", "values": ["data/checkpoints", "checkpoints", "intermediate results"]},
+        {"type": "must_contain_one", "values": ["pyarrow", "Parquet support", "parquet library"]},
+        {"type": "must_not_contain", "values": ["add staging/", "create staging/", "add archive/", "create archive/", "ETL directory"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "etl_pipeline_workspace",
+      "prompt": "You are setting up a MAGIC workspace inside an existing dbt project. The project structure already has:\n```\nmy-dbt-project/\n├── dbt_project.yml\n├── models/\n├── seeds/\n├── data/                  <- dbt seeds data, NOT MAGIC data\n├── logs/                  <- dbt logs, NOT MAGIC logs\n├── macros/\n└── tests/\n```\n\nThe user wants to use MAGIC skills to clean and transform a raw CSV export before loading it into dbt seeds. This will be a recurring ETL task — the user will re-run the cleaning pipeline monthly.\n\nContext:\n- The directory already has `data/` and `logs/` directories used by dbt\n- Initializing at the project root would conflict with existing directories\n- This is a recurring ETL pipeline, not a one-off analysis\n- The raw CSV is ~80MB and arrives monthly",
+      "expected_output": "Should: (1) recognize conflict with existing data/ and logs/ directories; (2) suggest a subdirectory (e.g., magic-workspace/) to avoid conflicts; (3) not init at the project root; (4) not nest inside an existing MAGIC workspace; (5) consider ETL-specific directories (staging/ or archive/) for recurring pattern; (6) set up workspace_state.md for multi-session continuity; (7) explain the monthly workflow",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["conflict", "existing data/", "directory clash"]},
+        {"type": "must_contain_one", "values": ["magic-workspace/", "subdirectory", "separate folder"]},
+        {"type": "must_contain_one", "values": ["staging/", "archive/", "ETL pattern", "recurring"]},
+        {"type": "must_contain_one", "values": ["workspace_state", "multi-session", "monthly workflow", "monthly", "recurring", "re-run", "each month", "schedule", "continuity", "state file"]},
+        {"type": "must_not_contain", "values": ["init at root", "init in project root", "overwrite data/"]}
+      ]
+    }
+  ]
+}

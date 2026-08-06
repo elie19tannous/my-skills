@@ -1,0 +1,374 @@
+{
+  "skill_name": "magic-data-validation",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_schema_validation",
+      "prompt": "You have a CSV file `customer_orders.csv` with the following columns:\n- `customer_id` (integer, should never be null)\n- `name` (text)\n- `email` (text, should match email pattern)\n- `order_total` (numeric, should be >= 0)\n- `order_date` (date string, format YYYY-MM-DD)\n- `status` (categorical: \"pending\", \"shipped\", \"delivered\", \"cancelled\")\n\nThe file has 5,000 rows. Some rows have issues: a few `order_total` values are negative, some `email` fields contain \"TBD\", and 12 rows have null `customer_id`.\n\nInfer the schema, validate the data against it, and produce a validation report.",
+      "expected_output": "Should: (1) infer schema from the full dataset; (2) validate data against the inferred schema detecting customer_id nulls and type mismatches; (3) report type mismatches and null violations; (4) follow schema -> constraints -> content -> sanity ordering; (5) detect negative order_total values and invalid email patterns; (6) validate status against allowed categorical values",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "infer schema",
+            "schema inference",
+            "detected schema"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "null",
+            "customer_id",
+            "not null"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "negative",
+            "order_total",
+            "constraint"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "email",
+            "pattern",
+            "format"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "status",
+            "enum",
+            "allowed values"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "apply numeric to text",
+            "skip schema",
+            "ignore nulls"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "constraint_checking",
+      "prompt": "You have a dataset `employee_records.csv` with 10,000 rows and the following columns:\n- `employee_id` (integer, unique, not null)\n- `department` (categorical: \"Engineering\", \"Sales\", \"Marketing\", \"HR\", \"Finance\")\n- `hire_date` (date string, YYYY-MM-DD)\n- `termination_date` (date string, YYYY-MM-DD, nullable)\n- `salary` (numeric, range 30000-500000)\n- `manager_id` (integer, nullable)\n- `performance_notes` (free text, nullable)\n- `status` (categorical: \"active\", \"inactive\", \"on_leave\")\n\nKnown issues: 45 rows have termination_date before hire_date; 8 rows have salary = 0; performance_notes contains \"N/A\" (200 rows), \"TBD\" (50 rows), single spaces (15 rows); 3 rows have invalid department values (\"Ops\", \"IT\"); manager_id references employee_id values that do not exist.\n\nDefine constraints and validate the dataset. Report all violations with counts and sample values.",
+      "expected_output": "Should: (1) define range constraints for salary and catch zero-salary placeholders; (2) define enum constraints for department and catch Ops and IT; (3) check cross-column constraint hire_date < termination_date; (4) distinguish text columns from numeric and use content validation for performance_notes; (5) detect sentinel values N/A, TBD, spaces in performance_notes; (6) check referential integrity on manager_id",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "range constraint",
+            "salary",
+            "30000"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "enum",
+            "department",
+            "Ops"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "hire_date",
+            "termination_date",
+            "cross-column"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sentinel",
+            "N/A",
+            "TBD"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "referential integrity",
+            "manager_id",
+            "employee_id"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "numeric validation on performance_notes",
+            "skip cross-column",
+            "ignore sentinels"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "fitness_for_use",
+      "prompt": "You have a dataset `clinical_trial_results.csv` with 25,000 rows from a multi-site clinical trial:\n- `patient_id` (integer, unique)\n- `site` (categorical: \"NYC\", \"LA\", \"Chicago\", \"Houston\", \"Miami\")\n- `treatment_group` (categorical: \"control\", \"drug_a\", \"drug_b\")\n- `age` (integer, range 18-85)\n- `baseline_score` (numeric, 0-100)\n- `followup_score` (numeric, 0-100)\n- `adverse_event` (boolean)\n- `dropout` (boolean)\n- `notes` (free text, nullable)\n\nThe dataset will be used for TWO purposes:\n1. Regulatory submission \u2014 strict requirements, zero tolerance for missing data in key columns\n2. Internal ML model \u2014 training a predictive model for adverse events, can tolerate some noise\n\nKnown complexities: Site \"Houston\" has 95% dropout=False (potential survivorship bias); overall correlation between age and followup_score is positive, but within each treatment_group it is negative (Simpson's paradox); 500 notes fields contain \"see attached\" or \"refer to chart\"; baseline_score and followup_score have a few values above 100.\n\nValidate this dataset with appropriate strictness for EACH use case. Identify the statistical pitfalls and explain why they matter differently for each use case.",
+      "expected_output": "Should: (1) ask about or acknowledge the two different downstream use cases before defining rules; (2) calibrate strictness differently for regulatory submission vs ML training; (3) detect survivorship bias in Houston site data; (4) detect Simpson's paradox in age vs followup_score across treatment groups; (5) differentiate inferred schema from target schema; (6) recommend content validation for free-text notes field",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "regulatory",
+            "ML training",
+            "use case"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "survivorship bias",
+            "Houston",
+            "dropout"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Simpson's paradox",
+            "confounding",
+            "treatment group"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "content validation",
+            "notes",
+            "placeholder"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "inferred schema",
+            "target schema",
+            "expected schema"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "same rules for both",
+            "skip sanity",
+            "ignore bias"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "schema-drift-detection",
+      "difficulty": "hard",
+      "prompt": "I have two versions of the same dataset: v1 from January (1000 rows) and v2 from March (1200 rows). The v2 has a new column 'loyalty_tier' and the 'discount' column changed from percentage (0-100) to decimal (0.0-1.0). Validate v2 against v1's schema.",
+      "expected_output": "Should: (1) detect that 'loyalty_tier' is a new column absent from v1 schema; (2) detect that 'discount' changed range from 0-100 to 0.0-1.0 indicating a unit change, not a data error; (3) distinguish intentional schema evolution (new column, unit change) from accidental data corruption; (4) NOT simply fail or reject v2 because it differs from v1 \u2014 must treat schema drift as evolution to investigate; (5) recommend documenting or confirming the changes with the data owner before flagging as errors",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "loyalty_tier",
+            "new column",
+            "added column"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "discount",
+            "range change",
+            "unit change",
+            "0-100",
+            "0.0-1.0"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "schema evolution",
+            "intentional",
+            "schema drift",
+            "schema change",
+            "expected change",
+            "not an error",
+            "deliberate",
+            "legitimate change",
+            "version difference",
+            "structural change"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "confirm",
+            "document",
+            "data owner",
+            "investigate"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "validation is correct",
+            "no issue",
+            "data is valid",
+            "reject v2",
+            "fail on schema mismatch"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "simpsons-paradox-detection",
+      "difficulty": "hard",
+      "prompt": "I validated my dataset and it looks fine \u2014 all constraints pass. But when I split by region, the success_rate in each region is lower than the aggregate. Is my validation wrong?",
+      "expected_output": "Should: (1) recognize this as Simpson's paradox \u2014 an aggregate trend that reverses when data is stratified; (2) explain that constraint-level validation passing does NOT guarantee statistical soundness; (3) recommend subgroup analysis (split by region and compare distributions); (4) explain confounding variables as the likely cause (e.g., region sizes differ, a lurking variable drives both region composition and success_rate); (5) NOT reassure the user that everything is fine just because constraints passed",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Simpson's paradox",
+            "paradox",
+            "reversal"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "subgroup",
+            "stratify",
+            "split by",
+            "per-region",
+            "segment",
+            "breakdown",
+            "group by"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "confounding",
+            "confound",
+            "lurking variable",
+            "composition",
+            "weighted",
+            "proportion"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "constraint",
+            "schema",
+            "statistical",
+            "aggregate",
+            "misleading"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "no issue",
+            "everything is fine",
+            "ignore the difference"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "scriptable_tool_schema_validation",
+      "difficulty": "medium",
+      "prompt": "I have a schema file at `specs/customer_schema.json` (generated by infer_schema.py earlier). Validate my cleaned dataset `data/checkpoints/cleaned.csv` against this schema and report any violations.",
+      "expected_output": "Should call validate_schema.py directly with --schema flag (scriptable tool, Tier B \u2014 requires schema path). This is the standard use case: validate data against an existing schema. No need to write custom validation code.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate_schema.py",
+            "validate_schema",
+            "--schema"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "schema.json",
+            "customer_schema",
+            "violation"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def validate_schema(",
+            "write custom validation",
+            "implement.*schema check"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "reference_impl_custom_constraints",
+      "difficulty": "medium",
+      "prompt": "Validate that in my orders dataset: (1) order_total equals sum of line items, (2) ship_date is always after order_date, (3) status is 'cancelled' only when cancel_reason is not null. Write validation code for these business rules.",
+      "expected_output": "Should read check_constraints.py source (reference implementation) for constraint-checking patterns, then write CUSTOM validation code for these specific business rules. The check_constraints.py script requires hand-authored constraints JSON and can't be called directly for ad-hoc rules.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "custom",
+            "validation code",
+            "check",
+            "assert"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "order_total",
+            "sum",
+            "line item"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "ship_date",
+            "after",
+            "order_date"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "python3 check_constraints.py"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+skill: magic-data-profiling
+version: 2.0.0
+evals:
+  - id: basic_quality_score
+    prompt: prompts/basic_quality_score.md
+    baseline: baselines/basic_quality_score.md
+    difficulty: easy
+    tests:
+      - "agent computes a composite quality score"
+      - "agent reports per-column breakdown alongside aggregate"
+      - "agent detects column types before profiling"
+      - "agent reports score with context (row count, column count)"
+
+  - id: outlier_detection
+    prompt: prompts/outlier_detection.md
+    baseline: baselines/outlier_detection.md
+    difficulty: medium
+    tests:
+      - "agent checks distribution normality before choosing method"
+      - "agent uses IQR for skewed columns and Z-score for normal columns"
+      - "agent reports outlier indices and sample values"
+      - "agent notes sample size limitation for small datasets"
+
+  - id: large_dataset_profiling
+    prompt: prompts/large_dataset_profiling.md
+    baseline: baselines/large_dataset_profiling.md
+    difficulty: hard
+    tests:
+      - "agent samples before full profiling on large data"
+      - "agent avoids running detect_all_issues without sample-size"
+      - "agent profiles targeted columns at full scale after sample review"
+      - "agent uses caching for expensive operations"
+      - "agent reports uncertainty from sampling"

@@ -1,0 +1,272 @@
+{
+  "skill_name": "magic-statistical-analysis",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "descriptive_stats",
+      "prompt": "You have a CSV file at `data/employee_survey.csv` containing employee satisfaction survey results. The file has 1,200 rows and columns: employee_id, department, tenure_years, satisfaction_score (1-10), salary, response_text. Compute descriptive statistics for all columns, generate narrative interpretations, and save the results.\n\nContext:\n- The dataset contains a mix of numeric (tenure_years, satisfaction_score, salary), categorical (department), and text (response_text) columns\n- employee_id is numeric but should not be analyzed as a continuous variable\n- You need to detect column types and apply appropriate statistics to each",
+      "expected_output": "Should: (1) detect column types (numeric, categorical, text) before computing any statistics; (2) compute mean, median, std, IQR, and skewness for numeric columns (tenure_years, satisfaction_score, salary); (3) compute frequency distributions for categorical column (department); (4) compute text statistics for response_text; (5) flag or exclude employee_id from continuous analysis; (6) generate narrative interpretations using uncertainty language such as 'appears' or 'suggests'",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "column type",
+            "numeric",
+            "categorical",
+            "text column"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "mean",
+            "median",
+            "std",
+            "skewness"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "frequency",
+            "distribution",
+            "department"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "appears",
+            "suggests",
+            "may indicate"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "employee_id mean",
+            "employee_id average",
+            "ID as continuous"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "hypothesis_testing",
+      "prompt": "You have a CSV file at `data/ab_test_results.csv` containing results from an A/B test on a website. The file has 5,000 rows and columns: user_id, variant (A or B), time_on_page_seconds, converted (0 or 1), pages_viewed. Compare time_on_page_seconds between variant A and variant B. Determine whether the difference is statistically significant and report the practical significance.\n\nContext:\n- This is a two-group comparison (variant A vs variant B)\n- The value column (time_on_page_seconds) is continuous and may or may not be normally distributed\n- Time-on-page data is often right-skewed (many short visits, few very long ones)\n- The sample size is large (5,000), so even trivial differences may be statistically significant\n- You need to report both statistical and practical significance",
+      "expected_output": "Should: (1) check normality of time_on_page_seconds before selecting test (e.g. Shapiro-Wilk); (2) select t-test if normal or Mann-Whitney U if not; (3) report p-value AND effect size (Cohen's d or rank-biserial r); (4) interpret effect size magnitude; (5) use uncertainty language; (6) note that large sample sizes can make trivial differences statistically significant",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "normality",
+            "Shapiro-Wilk",
+            "normal distribution"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Mann-Whitney",
+            "t-test",
+            "parametric",
+            "non-parametric"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "effect size",
+            "Cohen's d",
+            "rank-biserial"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "appears",
+            "suggests",
+            "may indicate",
+            "could",
+            "likely",
+            "might",
+            "potentially",
+            "whether",
+            "if the",
+            "depending on"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "always use t-test",
+            "skip normality",
+            "p-value is sufficient"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "multi_group_comparison",
+      "prompt": "You have a CSV file at `data/treatment_outcomes.csv` containing clinical trial data. The file has 800 rows and columns: patient_id, treatment_group (placebo, drug_A, drug_B, drug_C), age, outcome_score, side_effects_count. Compare outcome_score across all four treatment groups. Then run pairwise comparisons between each drug and placebo. Report all findings with appropriate corrections for multiple comparisons.\n\nContext:\n- This is a multi-group comparison (4 groups: placebo, drug_A, drug_B, drug_C)\n- The outcome_score is continuous\n- You need an omnibus test first (ANOVA or Kruskal-Wallis), then pairwise follow-ups\n- There are 3 pairwise comparisons (each drug vs placebo), so multiple comparison correction is needed\n- Clinical data demands careful attention to practical significance, not just statistical significance\n- Group sizes may be unequal",
+      "expected_output": "Should: (1) check normality across all four groups before selecting omnibus test; (2) select ANOVA (normal) or Kruskal-Wallis (non-normal); (3) report omnibus effect size (eta-squared or epsilon-squared); (4) apply Bonferroni correction for 3 pairwise comparisons; (5) report effect size per pairwise comparison; (6) flag results where p < 0.05 but effect size is negligible as 'statistically significant but practically negligible'",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "ANOVA",
+            "Kruskal-Wallis",
+            "omnibus"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Bonferroni",
+            "multiple comparison",
+            "correction"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "effect size",
+            "eta-squared",
+            "epsilon-squared"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "practically negligible",
+            "negligible effect",
+            "small effect"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "skip correction",
+            "no correction needed",
+            "p-value alone"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "multiple_testing_trap",
+      "difficulty": "hard",
+      "prompt": "I ran t-tests comparing satisfaction scores across 10 different product categories (all pairs). I found 3 pairs with p < 0.05. Can I report these as significant findings?",
+      "expected_output": "Should: (1) warn about the multiple comparisons problem \u2014 running 45 pairwise t-tests inflates the family-wise error rate far beyond 0.05; (2) recommend Bonferroni correction (adjusted threshold: 0.05/45 \u2248 0.0011) or FDR correction (Benjamini-Hochberg); (3) recalculate or state the corrected significance threshold explicitly; (4) use uncertainty language and advise re-evaluating whether the 3 pairs survive correction",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "multiple comparison",
+            "multiple testing",
+            "family-wise",
+            "familywise",
+            "inflat"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Bonferroni",
+            "Benjamini-Hochberg",
+            "FDR",
+            "false discovery rate"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "45",
+            "0.0011",
+            "0.05/45",
+            "corrected threshold",
+            "adjusted threshold"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "may not",
+            "should re-evaluate",
+            "caution",
+            "appears",
+            "suggests",
+            "likely",
+            "cannot conclude",
+            "does not necessarily",
+            "careful",
+            "reconsider",
+            "whether",
+            "might not"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "yes significant",
+            "report as significant",
+            "p < 0.05 means significant"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "scriptable_tier_b_with_params",
+      "difficulty": "medium",
+      "prompt": "Test whether there's a statistically significant difference in purchase_amount between the 'premium' and 'standard' customer tiers in my dataset at `data/customers.csv`.",
+      "expected_output": "Should call hypothesis_test.py directly with required params (scriptable tool, Tier B \u2014 needs --group_col and --value_col). The script auto-selects the appropriate test (t-test or Mann-Whitney) based on normality. No need to write custom hypothesis testing code.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "hypothesis_test.py",
+            "hypothesis_test",
+            "--group_col",
+            "group_col"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "purchase_amount",
+            "value_col",
+            "tier"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "significance",
+            "p-value",
+            "p_value",
+            "test"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def hypothesis_test(",
+            "from scipy import",
+            "write custom test"
+          ]
+        }
+      ]
+    }
+  ]
+}

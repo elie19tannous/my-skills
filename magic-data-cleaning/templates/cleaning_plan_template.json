@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "generated_for": "data-cleaning",
+  "description": "Cleaning plan for [describe data and issues]",
+  "input_path": "[path to input data]",
+  "output_path": "[path for cleaned output]",
+
+  "columns": {
+    "example_numeric_col": {
+      "dtype": "numeric",
+      "issue": "8.2% missing values, right-skewed distribution",
+      "strategy": "median_imputation",
+      "params": {}
+    },
+    "example_text_col": {
+      "dtype": "text",
+      "issue": "Leading/trailing whitespace, 3 encoding issues",
+      "strategy": "trim_whitespace",
+      "params": {
+        "also_fix_encoding": true
+      }
+    },
+    "example_categorical_col": {
+      "dtype": "categorical",
+      "issue": "Inconsistent values: 'NY', 'New York', 'new york'",
+      "strategy": "custom_mapping",
+      "params": {
+        "mapping": {
+          "NY": "New York",
+          "new york": "New York",
+          "N.Y.": "New York"
+        }
+      }
+    }
+  },
+
+  "global_operations": [
+    {
+      "operation": "remove_duplicates",
+      "description": "Remove 45 exact duplicate rows",
+      "params": {
+        "subset": null,
+        "keep": "first"
+      }
+    }
+  ]
+}

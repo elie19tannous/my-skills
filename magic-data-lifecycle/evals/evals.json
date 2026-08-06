@@ -1,0 +1,76 @@
+{
+  "skill_name": "magic-data-lifecycle",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_pipeline_routing",
+      "prompt": "A user gives you a CSV file at `data/customer_feedback.csv` containing 1,200 rows of customer survey responses with columns: respondent_id, date, rating (1-5), category, comment, resolved (yes/no). The user says: \"Help me check this data and see what's going on.\"\n\nWrite a plan describing exactly which MAGIC skills you would invoke, in what order, and why.\n\nContext:\n- The file is small (1,200 rows, ~400KB)\n- The user's request is open-ended (\"check this data\") — scope is unclear\n- You have not loaded or examined the data yet\n- All MAGIC skills are available",
+      "expected_output": "Should: (1) identify this as a Discover phase task and route file loading to magic-data-loading; (2) plan profiling with magic-data-profiling immediately after loading; (3) follow Discover before Plan sequence without jumping to cleaning; (4) not over-engineer by adding compliance reports or data specs for a simple initial check",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["magic-data-loading", "loading skill", "load first"]},
+        {"type": "must_contain_one", "values": ["magic-data-profiling", "profiling", "profile"]},
+        {"type": "must_contain_one", "values": ["Discover", "discovery phase", "understand data"]},
+        {"type": "must_not_contain", "values": ["magic-data-cleaning first", "clean before profiling", "skip profiling"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "multi_skill_pipeline",
+      "prompt": "You have a dataset at `data/product_reviews.csv` with 8,000 rows and columns: review_id, product_name, review_text, star_rating, date, verified_purchase. Initial profiling shows:\n- Quality score: 68/100\n- 12% of review_text values are null\n- 340 rows have star_rating = 0 (likely sentinel for \"not rated\")\n- 15 duplicate review_ids\n- date column has mixed formats (\"2024-01-15\", \"Jan 15, 2024\", \"15/01/2024\")\n\nThe user says: \"Clean this up so I can use it for analysis. I need review_text filled in where possible, sentinels removed, and dates normalized.\"\n\nWrite the pipeline plan: which skills handle which operations, in what order, with what success criteria.\n\nContext:\n- Profiling is already done (Discovery complete)\n- The user wants three specific operations: fill missing text, remove sentinels, normalize dates\n- Filling missing review_text requires semantic understanding (not regex) — this is a synthesis task\n- Sentinel removal and date normalization are deterministic — these are cleaning tasks\n- You need to define what \"done\" looks like before executing",
+      "expected_output": "Should: (1) define success criteria before execution (e.g., null rate < 2%, zero sentinels, all dates ISO); (2) route date normalization and sentinel removal to magic-data-cleaning; (3) route review_text fill to magic-data-synthesis; (4) sequence cleaning before synthesis; (5) plan validation after all operations",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["success criteria", "done when", "target quality"]},
+        {"type": "must_contain_one", "values": ["magic-data-cleaning", "cleaning skill"]},
+        {"type": "must_contain_one", "values": ["magic-data-synthesis", "synthesis skill", "LLM fill"]},
+        {"type": "must_contain_one", "values": ["magic-data-validation", "validate after", "re-profile"]},
+        {"type": "must_not_contain", "values": ["synthesis first", "synthesize before cleaning", "skip validation"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "complex_orchestration",
+      "prompt": "You are building a unified customer analytics dataset from three sources:\n\n1. `data/crm_export.csv` — 15,000 rows (customer_id, name, email, signup_date, region)\n2. `data/transactions.parquet` — 120,000 rows (txn_id, cust_id, amount, currency, txn_date, product_category)\n3. `data/support_tickets.jsonl` — 4,200 rows (ticket_id, customer_email, subject, body, status, created_at, resolved_at)\n\nRequirements:\n- Load all three sources, profile each independently\n- Join transactions to CRM by customer_id/cust_id (different column names)\n- Join support tickets to CRM by email\n- Detect and handle: duplicate customers across sources, currency normalization (USD/EUR/GBP -> USD), date format inconsistencies\n- Produce a unified dataset with quality score >= 85\n- Generate a compliance report\n\nAfter your first cleaning pass, validation shows quality score = 78 (below the 85 target). The main issue: 8% of joined records have null customer names (CRM records exist but name field is empty).\n\nWrite the full orchestration plan including how you handle the validation failure and refinement loop.\n\nContext:\n- Three different file formats (CSV, Parquet, JSONL) requiring separate loading strategies\n- Currency conversion is a transformation, not cleaning\n- The validation failure (78 < 85) requires a refinement loop\n- This is clearly a Tier 3 task (multi-dataset, full lifecycle infrastructure)",
+      "expected_output": "Should: (1) load each source with magic-data-loading using per-format detection; (2) profile each source independently before merging; (3) route joins and currency conversion to magic-data-transformation; (4) use quality gating with explicit target (>= 85); (5) detect validation failure (78 < 85) and enter a refinement loop; (6) re-validate after the fix; (7) sequence correctly: load all -> profile all -> clean/transform -> validate -> refine -> re-validate -> deliver",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["magic-data-loading", "format detection", "per-source load"]},
+        {"type": "must_contain_one", "values": ["magic-data-transformation", "transformation skill", "join"]},
+        {"type": "must_contain_one", "values": ["quality gate", "quality score", ">= 85", "quality threshold"]},
+        {"type": "must_contain_one", "values": ["refinement loop", "re-validate", "retry", "fix null names"]},
+        {"type": "must_not_contain", "values": ["skip re-validation", "accept 78", "ignore failure"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "refinement-loop",
+      "difficulty": "hard",
+      "prompt": "I ran the full pipeline: load → profile → clean → validate. But validation failed — 15% of rows still have issues after cleaning. What now?",
+      "expected_output": "Should: (1) recognize this as a refinement loop situation — one cleaning pass was not sufficient; (2) route BACK to magic-data-profiling to understand the nature of the remaining 15% issues before attempting another cleaning pass; (3) NOT suggest skipping validation or lowering quality thresholds to make the failure disappear; (4) consider whether the remaining issues require magic-data-synthesis (LLM-based generation) rather than deterministic cleaning; (5) define a new targeted clean plan based on profiling findings, then re-validate",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["refinement loop", "iterate", "another pass", "re-profile"]},
+        {"type": "must_contain_one", "values": ["magic-data-profiling", "profile remaining", "understand remaining", "re-profile", "profile the remaining", "profile again", "profiling", "diagnose"]},
+        {"type": "must_contain_one", "values": ["magic-data-synthesis", "synthesis", "LLM", "generation"]},
+        {"type": "must_contain_one", "values": ["re-validate", "validate again", "run validation after"]},
+        {"type": "must_not_contain", "values": ["lower threshold", "skip validation", "accept 85%", "ignore remaining"]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "wrong-skill-routing",
+      "difficulty": "edge",
+      "prompt": "I need to translate my English product descriptions to French. Which MAGIC skill should I use?",
+      "expected_output": "Should: (1) recognize that translation is LLM-based text generation, not a deterministic transformation; (2) route to magic-data-synthesis as the correct skill for this task; (3) mention DataDesigner as the synthesis component that handles translation; (4) NOT suggest using magic-data-transformation or magic-data-cleaning, as those handle structural or deterministic operations — not language generation",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["magic-data-synthesis", "synthesis skill", "synthesis"]},
+        {"type": "must_contain_one", "values": ["DataDesigner", "LLM", "language model", "generation"]},
+        {"type": "must_not_contain", "values": ["use transformation", "use cleaning", "regex replace", "apply transformation"]}
+      ]
+    }
+  ]
+}

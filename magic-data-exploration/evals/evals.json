@@ -1,0 +1,59 @@
+{
+  "skill_name": "magic-data-exploration",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_pattern_detection",
+      "prompt": "You have a CSV file at `data/sales_records.csv` with the following columns:\n- `date` (YYYY-MM-DD)\n- `region` (North, South, East, West)\n- `product` (A, B, C)\n- `units_sold` (integer)\n- `revenue` (float)\n- `discount_pct` (float, 0-50)\n\nThe file has 5,000 rows. Run pattern detection to surface the most interesting findings in this dataset.",
+      "expected_output": "Should: (1) run detect_patterns.py or generate equivalent pattern detection code; (2) report findings ranked by confidence level (high/medium/low); (3) use uncertainty language (\"may show\", \"appears to\", \"suggests\") rather than definitive claims",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["detect_patterns", "pattern detection", "confidence"]},
+        {"type": "must_contain_one", "values": ["may show", "appears to", "suggests", "possibly", "likely", "could", "might", "indicates", "potential", "seems"]},
+        {"type": "must_not_contain", "values": ["proves that", "definitively shows", "clearly causes", "we can conclude that"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "correlation_investigation",
+      "prompt": "You have a CSV file at `data/text_corpus.csv` with the following columns:\n- `id` (integer)\n- `title` (text)\n- `body` (text)\n- `category` (news, opinion, review, tutorial)\n- `author` (text)\n- `publish_date` (YYYY-MM-DD)\n- `word_count` (integer — pre-computed)\n\nThe file has 12,000 rows. A colleague says \"longer titles correlate with longer articles.\" Investigate whether this claim holds, and whether there are other interesting relationships in the data.",
+      "expected_output": "Should: (1) filter out derived-column correlations (e.g. body_length vs body_word_count) before reporting insights; (2) check whether the title-body length correlation persists across subgroups/categories; (3) distinguish correlation from causation in language and report confidence levels",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["title_length", "body_length", "derived", "subgroup", "category"]},
+        {"type": "must_contain_one", "values": ["correlation", "relationship", "confidence"]},
+        {"type": "must_not_contain", "values": ["causes", "proves that", "definitively"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "multi_segment_analysis",
+      "prompt": "You have a CSV file at `data/survey_responses.csv` with the following columns:\n- `respondent_id` (integer)\n- `age_group` (18-24, 25-34, 35-44, 45-54, 55+)\n- `gender` (M, F, Other)\n- `region` (Urban, Suburban, Rural)\n- `satisfaction_score` (1-10 integer)\n- `free_text_feedback` (text, 40% null)\n- `product_used` (text)\n- `recommendation_likelihood` (1-10 integer)\n\nThe file has 8,000 rows. Perform a comprehensive segment analysis to understand how satisfaction and recommendation likelihood vary across demographic groups. Identify any patterns that differ between aggregate and subgroup views.",
+      "expected_output": "Should: (1) prepare text columns before running exploration (derive features from free_text_feedback and product_used); (2) run segment analysis across multiple group columns (age_group, gender, region); (3) check for Simpson's paradox by comparing aggregate vs subgroup patterns; (4) present findings ranked by confidence with actionable next steps",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["age_group", "gender", "region", "segment"]},
+        {"type": "must_contain_one", "values": ["aggregate", "subgroup", "Simpson", "paradox", "overall vs"]},
+        {"type": "must_contain_one", "values": ["confidence", "next steps", "actionable"]},
+        {"type": "must_not_contain", "values": ["feedback_length vs feedback_word_count"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "spurious_correlation_trap",
+      "difficulty": "hard",
+      "prompt": "I found a correlation of 0.89 between 'ice_cream_sales' and 'drowning_incidents' in my city dataset. This seems like a strong finding. Should I include it in my report?",
+      "expected_output": "Should: (1) distinguish correlation from causation — a high r does not imply a causal relationship; (2) identify temperature or season as the likely confounding variable driving both ice cream sales and drowning incidents; (3) recommend controlling for the confounder (e.g. partial correlation, stratified analysis by season/temperature) before drawing any conclusions; (4) use uncertainty language and advise against presenting this as a meaningful standalone finding without further analysis",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["correlation does not", "causation", "does not imply", "not causal"]},
+        {"type": "must_contain_one", "values": ["confounder", "confounding", "temperature", "season", "lurking variable", "third variable"]},
+        {"type": "must_contain_one", "values": ["control for", "partial correlation", "stratif", "hold constant", "adjust for"]},
+        {"type": "must_contain_one", "values": ["may be", "appears to", "suggests", "caution", "further analysis", "not", "cannot conclude", "misleading", "spurious", "does not mean", "careful"]},
+        {"type": "must_not_contain", "values": ["strong relationship", "ice cream causes", "significant finding"]}
+      ]
+    }
+  ]
+}

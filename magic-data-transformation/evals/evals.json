@@ -1,0 +1,319 @@
+{
+  "skill_name": "magic-data-transformation",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_reshape",
+      "prompt": "You have a CSV file `quarterly_sales.csv` with the following structure:\n\n| salesperson | region | q1_sales | q2_sales | q3_sales | q4_sales |\n|-------------|--------|----------|----------|----------|----------|\n| Alice       | North  | 15000    | 18000    | 22000    | 19000    |\n| Bob         | South  | 12000    | 14000    | 16000    | 21000    |\n| Carol       | East   | 19000    | 17000    | 20000    | 23000    |\n\nConvert this wide-format table to long format so that each row represents one salesperson-quarter combination. The output should have columns: `salesperson`, `region`, `quarter`, `sales`.\n\nSave the result as `sales_long.csv`.",
+      "expected_output": "Should: (1) generate code that melts wide-format data to long using melt/unpivot; (2) specify correct id_vars (salesperson, region) and value_vars (q1-q4 columns); (3) rename variable/value columns to meaningful names (quarter, sales); (4) track row count change (3 rows * 4 quarters = 12 output rows); (5) validate output shape after reshape",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "melt",
+            "unpivot",
+            "wide to long"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "id_vars",
+            "salesperson",
+            "region"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "value_vars",
+            "q1_sales",
+            "q2_sales"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "12 rows",
+            "rows_out",
+            "row count"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "shape",
+            "output"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "use pivot instead",
+            "pivot is better",
+            "groupby only",
+            "skip validation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "multi_table_merge",
+      "prompt": "You have two CSV files:\n\n**orders.csv** (5000 rows):\n| order_id | customer_id | product_id | quantity | order_date |\n|----------|-------------|------------|----------|------------|\n| 1001     | C-42        | P-100      | 3        | 2025-01-15 |\n\n**products.csv** (200 rows):\n| product_id | product_name | category | unit_price |\n|------------|-------------|----------|------------|\n| P-100      | Widget A    | Hardware | 29.99      |\n\nNote: `customer_id` in orders is an integer column (42), while in a separate `customers.csv` it is stored as a string (\"C-42\"). The `product_id` column is consistent (string in both files).\n\nMerge orders with products on `product_id` using a left join. Then calculate a `total_price` column as `quantity * unit_price`.\n\nSave the result as `enriched_orders.csv`.",
+      "expected_output": "Should: (1) check join key cardinality before merging (product_id should be unique in products); (2) cast join keys to matching types; (3) detect or prevent join explosion by verifying rows_out equals rows_in for left join on unique right key; (4) derive total_price after merge; (5) validate row count after merge equals 5000",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "cardinality",
+            "unique",
+            "duplicate"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "left join",
+            "merge",
+            "join"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "join explosion",
+            "row count",
+            "5000"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "total_price",
+            "quantity * unit_price"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify",
+            "check"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "inner join only",
+            "skip cardinality",
+            "ignore duplicates"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "complex_pipeline",
+      "prompt": "You have three CSV files:\n\n**transactions.csv** (50,000 rows): `txn_id`, `store_id` (integer), `product_id` (integer), `quantity`, `amount`, `txn_date`\n\n**stores.csv** (50 rows): `store_id` (string \"5\"), `store_name`, `region`, `city`\n\n**products.csv** (500 rows): `product_id` (integer), `name`, `category`, `cost`\n\nBuild a pipeline that:\n1. Joins transactions with stores on `store_id` (note the type mismatch \u2014 integer vs string)\n2. Joins the result with products on `product_id`\n3. Filters to only transactions in Q1 2025 (January-March)\n4. Derives a `profit` column: `amount - (quantity * cost)`\n5. Derives a `margin_tier` column: \"high\" if profit margin > 50%, \"medium\" if > 20%, \"low\" otherwise\n6. Aggregates by `region` and `category`: total revenue, total profit, transaction count\n7. Pivots the aggregation so each category is a column, regions are rows, values are total revenue\n\nSave intermediate checkpoints and the final result as `regional_category_revenue.csv`.",
+      "expected_output": "Should: (1) apply transformations in correct order: type cast -> join -> filter -> derive -> aggregate -> reshape; (2) cast store_id to matching type before join; (3) check cardinality on both join keys before merging; (4) use np.where or equivalent for margin_tier conditional logic; (5) aggregate at correct (region, category) grain; (6) validate final output shape and data integrity",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "cast",
+            "astype",
+            "type mismatch"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "cardinality",
+            "unique",
+            "duplicate check"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "np.where",
+            "conditional",
+            "margin_tier"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "groupby",
+            "aggregate",
+            "region"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "pivot",
+            "reshape",
+            "regional_category"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "skip type cast",
+            "no cardinality check",
+            "no validation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "join-explosion-prevention",
+      "difficulty": "hard",
+      "prompt": "I need to merge orders.csv (10K rows) with order_items.csv (50K rows) on order_id. Then merge the result with products.csv (1K rows) on product_id. Finally aggregate total revenue by category.",
+      "expected_output": "Should: (1) check cardinality of order_id in orders.csv vs order_items.csv BEFORE joining \u2014 one order has many items so this is a one-to-many join; (2) warn that the first join will expand rows from 10K to 50K (expected, not a bug, because each order has ~5 items on average); (3) check cardinality of product_id in products.csv is unique (one-to-many join will not further explode rows); (4) sequence joins correctly \u2014 orders JOIN order_items first, then JOIN products; (5) verify row counts after each join match expectations; (6) aggregate at the correct grain (category) only after all joins are complete",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "cardinality",
+            "one-to-many",
+            "duplicate order_id"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "row explosion",
+            "50K",
+            "expand",
+            "10K to 50K",
+            "rows will increase"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "verify row count",
+            "check rows",
+            "row count after join",
+            "validate",
+            "rows_out",
+            "count after",
+            "post-merge",
+            "expected rows"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sequence",
+            "join order",
+            "orders first",
+            "order_items first",
+            "first join",
+            "then join",
+            "step 1",
+            "step 2",
+            "first merge",
+            "then merge"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "just merge",
+            "simple join",
+            "skip cardinality"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "scriptable_tier_b_aggregate",
+      "difficulty": "medium",
+      "prompt": "Aggregate my sales dataset by region, computing the sum of revenue, average order size, and count of transactions per region.",
+      "expected_output": "Should call aggregate.py directly with required params (scriptable tool, Tier B \u2014 needs --group_cols and --agg_cols). The CLI handles multi-function aggregation. No need to write custom groupby code for this standard operation.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "aggregate.py",
+            "aggregate",
+            "--group_cols",
+            "group_cols"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "region",
+            "sum",
+            "mean",
+            "count"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def aggregate(",
+            "df.groupby.*agg",
+            "write custom aggregation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "reference_impl_derive_columns",
+      "difficulty": "medium",
+      "prompt": "Create three new derived columns in my dataset: (1) `profit_margin` = (revenue - cost) / revenue * 100, (2) `customer_tenure_days` = today - signup_date, (3) `risk_score` = a weighted combination of late_payments * 0.4 + credit_utilization * 0.3 + account_age_penalty * 0.3.",
+      "expected_output": "Should read derive_columns.py source (reference implementation) for safe expression evaluation patterns, then write CUSTOM derivation code for these specific calculations. The expressions are too complex for derive_columns.py's --expressions flag.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "custom",
+            "derive",
+            "calculated",
+            "compute"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "profit_margin",
+            "revenue",
+            "cost"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "risk_score",
+            "weighted",
+            "0.4"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "python3 derive_columns.py"
+          ]
+        }
+      ]
+    }
+  ]
+}

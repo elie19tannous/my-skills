@@ -1,0 +1,29 @@
+skill: magic-workspace-init
+version: 2.0.0
+evals:
+  - id: basic_workspace_setup
+    prompt: prompts/basic_workspace_setup.md
+    baseline: baselines/basic_workspace_setup.md
+    difficulty: easy
+    tests:
+      - "agent creates standard workspace directory structure"
+      - "agent verifies Python environment before scaffolding"
+      - "agent reports workspace status to user"
+
+  - id: multi_dataset_project
+    prompt: prompts/multi_dataset_project.md
+    baseline: baselines/multi_dataset_project.md
+    difficulty: medium
+    tests:
+      - "agent creates per-dataset subdirectories under data/input/"
+      - "agent considers project type when configuring workspace"
+      - "agent does not over-scaffold for simple tasks"
+
+  - id: etl_pipeline_workspace
+    prompt: prompts/etl_pipeline_workspace.md
+    baseline: baselines/etl_pipeline_workspace.md
+    difficulty: hard
+    tests:
+      - "agent adapts workspace for ETL pipeline pattern"
+      - "agent handles coexistence with existing project structure"
+      - "agent avoids nested workspace anti-pattern"

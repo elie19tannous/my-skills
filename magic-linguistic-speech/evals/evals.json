@@ -1,0 +1,47 @@
+{
+  "skill_name": "magic-linguistic-speech",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "field-data-flex-pua-trap",
+      "prompt": "I'm ingesting FLEx XML data from an endangered-language documentation project. The downstream tokenizer is producing weird unrecognized characters. What's wrong?",
+      "expected_output": "Should: (1) diagnose SIL Private-Use-Area (PUA) characters from legacy SIL fonts; (2) MANDATORY pre-processing: PUA → Unicode conversion; (3) cite SIL per-font mapping tables; (4) explain silent corruption otherwise; (5) recommend ELAN/SayMore intermediate if FLEx export is the original; (6) flag this is a common field-data ingest failure mode; (7) cross-skill: magic-linguistic-ethics for community-controlled archives.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["PUA", "Private-Use-Area", "SIL", "legacy font"]},
+        {"type": "must_contain_one", "values": ["Unicode normalization", "Unicode conversion", "PUA → Unicode"]},
+        {"type": "must_contain_one", "values": ["common", "frequent", "silent"]},
+        {"type": "must_contain_one", "values": ["community", "ethics", "AILLA", "ELAR"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "asr-class0-mms-vs-whisper",
+      "prompt": "I want to build ASR for Cherokee. Should I use Whisper or MMS?",
+      "expected_output": "Should: (1) recommend MMS — Cherokee is class 0-1, not in Whisper's 99 supported languages with usable quality; (2) MMS covers 1107 languages; (3) note community partnership essential for Cherokee data (FPIC); (4) flag tone-marking preservation if applicable; (5) recommend community-collected audio + custom fine-tune as augmentation; (6) hand off to magic-linguistic-ethics + magic-linguistic-corpus.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["MMS", "Massively Multilingual Speech"]},
+        {"type": "must_contain_one", "values": ["1107", "broader coverage", "more languages"]},
+        {"type": "must_contain_one", "values": ["community", "FPIC", "Cherokee Nation", "ethics"]},
+        {"type": "must_not_contain", "values": ["Whisper is sufficient for Cherokee", "just use Whisper"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "tone-language-asr-diacritic-strip",
+      "prompt": "Our Yoruba ASR pipeline is producing incomprehensible output. Looking at the transcripts, the diacritics are missing. Bug or feature?",
+      "expected_output": "Should: (1) BUG — Yoruba diacritics carry tone, which is semantic; (2) tone-stripped Yoruba ASR output is unusable; (3) recommend pipeline that REJECTS diacritic-stripped input; (4) IPA validator should flag missing tone marks; (5) generalize to Vietnamese, Hausa, Mandarin, Igbo, Twi, Thai, Lao; (6) Whisper has known tone-stripping failures on some configs.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["BUG", "bug", "issue", "problem"]},
+        {"type": "must_contain_one", "values": ["tone", "diacritic", "semantic"]},
+        {"type": "must_contain_one", "values": ["Vietnamese", "Hausa", "Mandarin", "Thai", "tone language"]},
+        {"type": "must_not_contain", "values": ["diacritics are optional", "stripping is fine"]}
+      ]
+    }
+  ]
+}

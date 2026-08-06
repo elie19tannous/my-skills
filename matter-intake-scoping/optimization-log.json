@@ -1,0 +1,28 @@
+{
+  "skill": "matter-intake-scoping",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Authored the matter-intake-scoping skill to the standard Lawcal legal-tech package: SKILL.md (English), SKILL_HE.md (Hebrew mirror), two references (intake-questionnaire, scoping-and-fees), an offline stdlib-only intake completeness checker, metadata.json, evidence.json, and this log. The skill runs a structured intake+scoping gate on a new matter: facts/chronology, party matrix, conflicts check, deadline/limitation register, scope in/out/assumptions, and a fee build-up. Central discipline is anti-assumption: conflicts are never 'clear' without a real records search, and no fee number goes out without its scope attached. Ran the script self-check (--selftest: OK) on python3.11.",
+      "changes": [
+        {"type": "package", "id": "skill-md", "detail": "Authored SKILL.md: intake gate, fact capture, party/role matrix, conflicts check (records-based), deadline & limitation register, scope in/out/assumptions/dependencies, fee build-up (basis/hours\u00d7rate/disbursements/tax/range), intake summary pack, anti-assumption discipline, examples, gotchas, reference links, troubleshooting."},
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the instructions, party/conflicts/deadline/scope/fee steps, examples, gotchas, and reference links."},
+        {"type": "package", "id": "references", "detail": "Added references/intake-questionnaire.md (interview script + file-opening checklist with mandatory-to-open blockers) and references/scoping-and-fees.md (scope writing, deadline/limitation register, fee build-up, estimate-vs-quote)."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category legal-tech, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 5 claims sourced to ABA Model Rule 1.7 (conflicts), ABA Model Rule 1.5 (fees), SRA client-care code, the local limitation-risk reference, and the script self-check."},
+        {"type": "test", "id": "script-selftest", "detail": "Verified scripts/intake_check.py --selftest passes on python3.11 (stdlib only, no network); checker scores completeness and blocks opening on pending conflicts / missing limitation date."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-conflicts-search",
+          "reason": "Actually clearing conflicts requires searching the firm's real client-matter database, which a static offline checker cannot do. The script deliberately stops at completeness/blocker detection (it flags conflicts as pending) and defers the real search to the human/agent with database access, per the anti-assumption rule.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

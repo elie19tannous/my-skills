@@ -1,12 +1,9 @@
 ---
 name: m365-agents-py
-description: |
-  Microsoft 365 Agents SDK for Python. Build multichannel agents for Teams/M365/Copilot Studio with aiohttp hosting, AgentApplication routing, streaming responses, and MSAL-based auth. Triggers: "Microsoft 365 Agents SDK", "microsoft_agents", "AgentApplication", "start_agent_process", "TurnContext", "Copilot Studio client", "CloudAdapter".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: microsoft-agents-hosting-core, microsoft-agents-hosting-aiohttp, microsoft-agents-activity, microsoft-agents-authentication-msal, microsoft-agents-copilotstudio-client
+description: Microsoft 365 Agents SDK for Python. Build multichannel agents for Teams/M365/Copilot Studio with aiohttp hosting, AgentApplication routing, streaming responses, and MSAL-based auth.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Microsoft 365 Agents SDK (Python)
@@ -14,9 +11,8 @@ metadata:
 Build enterprise agents for Microsoft 365, Teams, and Copilot Studio using the Microsoft Agents SDK with aiohttp hosting, AgentApplication routing, streaming responses, and MSAL-based authentication.
 
 ## Before implementation
-
 - Use the microsoft-docs MCP to verify the latest API signatures for AgentApplication, start_agent_process, and authentication options.
-- Confirm package versions on PyPI for the microsoft-agents-\* packages you plan to use.
+- Confirm package versions on PyPI for the microsoft-agents-* packages you plan to use.
 
 ## Important Notice - Import Changes
 
@@ -43,9 +39,10 @@ CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=<tenant-id>
 # Optional: OAuth handlers for auto sign-in
 AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__GRAPH__SETTINGS__AZUREBOTOAUTHCONNECTIONNAME=<connection-name>
 
-# Optional: Azure OpenAI for streaming (AAD auth via DefaultAzureCredential)
+# Optional: Azure OpenAI for streaming
 AZURE_OPENAI_ENDPOINT=<endpoint>
 AZURE_OPENAI_API_VERSION=<version>
+AZURE_OPENAI_API_KEY=<key>
 
 # Optional: Copilot Studio client
 COPILOTSTUDIOAGENT__ENVIRONMENTID=<environment-id>
@@ -94,9 +91,7 @@ ADAPTER = CloudAdapter(connection_manager=CONNECTION_MANAGER)
 AUTHORIZATION = Authorization(STORAGE, CONNECTION_MANAGER, **agents_sdk_config)
 
 # Create AgentApplication
-AGENT_APP = AgentApplication[TurnState](
-    storage=STORAGE, adapter=ADAPTER, authorization=AUTHORIZATION, **agents_sdk_config
-)
+AGENT_APP = AgentApplicationTurnState
 
 
 @AGENT_APP.conversation_update("membersAdded")
@@ -140,9 +135,7 @@ from microsoft_agents.hosting.core import (
 )
 from microsoft_agents.activity import ActivityTypes
 
-AGENT_APP = AgentApplication[TurnState](
-    storage=STORAGE, adapter=ADAPTER, authorization=AUTHORIZATION, **agents_sdk_config
-)
+AGENT_APP = AgentApplicationTurnState
 
 # Welcome handler
 @AGENT_APP.conversation_update("membersAdded")
@@ -190,20 +183,12 @@ async def on_error(context: TurnContext, error: Exception):
 
 ```python
 from openai import AsyncAzureOpenAI
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from microsoft_agents.activity import SensitivityUsageInfo
 
-# AAD token provider (preferred over AZURE_OPENAI_API_KEY)
-token_provider = get_bearer_token_provider(
-    DefaultAzureCredential(),
-    "https://cognitiveservices.azure.com/.default",
-)
-
-# Module-level singleton: client lives for the agent app lifetime.
 CLIENT = AsyncAzureOpenAI(
     api_version=environ["AZURE_OPENAI_API_VERSION"],
     azure_endpoint=environ["AZURE_OPENAI_ENDPOINT"],
-    azure_ad_token_provider=token_provider,
+    api_key=environ["AZURE_OPENAI_API_KEY"]
 )
 
 @AGENT_APP.message("poem")
@@ -229,7 +214,7 @@ async def on_poem_message(context: TurnContext, _state: TurnState):
         ],
         stream=True,
     )
-
+    
     try:
         async for chunk in streamed_response:
             if chunk.choices and chunk.choices[0].delta.content:
@@ -288,10 +273,10 @@ def acquire_token(settings, app_client_id, tenant_id):
         client_id=app_client_id,
         authority=f"https://login.microsoftonline.com/{tenant_id}",
     )
-
+    
     token_request = {"scopes": ["https://api.powerplatform.com/.default"]}
     accounts = pca.get_accounts()
-
+    
     if accounts:
         response = pca.acquire_token_silent(token_request["scopes"], account=accounts[0])
         return response.get("access_token")
@@ -305,22 +290,21 @@ async def main():
         environment_id=environ.get("COPILOTSTUDIOAGENT__ENVIRONMENTID"),
         agent_identifier=environ.get("COPILOTSTUDIOAGENT__SCHEMANAME"),
     )
-
+    
     token = acquire_token(
         settings,
         app_client_id=environ.get("COPILOTSTUDIOAGENT__AGENTAPPID"),
         tenant_id=environ.get("COPILOTSTUDIOAGENT__TENANTID"),
     )
-
-    # CopilotClient does not implement the context manager protocol.
+    
     copilot_client = CopilotClient(settings, token)
-
+    
     # Start conversation
     act = copilot_client.start_conversation(True)
     async for action in act:
         if action.text:
             print(action.text)
-
+    
     # Ask question
     replies = copilot_client.ask_question("Hello!", action.conversation.id)
     async for reply in replies:
@@ -333,22 +317,34 @@ asyncio.run(main())
 
 ## Best Practices
 
-1. **This skill is async-first (aiohttp-based).** Use async handlers and `async with` for aiohttp sessions.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. Use `microsoft_agents` import prefix (underscores, not dots).
-4. Use `MemoryStorage` only for development; use BlobStorage or CosmosDB in production.
-5. Always use `load_configuration_from_env(environ)` to load SDK configuration.
-6. Include `jwt_authorization_middleware` in aiohttp Application middlewares.
-7. Use `MsalConnectionManager` for MSAL-based authentication.
-8. Call `end_stream()` in finally blocks when using streaming responses.
-9. Use `auth_handlers` parameter on message decorators for OAuth-protected routes.
-10. Keep secrets in environment variables, not in source code.
+1. Use `microsoft_agents` import prefix (underscores, not dots).
+2. Use `MemoryStorage` only for development; use BlobStorage or CosmosDB in production.
+3. Always use `load_configuration_from_env(environ)` to load SDK configuration.
+4. Include `jwt_authorization_middleware` in aiohttp Application middlewares.
+5. Use `MsalConnectionManager` for MSAL-based authentication.
+6. Call `end_stream()` in finally blocks when using streaming responses.
+7. Use `auth_handlers` parameter on message decorators for OAuth-protected routes.
+8. Keep secrets in environment variables, not in source code.
+
+## Reference Files
+
+| File | Contents |
+| --- | --- |
+| references/acceptance-criteria.md | Import paths, hosting pipeline, streaming, OAuth, and Copilot Studio patterns |
 
 ## Reference Links
 
-| Resource                      | URL                                                                           |
-| ----------------------------- | ----------------------------------------------------------------------------- |
-| Microsoft 365 Agents SDK      | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/                   |
-| GitHub samples (Python)       | https://github.com/microsoft/Agents-for-python                                |
-| PyPI packages                 | https://pypi.org/search/?q=microsoft-agents                                   |
+| Resource | URL |
+| --- | --- |
+| Microsoft 365 Agents SDK | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/ |
+| GitHub samples (Python) | https://github.com/microsoft/Agents-for-python |
+| PyPI packages | https://pypi.org/search/?q=microsoft-agents |
 | Integrate with Copilot Studio | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/integrate-with-mcs |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

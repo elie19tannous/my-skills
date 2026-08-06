@@ -1,0 +1,418 @@
+{
+  "skill_name": "magic-data-cleaning",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "missing_value_handling",
+      "prompt": "You have a CSV file at `data/customer_orders.csv` with 5,000 rows and columns: customer_id (int), name (text), email (text), order_total (float), order_date (date), region (categorical, 6 values), loyalty_score (float). The file has the following missing value profile:\n\n- `order_total`: 3% missing (142 rows)\n- `loyalty_score`: 18% missing (912 rows)\n- `region`: 4% missing (198 rows)\n- `email`: 8% missing (401 rows)\n\nHandle the missing values appropriately for each column, validate the results, and save a checkpoint.\n\nContext:\n- The data will be used for a regional sales analysis, so `region` is critical\n- `loyalty_score` is used for customer segmentation downstream\n- `email` is a free-text field with no meaningful imputation possible via statistics\n- No sentinel values are present \u2014 the missing values are genuine NaN",
+      "expected_output": "Should: (1) run issue detection first to understand the full missing value picture; (2) select different imputation strategies per column based on data type and missing percentage; (3) use mean or median for `order_total`, KNN or correlation-preserving method for `loyalty_score`, mode for `region`, and drop/leave NaN for `email` without imputing; (4) validate after imputation confirming null counts reduced and no new nulls introduced; (5) save a checkpoint",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "detect",
+            "profile",
+            "missing",
+            "null count"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "median",
+            "mean",
+            "impute"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "KNN",
+            "knn",
+            "correlation",
+            "iterative"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "mode",
+            "categorical"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify",
+            "null check"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "checkpoint",
+            "save"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "mode imputation for email",
+            "impute email"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "string_normalization",
+      "prompt": "You have a CSV file at `data/product_catalog.csv` with 12,000 rows and columns: product_id, product_name, category, description, manufacturer, country_of_origin. The text columns have the following issues:\n\n- `product_name`: 340 rows have leading/trailing whitespace, 89 rows have double spaces, 23 rows have mojibake characters (e.g., `\"Caf\u00c3\u00a9 Machine\"` instead of `\"Cafe Machine\"`)\n- `category`: inconsistent casing (`\"Electronics\"`, `\"electronics\"`, `\"ELECTRONICS\"`) across 6 distinct categories\n- `description`: 156 rows have unicode control characters, 45 rows have non-NFC-normalized unicode\n- `manufacturer`: 67 rows have trailing tabs and carriage returns from a Windows export\n\nClean all text quality issues, validate the results, and save a checkpoint.\n\nContext:\n- The `category` column will be used for groupby aggregation, so casing must be consistent\n- The `product_name` column feeds into a search index, so whitespace and encoding matter\n- The `description` column is user-facing, so control characters must be removed\n- You should NOT change the semantic content of any field \u2014 only fix formatting issues",
+      "expected_output": "Should: (1) identify text quality issues before cleaning rather than blindly normalizing; (2) apply trim before whitespace collapse (correct operation order); (3) fix mojibake encoding in product_name; (4) normalize casing in category for consistency; (5) remove control characters from description while preserving newlines/tabs; (6) apply NFC unicode normalization; (7) not alter semantic content; (8) validate after normalization confirming issue counts dropped; (9) save a checkpoint",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "detect",
+            "identify",
+            "inspect",
+            "audit"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "strip",
+            "trim",
+            "rstrip",
+            "lstrip"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "mojibake",
+            "encoding",
+            "ftfy",
+            "fix_text"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "lower",
+            "title case",
+            "casing",
+            "normalize case"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "NFC",
+            "unicodedata",
+            "normalize"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify",
+            "confirm"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "checkpoint",
+            "save"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "translate",
+            "semantic change",
+            "word replacement"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "complex_cleaning_plan",
+      "prompt": "You have a JSONL file at `data/survey_responses.jsonl` with 8,000 records and fields: respondent_id, age, income, education_level, satisfaction_score, open_feedback, survey_date, region. The file has multiple overlapping quality issues:\n\n- `age`: 2% missing, plus 34 rows with value \"N/A\" (string in a numeric field)\n- `income`: 22% missing, plus 12 outliers (negative values that are clearly errors)\n- `education_level`: inconsistent casing and whitespace (\"Bachelor's \", \" bachelor's\", \"BACHELORS\")\n- `satisfaction_score`: 5% missing (numeric, 1-10 scale)\n- `open_feedback`: 15% contain sentinel value \"No response\" which should be treated as missing; 3% contain the placeholder \"TBD\"\n- `survey_date`: 8 rows have dates in MM/DD/YYYY format while the rest are YYYY-MM-DD\n- Approximately 200 exact duplicate rows\n\nProduce a cleaning plan, execute it in stages with checkpoints, validate after each stage, and route synthesis tasks appropriately.\n\nContext:\n- This data feeds into a satisfaction analysis dashboard\n- The `open_feedback` sentinels (\"No response\", \"TBD\") need LLM-based contextual fill, not statistical imputation\n- The duplicate rows likely come from a double-submission bug and should be removed\n- Order of operations matters: normalize strings before deduplication",
+      "expected_output": "Should: (1) run full issue detection before acting; (2) produce a multi-step cleaning plan before executing; (3) clean deterministic issues first (type coercion, whitespace, date format) before imputation; (4) normalize education_level strings before deduplication; (5) convert 'N/A' strings in age to NaN before numeric imputation; (6) flag or remove negative income outliers rather than blindly imputing over them; (7) recognize open_feedback sentinels as a synthesis task and route to magic-data-synthesis rather than imputing with mode; (8) save checkpoints between stages (at least 2); (9) validate after each major stage",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "plan",
+            "stages",
+            "multi-step",
+            "cleaning plan"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "detect",
+            "profile",
+            "issue detection"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "N/A",
+            "coerce",
+            "to NaN",
+            "string to numeric"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "normalize",
+            "education_level",
+            "whitespace",
+            "casing"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "synthesis",
+            "magic-data-synthesis",
+            "LLM",
+            "route"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "deduplicate",
+            "drop_duplicates",
+            "duplicates"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "checkpoint",
+            "intermediate save",
+            "stage save"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "validate",
+            "verify after",
+            "assert"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "impute open_feedback",
+            "mode for open_feedback",
+            "fillna open_feedback"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "cleaning-vs-synthesis-boundary",
+      "difficulty": "hard",
+      "prompt": "I have a dataset with a 'description' column where 200 rows contain 'TBD' and 50 rows contain 'N/A'. The other 750 rows have full English text descriptions. Should I clean these or generate new ones?",
+      "expected_output": "Should: (1) recognize 'TBD' and 'N/A' as sentinel values, not genuine missing values; (2) clearly distinguish between cleaning (deterministic, code-fixable issues) and synthesis (requires LLM to generate new content); (3) recommend routing the TBD/N/A rows to magic-data-synthesis for LLM-based description generation, not statistical imputation; (4) explain why mode/median/ffill cannot meaningfully fill a free-text description column; (5) not suggest any statistical fill strategy for the description column",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sentinel",
+            "TBD",
+            "N/A",
+            "placeholder"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "synthesis",
+            "magic-data-synthesis",
+            "LLM",
+            "generate"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "cleaning",
+            "deterministic",
+            "code-fixable",
+            "distinguish"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "cannot impute",
+            "not statistical",
+            "free-text",
+            "text column"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "fillna",
+            "forward fill",
+            "mode imputation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "empty-dataset-edge",
+      "difficulty": "edge",
+      "prompt": "I loaded a CSV but after profiling it has 0 valid rows \u2014 every row has at least one critical null. What should I do?",
+      "expected_output": "Should: (1) NOT proceed with cleaning operations on a dataset with 0 valid rows; (2) suggest checking the data source or upstream pipeline for a loading or export failure; (3) consider whether the loading step itself failed (e.g., wrong file, wrong delimiter, corrupted file); (4) recommend escalating to a data source investigation rather than applying imputation; (5) not attempt any imputation or cleaning on the empty/all-null dataset",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "do not",
+            "cannot",
+            "stop",
+            "halt",
+            "investigate",
+            "pause",
+            "shouldn't",
+            "not appropriate",
+            "don't",
+            "before",
+            "first",
+            "root cause",
+            "why",
+            "underlying"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "source",
+            "upstream",
+            "loading",
+            "raw",
+            "original",
+            "re-load",
+            "export",
+            "corrupt",
+            "ingestion",
+            "pipeline",
+            "ETL",
+            "input"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "impute all",
+            "proceed with cleaning",
+            "apply fillna"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "scriptable_tool_standard_cleaning",
+      "difficulty": "medium",
+      "prompt": "My dataset `data/users.csv` (10,000 rows) has about 12% missing values scattered across numeric columns. Clean the missing values using whatever strategy works best automatically.",
+      "expected_output": "Should call handle_missing.py directly via CLI (scriptable tool, Tier A \u2014 auto strategy handles this case). The auto strategy selects median for numeric columns and mode for categorical. No need for custom per-column logic when the user says 'whatever works best automatically'.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "handle_missing.py",
+            "handle_missing",
+            "auto"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "median",
+            "impute",
+            "fill",
+            "strategy"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def handle_missing(",
+            "write custom imputation",
+            "implement.*from scratch"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "scriptable_tool_custom_cleaning",
+      "difficulty": "medium",
+      "prompt": "Clean missing values in my dataset. For the 'age' column, use KNN imputation grouped by 'department'. For 'salary', use the median within each 'level' group. For 'email', drop any row where email is null (it's required for our join).",
+      "expected_output": "Should read handle_missing.py source or seed patterns to understand imputation strategies, then write CUSTOM code with per-column logic. The CLI's --strategy flag takes a single strategy for all columns, so it can't express per-column rules. Must write custom Python with groupby-KNN for age, group-median for salary, and dropna for email.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "custom",
+            "per-column",
+            "KNN",
+            "knn"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "groupby",
+            "group",
+            "department"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "drop",
+            "dropna",
+            "email.*null",
+            "required"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "handle_missing.py --strategy auto",
+            "handle_missing.py data"
+          ]
+        }
+      ]
+    }
+  ]
+}

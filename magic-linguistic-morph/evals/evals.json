@@ -1,0 +1,47 @@
+{
+  "skill_name": "magic-linguistic-morph",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "agglutinative-finnish-paradigm-augmentation",
+      "prompt": "I'm fine-tuning Llama on Finnish but only have ~20K Finnish examples. Can morphology help?",
+      "expected_output": "Should: (1) classify Finnish as tier=hi, agglutinative-Uralic; (2) note UniMorph coverage is DEEP for Finnish; (3) recommend paradigm-completion augmentation (UniMorph paradigms × 10-30 inflected forms per lemma); (4) tag synthetic with <morph_aug>; (5) expected gain ~1-3 BLEU; (6) HFST-fin (Omorfi) is the FST analyzer if needed; (7) hand off to magic-linguistic-tokenize for fertility re-audit.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["paradigm completion", "paradigm-completion", "augmentation"]},
+        {"type": "must_contain_one", "values": ["UniMorph", "deep", "10×", "10x"]},
+        {"type": "must_contain_one", "values": ["morph_aug", "tag", "synthetic tag"]},
+        {"type": "must_not_contain", "values": ["BPE alone is enough", "morphology not needed"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "templatic-arabic-trap",
+      "prompt": "I'm trying to use Morfessor to segment Arabic morphemes for my LLM tokenizer. Should I?",
+      "expected_output": "Should: (1) NO — Morfessor is concatenative; Arabic is templatic non-concatenative; (2) explain root-pattern (k-t-b root with various patterns producing kataba, kitab, maktab, etc.); (3) recommend Farasa or MADAMIRA instead (root-aware); (4) note segmentation BEFORE BPE; vocab should include root + pattern markers; (5) generalize to Hebrew (YAP) and Amharic (HornMorpho).",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not", "don't", "avoid"]},
+        {"type": "must_contain_one", "values": ["templatic", "non-concatenative", "root-pattern"]},
+        {"type": "must_contain_one", "values": ["Farasa", "MADAMIRA", "root-aware"]},
+        {"type": "must_contain_one", "values": ["Hebrew", "YAP", "Amharic", "HornMorpho"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "polysynthetic-inuktitut",
+      "prompt": "How do I tokenize Inuktitut for my MT model? Each word seems insanely long.",
+      "expected_output": "Should: (1) tier=extreme polysynthetic; (2) explain words can be 8-20+ morphemes; (3) MANDATORY morpheme segmentation BEFORE BPE; (4) HFST-iku (Inuit-FST) or HFST-kal for Greenlandic — use if available; (5) SIGMORPHON 2023 segmenter as fallback; (6) tokenizer alone insufficient — vocab extension critical (route to magic-linguistic-tokenize); (7) flag community partnership for community-controlled data.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["polysynth", "tier=extreme"]},
+        {"type": "must_contain_one", "values": ["HFST-iku", "Inuit-FST", "FST"]},
+        {"type": "must_contain_one", "values": ["mandatory", "MANDATORY", "essential", "critical"]},
+        {"type": "must_contain_one", "values": ["community", "magic-linguistic-ethics"]}
+      ]
+    }
+  ]
+}

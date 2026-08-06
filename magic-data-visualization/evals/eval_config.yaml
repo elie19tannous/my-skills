@@ -1,0 +1,33 @@
+skill: magic-data-visualization
+version: 2.0.0
+evals:
+  - id: basic_bar_chart
+    prompt: prompts/basic_bar_chart.md
+    baseline: baselines/basic_bar_chart.md
+    difficulty: easy
+    tests:
+      - "agent selects bar chart for categorical-vs-numeric comparison"
+      - "agent uses colorblind-safe palette"
+      - "agent labels both axes and includes a title"
+      - "agent starts Y-axis at zero"
+
+  - id: multi_chart_dashboard
+    prompt: prompts/multi_chart_dashboard.md
+    baseline: baselines/multi_chart_dashboard.md
+    difficulty: medium
+    tests:
+      - "agent selects different chart types for different story types"
+      - "agent uses small multiples instead of dual Y-axes"
+      - "agent formats axes consistently across all charts"
+      - "agent saves each chart as a separate file"
+
+  - id: story_driven_viz
+    prompt: prompts/story_driven_viz.md
+    baseline: baselines/story_driven_viz.md
+    difficulty: hard
+    tests:
+      - "agent identifies the story the data tells before choosing charts"
+      - "agent selects chart types matching each story (trend, distribution, comparison)"
+      - "agent avoids anti-patterns (pie, 3D, dual axis, truncated Y)"
+      - "agent generates descriptive titles that convey the takeaway"
+      - "agent handles >20 categories by aggregating to top-N"

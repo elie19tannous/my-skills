@@ -1,0 +1,72 @@
+{
+  "skill_name": "magic-linguistic-scope",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "midresource-yoruba-strategy",
+      "prompt": "I want to fine-tune an LLM for Yoruba. What's the right strategy?",
+      "expected_output": "Should: (1) resolve Yoruba to ISO yor + Glottolog yoru1245, note tone-language status; (2) classify Joshi class (2 per the original 2020 paper, 3 per current FLORES-200/NLLB-200/MasakhaNER signals — either is acceptable so long as the class is named); (3) recommend Igbo/Hausa/Swahili as transfer sources (not English) with URIEL distances; (4) recommend vocab extension + LoRA + multilingual base (NLLB/AfroLM) over English fine-tune; (5) flag diacritic preservation as non-negotiable.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain", "values": ["yor", "yoru1245", "tone"]},
+        {"type": "must_contain_one", "values": ["Class 2", "Class 3"]},
+        {"type": "must_contain", "values": ["Igbo", "Hausa"]},
+        {"type": "must_not_contain", "values": ["just use English", "fine-tune from English"]},
+        {"type": "must_contain_one", "values": ["vocab extension", "OFA", "FOCUS", "LoRA"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "class-0-disambiguation-quechua",
+      "prompt": "Train a Quechua model for me.",
+      "expected_output": "Should: (1) recognize 'Quechua' as a macrolanguage and STOP for disambiguation; (2) present Cusco/Ayacucho/Bolivian as options; (3) NOT proceed with strategy until disambiguation; (4) note community-engagement requirements (vitality + Indigenous data).",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain", "values": ["macrolanguage", "disambiguat"]},
+        {"type": "must_contain_one", "values": ["Cusco", "Ayacucho", "Bolivian", "quz"]},
+        {"type": "must_not_contain", "values": ["Class", "transfer source"]},
+        {"type": "must_contain_one", "values": ["community", "Indigenous", "FPIC", "ethics"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "class-3-swahili-multilingual",
+      "prompt": "We want to add Swahili support to our existing Llama 3 fine-tune. What should we know?",
+      "expected_output": "Should: (1) resolve Swahili (swa); (2) Class 3 — has FLORES, NLLB, MasakhaNER; (3) note Latin script + Bantu noun classes; (4) URIEL transfer sources Zulu/Kinyarwanda/Xhosa; (5) recommend standard fine-tune + targeted MasakhaNER eval; (6) note Swahili is one of the better-resourced African languages — Class 3 is a real upgrade from Class 1-2 patterns.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain", "values": ["swa", "Class 3"]},
+        {"type": "must_contain_one", "values": ["MasakhaNER", "FLORES", "NLLB"]},
+        {"type": "must_contain_one", "values": ["Zulu", "Kinyarwanda", "Xhosa", "Bantu"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "class-5-english-no-special-handling",
+      "prompt": "I'm training on English text. Anything special to know about scope?",
+      "expected_output": "Should: (1) resolve English (eng); (2) Class 5 — no special low-resource heuristics needed; (3) standard pretrained tokenizers, full fine-tune, broad eval suites apply; (4) brief — don't over-engineer scope for a Class 5 language.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain", "values": ["eng", "Class 5"]},
+        {"type": "must_not_contain", "values": ["vocab extension required", "transfer source carefully"]},
+        {"type": "max_length_words", "values": [350]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "polysynthetic-extreme-inuktitut",
+      "prompt": "I want to build something useful for Inuktitut speakers.",
+      "expected_output": "Should: (1) resolve Inuktitut (iku); (2) Class 0-1 — very limited data; (3) flag polysynthesis (tokenizer fertility 4-7×); (4) note URIEL distance to English ≥ 0.78 — English is hopeless as transfer source; (5) recommend West Greenlandic (kal) as closest source; (6) MANDATORY routing to magic-linguistic-ethics — Indigenous Canadian data; community engagement before any data acquisition; (7) suggest archive routes (DELAMAN/AILLA).",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain", "values": ["iku", "polysynth"]},
+        {"type": "must_contain_one", "values": ["West Greenlandic", "kal"]},
+        {"type": "must_contain_one", "values": ["community", "FPIC", "ethics", "Indigenous"]},
+        {"type": "must_contain_one", "values": ["English is", "do not use English", "English is unsafe", "English is hopeless"]}
+      ]
+    }
+  ]
+}

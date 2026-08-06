@@ -1,0 +1,354 @@
+{
+  "skill_name": "magic-data-profiling",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_quality_score",
+      "prompt": "You have a CSV file at `data/customer_records.csv` with 5,000 rows and these columns:\n- `id` (integer, unique identifier)\n- `name` (string, customer name)\n- `email` (string, email address)\n- `age` (integer, some missing values)\n- `signup_date` (string, date format varies: \"2024-01-15\", \"Jan 15, 2024\", \"15/01/2024\")\n- `status` (string, values: \"active\", \"inactive\", \"Active\", \"ACTIVE\")\n\nThe dataset has ~8% missing values concentrated in `age` and `email`, mixed date formats in `signup_date`, and inconsistent casing in `status`.\n\nProfile this dataset and report the quality score.",
+      "expected_output": "Should: (1) detect column types before profiling (numeric vs text vs categorical); (2) compute a composite quality score (0-100) across completeness, consistency, uniqueness, and validity dimensions; (3) report per-column breakdown alongside the aggregate score; (4) identify inconsistent casing in status as a consistency issue; (5) identify mixed date formats in signup_date as a consistency issue; (6) report the score with context including row count (5,000), column count (6), and what the score means; (7) use code for computing statistics, not LLM inference",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "quality score",
+            "composite score",
+            "overall score"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "per-column",
+            "column breakdown",
+            "by column"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "completeness",
+            "consistency",
+            "validity"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "casing",
+            "status",
+            "inconsistent"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "date format",
+            "signup_date",
+            "mixed format"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "5000 rows",
+            "5,000 rows",
+            "row count"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "LLM infer",
+            "estimate without code",
+            "guess"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "outlier_detection",
+      "prompt": "You have a dataset at `data/sensor_readings.csv` with 2,000 rows and these columns:\n- `sensor_id` (string, 10 unique sensors)\n- `temperature` (float, normally distributed around 22.0 with std 2.5, but sensor_03 has 15 readings spiking to 85-95)\n- `humidity` (float, right-skewed distribution, range 30-95 with a long tail)\n- `pressure` (float, normally distributed around 1013 with std 5)\n- `reading_time` (datetime string)\n\nDetect and report outliers across all numeric columns. Choose the appropriate outlier detection method for each column based on its distribution.",
+      "expected_output": "Should: (1) check distribution normality before choosing a detection method for each column; (2) use Z-score for temperature and pressure which are normally distributed; (3) use IQR for humidity which is right-skewed; (4) identify the sensor_03 temperature spikes (85-95 range) as clear outliers; (5) report outlier count, percentage, and sample values for each column; (6) not blindly apply the same method to all columns; (7) discuss whether outliers are errors vs legitimate extreme values",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "normality",
+            "Shapiro",
+            "distribution test",
+            "normal test"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "Z-score",
+            "z_score",
+            "zscore"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "IQR",
+            "interquartile",
+            "iqr"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sensor_03",
+            "temperature spike",
+            "85",
+            "95"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "outlier count",
+            "percentage",
+            "sample values"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "malfunction",
+            "error vs",
+            "legitimate",
+            "natural"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "same method for all",
+            "apply Z-score to humidity",
+            "apply IQR to all"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "large_dataset_profiling",
+      "prompt": "You have a dataset at `data/transactions.parquet` with 5,000,000 rows and 25 columns including:\n- `transaction_id` (string, unique)\n- `amount` (float, range 0.01 to 500,000)\n- `currency` (string, 15 unique currencies)\n- `merchant_category` (string, 200+ unique categories)\n- `description` (string, free-text, average 50 words)\n- `customer_id` (string, 100,000 unique customers)\n- `timestamp` (datetime)\n- 18 additional numeric and categorical columns\n\nProfile this dataset comprehensively. The goal is to assess data quality and identify issues before building a fraud detection model.",
+      "expected_output": "Should: (1) sample before full profiling (e.g., 10,000 rows) rather than running detect_all_issues on the full 5M rows; (2) explicitly note that sampled profiling results have uncertainty and may miss rare patterns; (3) identify targeted columns for full-scale profiling after reviewing sample results; (4) use or generate a caching pattern for expensive operations such as correlation matrix; (5) consider memory constraints and not attempt a 25-column correlation heatmap at full scale; (6) report quality score with context of 5M rows, 25 columns, and fraud detection use case; (7) profile the description column using text metrics not numeric metrics",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "sample",
+            "sample first",
+            "sample size"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "uncertainty",
+            "may miss",
+            "sampling caveat",
+            "not representative",
+            "approximate",
+            "estimate",
+            "caveat",
+            "limitation",
+            "confidence",
+            "extrapolat"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "targeted",
+            "full-scale",
+            "targeted columns"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "memory",
+            "memory constraint",
+            "at full scale",
+            "OOM",
+            "batch",
+            "chunk",
+            "partition",
+            "column-by-column"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "text metrics",
+            "vocabulary",
+            "word count",
+            "text length"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "detect_all_issues without sample",
+            "full scan 5M",
+            "load all 5 million"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "misleading-quality-score",
+      "difficulty": "hard",
+      "prompt": "I profiled my dataset and got a quality score of 95/100 but I know the data has problems. The 'status' column has 80% of values as 'ACTIVE' which seems wrong for historical data. Why did profiling miss this?",
+      "expected_output": "Should: (1) recognize the 80% 'ACTIVE' uniformity as a domain validity issue that standard quality metrics do not capture; (2) explain that quality scores measure completeness, consistency, and format validity \u2014 not domain-specific business logic; (3) suggest content validation checks: compare status distribution against historical expectations or business rules; (4) NOT say the data is clean or that a 95 score means no problems exist; (5) recommend augmenting profiling with domain-specific validation rules for status columns in historical datasets",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "uniformity",
+            "distribution",
+            "80%",
+            "skewed",
+            "dominant value"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "quality score limitation",
+            "score does not capture",
+            "not detect",
+            "missed by",
+            "blind spot",
+            "doesn't cover",
+            "structural",
+            "semantic",
+            "doesn't measure",
+            "won't catch"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "content validation",
+            "business rules",
+            "domain validation",
+            "expected distribution",
+            "domain-specific",
+            "semantic check",
+            "business logic",
+            "rule-based"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "historical",
+            "ACTIVE",
+            "status column",
+            "domain-specific"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "data is clean",
+            "no issues",
+            "quality is good"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "scriptable_tool_direct_call",
+      "difficulty": "medium",
+      "prompt": "I have a dataset at `data/sales.csv` with 3,000 rows and 8 columns (mix of numeric and text). Give me a quick quality assessment.",
+      "expected_output": "Should call quality_score.py directly via CLI (scriptable tool, Tier A \u2014 standard defaults work). Should NOT read the script source and write custom quality scoring code. The standard 4-dimension formula (completeness, consistency, uniqueness, validity) is sufficient for a 'quick quality assessment'.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "quality_score.py",
+            "quality_score",
+            "run quality"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "completeness",
+            "consistency",
+            "uniqueness",
+            "validity"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def quality_score(",
+            "write custom quality",
+            "implement.*scoring"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "scriptable_tool_custom_mode",
+      "difficulty": "medium",
+      "prompt": "I need a custom quality score for my ML training dataset. Weight completeness at 50% (missing values kill model performance), add a 'timeliness' dimension (data older than 30 days is stale), and score each column separately rather than using the aggregate.",
+      "expected_output": "Should read quality_score.py source or use seed patterns to understand the formula, then write CUSTOM scoring code with: (1) modified weights (completeness 50%), (2) a new timeliness dimension, (3) per-column scoring. Should NOT just call quality_score.py with default args since that uses fixed 4-dimension weights.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "custom",
+            "adapt",
+            "modify",
+            "write",
+            "implement"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "50%",
+            "0.50",
+            "timeliness",
+            "weight"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "per-column",
+            "column-level",
+            "each column"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "python3 quality_score.py data",
+            "call quality_score.py with default"
+          ]
+        }
+      ]
+    }
+  ]
+}

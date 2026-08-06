@@ -1,168 +1,80 @@
 ---
 name: model-routing
-description: >
-  Choose default fal.ai endpoint IDs for genmedia production skills. Use this
-  with commercial, marketing, ugc, character-design, cinematography,
-  storytelling, and workflow when the user has not named a specific model.
+description: "Heuristics for choosing the right model tier (haiku/sonnet/opus) when delegating to agents. Loaded by orchestrating commands to inform agent selection."
+alwaysApply: true
 ---
 
-# Genmedia model routing
+# Model Routing Heuristics
 
-Use these endpoint defaults when a domain skill needs a model. These choices
-come from project-specific guidance. Still run `genmedia schema <endpoint_id>
---json` before execution and `genmedia pricing <endpoint_id> --json` when cost
-matters.
+When delegating work to agents, use these signals to select the right model tier. These are heuristics, not hard rules — the user can always override with `--quick` or `--thorough`.
 
-Endpoint-first rule:
+## Complexity Signals
 
-1. Pick the endpoint ID from this skill.
-2. Verify it with `genmedia models --endpoint_id <endpoint_id> --json`.
-3. Inspect it with `genmedia schema <endpoint_id> --json`.
-4. Check `genmedia pricing <endpoint_id> --json` when cost matters.
-5. Use text search only if the routed endpoint is missing, deprecated,
-   rejected, or the task needs a model role not covered here.
+| Signal | Simple (haiku/sonnet) | Moderate (sonnet) | Complex (opus) |
+|--------|----------------------|-------------------|----------------|
+| **File count** | 1-2 files | 3-8 files | 9+ files |
+| **Scope** | Single class/method | Single system | Multiple systems |
+| **Keywords** | "add field", "rename", "fix typo", "remove" | "implement", "refactor", "test" | "architect", "migrate", "optimize", "redesign" |
+| **Risk level** | No serialization, no networking | Serialization involved | Networking, threading, platform-specific |
+| **Patterns** | Obvious fix, boilerplate | Requires design choices | Requires trade-off reasoning |
 
-Do not invent endpoint IDs.
+## Routing Decision Matrix
 
-## Image generation
+### Haiku Tier — Fast, Cheap, Read-Only
+**Agents:** `unity-scout`, `unity-linter`
+**Use when:**
+- Quick codebase exploration before a larger task
+- Fast validation pass (lint-style check)
+- Finding files, symbols, or patterns
+- Pre-flight checks before delegating to a heavier agent
 
-### Text-heavy image work
+**Never use for:** Writing code, modifying files, complex reasoning
 
-Use for infographics, UI mockups, posters, product labels, packaging text,
-readable signs, book covers, educational diagrams, and any output where text
-inside the image must be accurate.
+### Sonnet Tier — Balanced Speed/Quality
+**Agents:** `unity-coder-lite`, `unity-fixer-lite`, `unity-reviewer`, `unity-test-runner`, `unity-build-runner`, `unity-migrator`, `unity-security-reviewer`, `unity-git-master`
+**Use when:**
+- Single-file changes with clear requirements
+- Code review against a known checklist
+- Writing tests for existing code
+- Build configuration
+- Bug fixes where the cause is known or obvious
+- Structured tasks with documented procedures (migrations, LFS setup)
 
-1. `openai/gpt-image-2`
-   - Use `quality=high`.
-   - Prefer 2K or 4K custom `image_size` when the final must be detailed.
-   - Treat as expensive. Do not use it for cheap drafts.
-2. `fal-ai/nano-banana-pro`
-   - Use as the second choice when text is important but GPT Image 2 is not
-     available or the user accepts a lower ceiling.
+### Opus Tier — Deep Reasoning
+**Agents:** `unity-coder`, `unity-fixer`, `unity-verifier`, `unity-optimizer`, `unity-prototyper`, `unity-shader-dev`, `unity-scene-builder`, `unity-ui-builder`, `unity-network-dev`, `unity-critic`
+**Use when:**
+- Multi-system feature implementation
+- Bug investigation requiring deep analysis
+- Performance optimization (trade-off reasoning)
+- Architecture decisions
+- Shader math and visual programming
+- Spatial reasoning (scene building)
+- Challenging plans (critic role)
 
-Cheap and simple models are not acceptable for text-heavy production.
+## Integration with Commands
 
-### Premium still images
+### /unity-workflow — Phase 2 (Plan)
+During the Plan phase, evaluate the requirements against the complexity signals above:
+1. Count the estimated files to create/modify
+2. Check for complexity keywords in the task description
+3. Identify risk factors (serialization, networking, platform-specific)
+4. Choose the agent tier accordingly:
+   - Simple requirements → route to `unity-coder-lite` (sonnet)
+   - Moderate requirements → route to `unity-coder` (opus)
+   - Complex multi-system → route to multiple agents via `/unity-team`
 
-Use for commercial stills, realistic product scenes, editorial photography,
-cinematic keyframes, and high-quality visual concepts.
+### /unity-team — Agent Selection
+When building a team, consider mixing tiers for efficiency:
+- Use `unity-scout` (haiku) for the initial project scan
+- Use sonnet agents for structured tasks (tests, review)
+- Reserve opus agents for the creative/reasoning-heavy work
+- The `--quick` flag swaps opus agents for their sonnet equivalents where available
 
-- More realistic output: `openai/gpt-image-2`.
-- High-quality styled output: `openai/gpt-image-2`.
-- One step down: `fal-ai/nano-banana-pro`.
-- Strong cheaper alternative: `fal-ai/nano-banana-2`.
+### Cost Awareness
+| Tier | Relative Cost | Relative Speed |
+|------|--------------|----------------|
+| Haiku | 1x | Fastest |
+| Sonnet | 5x | Fast |
+| Opus | 25x | Slower |
 
-### Fast draft images
-
-Use for quick concepts, mood options, rough composition, and cheap iteration.
-
-- `fal-ai/flux-2/klein/9b`
-
-Do not use fast draft output as final commercial delivery unless the user asks.
-
-## Image editing
-
-Use for background replacement, relighting, cleanup, object changes, product
-placement, outfit changes, character edits, and multi-image composition.
-
-1. `fal-ai/nano-banana-pro/edit`
-2. `openai/gpt-image-2/edit`
-3. `fal-ai/bytedance/seedream/v5/lite/edit`
-
-For product fidelity, also consider:
-
-- `fal-ai/nano-banana-pro`
-- `fal-ai/nano-banana-2`
-- `fal-ai/bytedance/seedream/v5/lite/text-to-image`
-- `fal-ai/nano-banana-2/edit`
-
-For consistent characters, use `openai/gpt-image-2` first. If editing an
-existing character image, inspect `openai/gpt-image-2/edit`.
-
-## Video generation
-
-### Highest quality video
-
-Use Seedance 2.0 first for final, high-quality video.
-
-- Text to video: `bytedance/seedance-2.0/text-to-video`
-- Image to video: `bytedance/seedance-2.0/image-to-video`
-- Reference to video: `bytedance/seedance-2.0/reference-to-video`
-
-Fast variants exist for lower latency:
-
-- `bytedance/seedance-2.0/fast/text-to-video`
-- `bytedance/seedance-2.0/fast/image-to-video`
-- `bytedance/seedance-2.0/fast/reference-to-video`
-
-### Fast or lower-cost video
-
-Use Grok Imagine Video for fast, lower-cost motion previews and economical
-video generation.
-
-- Text to video: `xai/grok-imagine-video/text-to-video`
-- Image to video: `xai/grok-imagine-video/image-to-video`
-- Video edit: `xai/grok-imagine-video/edit-video`
-
-### Multi-shot storytelling
-
-Use in this order:
-
-1. `bytedance/seedance-2.0/text-to-video`
-2. `bytedance/seedance-2.0/image-to-video`
-3. `bytedance/seedance-2.0/reference-to-video`
-4. `fal-ai/kling-video/v3/pro/text-to-video`
-5. `fal-ai/kling-video/v3/pro/image-to-video`
-6. `alibaba/happy-horse/text-to-video`
-7. `alibaba/happy-horse/image-to-video`
-
-Use Kling v3 when its multi-prompt, element, or custom element controls match
-the requested shot plan. Use Happy Horse after Seedance and Kling unless the
-user specifically asks for it.
-
-### Native audio and lip-sync
-
-Use for talking avatars, speech-driven face motion, product spokespersons,
-UGC-style presenters, and lip-sync from an image plus audio or text.
-
-1. `veed/fabric-1.0`
-   - Image plus uploaded audio.
-2. `veed/fabric-1.0/text`
-   - Image plus text speech.
-3. `fal-ai/creatify/aurora`
-   - Avatar video from image plus audio, with optional visual direction.
-
-## Campaign and UGC routing
-
-Use these when the user asks for campaign-level marketing or creator-style
-social content.
-
-### Marketing campaign assets
-
-- Campaign key art, landing heroes, posters, text-heavy ads, app visuals, and
-  exact-copy layouts: `openai/gpt-image-2` at `quality=high`.
-- Premium still variants: `openai/gpt-image-2`, then
-  `fal-ai/nano-banana-pro`, then `fal-ai/nano-banana-2`.
-- Edits from product, logo, UI, or lifestyle references:
-  `fal-ai/nano-banana-pro/edit`, then `openai/gpt-image-2/edit`.
-- Fast variant exploration: `fal-ai/flux-2/klein/9b`.
-- Product reveal or social campaign video:
-  `bytedance/seedance-2.0/image-to-video`.
-- Text-to-video campaign concept: `bytedance/seedance-2.0/text-to-video`.
-
-### UGC and creator ads
-
-- Portrait plus audio talking head: `veed/fabric-1.0`.
-- Portrait plus text talking head: `veed/fabric-1.0/text`.
-- Avatar with visual direction: `fal-ai/creatify/aurora`.
-- Existing footage with new speech: `fal-ai/sync-lipsync/v2`.
-- Product b-roll: `bytedance/seedance-2.0/image-to-video`.
-- Fast b-roll draft: `xai/grok-imagine-video/image-to-video`.
-
-## Utility endpoints
-
-Workflow utility endpoint IDs live in the `workflow` skill reference:
-`workflow/references/utility-endpoints.md`.
-
-Utility endpoints are allowed to be explicit because they are deterministic
-tools, not creative model choices. Always inspect schema before use.
+For iterative work (verify-fix loops), prefer sonnet for early passes and opus for the final judgment pass. This can reduce costs by 50%+ on multi-iteration workflows.

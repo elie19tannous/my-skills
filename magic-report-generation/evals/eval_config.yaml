@@ -1,0 +1,31 @@
+skill: magic-report-generation
+version: 2.0.0
+evals:
+  - id: basic_summary_report
+    prompt: prompts/basic_summary_report.md
+    baseline: baselines/basic_summary_report.md
+    difficulty: easy
+    tests:
+      - "agent includes all 6 mandatory sections"
+      - "agent leads with key finding in summary"
+      - "agent includes at least one caveat"
+
+  - id: multi_section_report
+    prompt: prompts/multi_section_report.md
+    baseline: baselines/multi_section_report.md
+    difficulty: medium
+    tests:
+      - "agent selects appropriate template for audience"
+      - "agent provides baseline comparison for metrics"
+      - "agent quantifies uncertainty with ranges or sample sizes"
+      - "agent formats tables with truncation for large data"
+
+  - id: contradictory_findings
+    prompt: prompts/contradictory_findings.md
+    baseline: baselines/contradictory_findings.md
+    difficulty: hard
+    tests:
+      - "agent presents both contradictory findings without hiding either"
+      - "agent explains methodology difference causing the contradiction"
+      - "agent does not resolve the contradiction by choosing one side"
+      - "agent includes appropriate caveats about the conflicting results"

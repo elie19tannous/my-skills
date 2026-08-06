@@ -1,122 +1,188 @@
 ---
-name: "loop"
-description: "Start an autonomous experiment loop with user-selected interval (10min, 1h, daily, weekly, monthly). Uses CronCreate for scheduling. Use when the user runs /ar:loop or asks to run an autoresearch experiment continuously on a schedule."
-command: /ar:loop
+name: loop
+license: MIT
+description: >-
+  Bounded foreground repetition for the current session. Creates a loop
+  contract, runs or coordinates an action plus verifier up to a declared attempt
+  limit, and records evidence under .planning/loops/. Use for repeat-until-pass
+  work that is too small for daemon and not time-based scheduling.
+user-invocable: true
+auto-trigger: false
+trigger_keywords:
+  - loop
+  - repeat until
+  - until tests pass
+  - until lint passes
+  - max attempts
+  - retry until
+last-updated: 2026-06-09
 ---
 
-# /ar:loop — Autonomous Experiment Loop
+# /loop -- Bounded Foreground Loop
 
-Start a recurring experiment loop that runs at a user-selected interval.
+## Orientation
 
-## Usage
+**Use when:** the user wants a visible repeat-until-pass cycle inside the
+current session, such as "loop until lint passes" or "try this up to three
+times and stop if tests still fail."
 
-```
-/ar:loop engineering/api-speed             # Start loop (prompts for interval)
-/ar:loop engineering/api-speed 10m         # Every 10 minutes
-/ar:loop engineering/api-speed 1h          # Every hour
-/ar:loop engineering/api-speed daily       # Daily at ~9am
-/ar:loop engineering/api-speed weekly      # Weekly on Monday ~9am
-/ar:loop engineering/api-speed monthly     # Monthly on 1st ~9am
-/ar:loop stop engineering/api-speed        # Stop an active loop
-```
+**Don't use when:** the work should run unattended across sessions (`/daemon`),
+on a clock (`/schedule`), on file changes (`/watch`), or as a metric-driven
+optimization experiment (`/experiment`).
 
-## What It Does
+## Commands
 
-### Step 1: Resolve experiment
+| Command | Behavior |
+|---|---|
+| `/loop status` | Show all known Citadel loops with active/stopped grouping. |
+| `/loop inspect {id}` | Show one loop's contract, verifier, budget, runs, and stop reason. |
+| `/loop templates` | List built-in loop templates. |
+| `/loop plan --template {name}` | Create a loop contract from a template. |
+| `/loop run "{action}" --verify "{command}" --max {N}` | Run a bounded foreground loop. |
+| `/loop stop {id}` | Mark a loop stopped. |
 
-If no experiment specified, list experiments and let user pick.
+## Protocol
 
-### Step 2: Select interval
+### Step 1: Classify the loop
 
-If interval not provided as argument, present options:
+Determine which kind of loop the user requested:
 
-```
-Select loop interval:
-  1. Every 10 minutes  (rapid — stay and watch)
-  2. Every hour         (background — check back later)
-  3. Daily at ~9am      (overnight experiments)
-  4. Weekly on Monday   (long-running experiments)
-  5. Monthly on 1st     (slow experiments)
-```
+| User intent | Route |
+|---|---|
+| Repeat within this active session | `/loop` |
+| Continue campaign across sessions | `/daemon` |
+| Run on a schedule | `/schedule` |
+| Watch PR checks/reviews | `/pr-watch` |
+| Watch files or marker comments | `/watch` |
+| Optimize a numeric metric | `/experiment` |
 
-Map to cron expressions:
+If another route is clearly better, say so and route there.
 
-| Interval | Cron Expression | Shorthand |
-|----------|----------------|-----------|
-| 10 minutes | `*/10 * * * *` | `10m` |
-| 1 hour | `7 * * * *` | `1h` |
-| Daily | `57 8 * * *` | `daily` |
-| Weekly | `57 8 * * 1` | `weekly` |
-| Monthly | `57 8 1 * *` | `monthly` |
+### Step 2: Require a verifier
 
-### Step 3: Create the recurring job
+A `/loop run` must have an explicit verifier. Explicit means the user supplied
+`--verify "<command>"` or an equally concrete verifier command in plain language.
+Do not infer a verifier from words like "lint", "test", "until it works", or
+"fix until passing." If the verifier is missing, ask for it before executing and
+do not run `loop-runner.js`, shell commands, or manual repair steps.
 
-Use `CronCreate` with this prompt (fill in the experiment details):
+Accept examples like:
 
-```
-You are running autoresearch experiment "{domain}/{name}".
-
-1. Read .autoresearch/{domain}/{name}/config.cfg for: target, evaluate_cmd, metric, metric_direction
-2. Read .autoresearch/{domain}/{name}/program.md for strategy and constraints
-3. Read .autoresearch/{domain}/{name}/results.tsv for experiment history
-4. Run: git checkout autoresearch/{domain}/{name}
-
-Then do exactly ONE iteration:
-- Review results.tsv: what worked, what failed, what hasn't been tried
-- Edit the target file with ONE change (strategy escalation based on run count)
-- Commit: git add {target} && git commit -m "experiment: {description}"
-- Evaluate: python {skill_path}/scripts/run_experiment.py --experiment {domain}/{name} --single
-- Read the output (KEEP/DISCARD/CRASH)
-
-Rules:
-- ONE change per experiment
-- NEVER modify the evaluator
-- If 5 consecutive crashes in results.tsv, delete this cron job (CronDelete) and alert
-- After every 10 experiments, update Strategy section of program.md
-
-Current best metric: {read from results.tsv or "no baseline yet"}
-Total experiments so far: {count from results.tsv}
+```text
+--verify "npm run lint"
+--verify "npm run test"
+--verify "node scripts/operating-proof.js --write"
 ```
 
-### Step 4: Store loop metadata
+If missing, respond in this shape:
 
-Write to `.autoresearch/{domain}/{name}/loop.json`:
+```text
+/loop needs an explicit verifier before it can run. Please provide one, for example:
+--verify "npm run lint"
 
-```json
-{
-  "cron_id": "{id from CronCreate}",
-  "interval": "{user selection}",
-  "started": "{ISO timestamp}",
-  "experiment": "{domain}/{name}"
-}
+I will not run the loop until the verifier is explicit.
 ```
 
-### Step 5: Confirm to user
+### Step 3: Create the contract
 
-```
-Loop started for {domain}/{name}
-  Interval: {interval description}
-  Cron ID: {id}
-  Auto-expires: 3 days (CronCreate limit)
+For status, inspect, templates, and stop commands, run:
 
-  To check progress: /ar:status
-  To stop the loop:  /ar:loop stop {domain}/{name}
-
-  Note: Recurring jobs auto-expire after 3 days.
-  Run /ar:loop again to restart after expiry.
+```bash
+node .citadel/scripts/loops.js <command>
 ```
 
-## Stopping a Loop
+For template planning:
 
-When user runs `/ar:loop stop {experiment}`:
+```bash
+node .citadel/scripts/loops.js plan --template <name> --write
+```
 
-1. Read `.autoresearch/{domain}/{name}/loop.json` to get the cron ID
-2. Call `CronDelete` with that ID
-3. Delete `loop.json`
-4. Confirm: "Loop stopped for {experiment}. {n} experiments completed."
+For foreground execution:
 
-## Important Limitations
+```bash
+node .citadel/scripts/loop-runner.js --action "<action>" --verify "<verifier>" --max-attempts <N> --write
+```
 
-- **3-day auto-expiry**: CronCreate jobs expire after 3 days. For longer experiments, the user must re-run `/ar:loop` to restart. Results persist — the new loop picks up where the old one left off.
-- **One loop per experiment**: Don't start multiple loops for the same experiment.
-- **Concurrent experiments**: Multiple experiments can loop simultaneously ONLY if they're on different git branches (which they are by default — each experiment gets `autoresearch/{domain}/{name}`).
+If `.citadel/scripts/` is not present and this is the Citadel harness repo
+itself, use `node scripts/loops.js` or `node scripts/loop-runner.js` instead.
+
+The runner writes a contract under `.planning/loops/{id}.json`, appends each
+attempt, and stops with a shared stop status.
+
+### Step 4: Stop on the first terminal condition
+
+Stop when any of these are true:
+
+- verifier passes
+- attempt limit is reached
+- the action fails in a way that needs human review
+- the requested action would cross a safety or approval boundary
+- the user asks to stop
+
+Never silently continue beyond the declared attempt limit.
+
+### Step 5: Report the outcome
+
+Summarize:
+
+- loop id
+- status
+- attempts used
+- verifier
+- runner command, including `--verify` and `--max-attempts`
+- state path
+- next action if stopped before success
+
+## Fringe Cases
+
+**If `.planning/` does not exist:** create `.planning/loops/` before writing
+loop state. If writing fails, output the contract inline and tell the user
+setup is needed.
+
+**No verifier:** ask for one. Do not infer a destructive or expensive verifier.
+
+**Action is an agent command, not a shell command:** run the action manually as
+the agent for each attempt, then record the loop with `node scripts/loops.js
+register` or use the loop contract as the state artifact. Do not pass slash
+commands to the shell runner.
+
+**Verifier keeps failing with the same cause:** stop at the attempt limit and
+report `attempt-limit` with the latest evidence.
+
+**User asks for unattended looping:** route to `/daemon` or `/schedule`, not
+`/loop`.
+
+## Contextual Gates
+
+**Disclosure:** "Running foreground loop: action `{action}`, verifier
+`{verifier}`, max attempts `{N}`."
+
+**Reversibility:** amber -- the loop may run user-provided shell commands and
+modify files; inspect the diff or loop-owned artifacts to revert.
+
+**Trust gates:**
+- Any: require verifier and attempt cap.
+- Familiar: may execute shell action/verifier after disclosing the contract.
+- Risky commands: require normal tool approval boundaries before running.
+
+## Quality Gates
+
+- A loop contract exists under `.planning/loops/` unless the filesystem blocks it.
+- The verifier is explicit.
+- The attempt limit is explicit and >= 1.
+- The final status uses the shared loop vocabulary from `docs/LOOP_CONTRACT.md`.
+- The final answer includes the loop id and state path.
+
+## Exit Protocol
+
+```
+---HANDOFF---
+- Loop: {id}
+- Status: {status}
+- Attempts: {used}/{max}
+- Verifier: {command}
+- Runner: node .citadel/scripts/loop-runner.js --action "{action}" --verify "{command}" --max-attempts {max} --write
+- State: .planning/loops/{id}.json
+- Next: {next action or "none"}
+---
+```

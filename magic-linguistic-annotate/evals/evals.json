@@ -1,0 +1,46 @@
+{
+  "skill_name": "magic-linguistic-annotate",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "skewed-classes-iaa-trap",
+      "prompt": "Two annotators labeled 1000 tweets for hate-speech (yes/no). Cohen κ = 0.32. Is annotation quality bad?",
+      "expected_output": "Should: (1) NOT necessarily — flag the skewed-prevalence problem (most tweets are 'no'); (2) recommend computing PABAK or F1-complement for the rare-class agreement; (3) Cohen κ underestimates real agreement on skewed-prevalence tasks; (4) report per-class IAA + raw agreement %; (5) recommend Krippendorff α as alternative.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["skewed", "imbalance", "prevalence"]},
+        {"type": "must_contain_one", "values": ["PABAK", "F1-complement", "raw agreement"]},
+        {"type": "must_not_contain", "values": ["bad quality", "low quality clearly"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "calibration-skipping-cost",
+      "prompt": "We have 50 hours of annotator time + a 10K-item dataset to label. Should we just go straight to bulk to maximize coverage?",
+      "expected_output": "Should: (1) NO — calibration round is non-negotiable; (2) explain cost asymmetry (skipping calibration → 10-20% bulk re-annotation = 1000-2000 items wasted); (3) recommend 50 items pilot + 100 items calibration before bulk; (4) cite ~5-7 hours total for calibration vs 50+ hours for re-annotation; (5) note 10% double-annotated for IAA monitoring during bulk.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not", "don't"]},
+        {"type": "must_contain_one", "values": ["calibration", "non-negotiable", "mandatory"]},
+        {"type": "must_contain_one", "values": ["10%", "20%", "re-annotation", "asymmetry"]},
+        {"type": "must_contain_one", "values": ["pilot", "discussion", "edge-case"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "ner-span-iaa-correct-metric",
+      "prompt": "I'm building a low-resource Yoruba NER dataset with 3 annotators. What IAA metric should I use?",
+      "expected_output": "Should: (1) recommend γ (gamma) — span/unitized task (NER); (2) explain κ doesn't model span boundaries; (3) note Krippendorff α as alternative for label agreement portion; (4) target ≥ 0.8; (5) report bootstrap CI; (6) recommend INCEpTION or Prodigy for tooling; (7) cross-skill: route to magic-linguistic-ethics for community-data CARE/FPIC consideration.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["γ", "gamma", "span", "boundary"]},
+        {"type": "must_not_contain", "values": ["use Cohen κ for spans"]},
+        {"type": "must_contain_one", "values": ["INCEpTION", "Prodigy", "Label Studio"]},
+        {"type": "must_contain_one", "values": ["community", "ethics", "CARE", "FPIC"]}
+      ]
+    }
+  ]
+}

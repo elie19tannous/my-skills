@@ -1,0 +1,29 @@
+skill: magic-data-loading
+version: 2.0.0
+evals:
+  - id: basic_csv_load
+    prompt: prompts/basic_csv_load.md
+    baseline: baselines/basic_csv_load.md
+    difficulty: easy
+    tests:
+      - "agent generates code that loads the CSV"
+      - "agent detects format before loading"
+      - "agent validates after loading"
+
+  - id: cjk_encoding
+    prompt: prompts/cjk_encoding.md
+    baseline: baselines/cjk_encoding.md
+    difficulty: medium
+    tests:
+      - "agent considers Big5/GB2312 for CJK data"
+      - "agent uses content-based detection not extension"
+      - "agent validates encoding correctness after loading"
+
+  - id: multi_source_merge
+    prompt: prompts/multi_source_merge.md
+    baseline: baselines/multi_source_merge.md
+    difficulty: hard
+    tests:
+      - "agent handles schema normalization across sources"
+      - "agent tracks source provenance per record"
+      - "agent deduplicates by primary key"

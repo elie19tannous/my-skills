@@ -1,0 +1,29 @@
+skill: magic-statistical-analysis
+version: 2.0.0
+evals:
+  - id: descriptive_stats
+    prompt: prompts/descriptive_stats.md
+    baseline: baselines/descriptive_stats.md
+    difficulty: easy
+    tests:
+      - "agent computes mean, median, std, skewness for numeric columns"
+      - "agent detects column types (numeric, text, categorical) before computing"
+      - "agent generates narrative interpretation with uncertainty language"
+
+  - id: hypothesis_testing
+    prompt: prompts/hypothesis_testing.md
+    baseline: baselines/hypothesis_testing.md
+    difficulty: medium
+    tests:
+      - "agent checks normality before selecting parametric vs non-parametric test"
+      - "agent reports effect size alongside p-value"
+      - "agent uses uncertainty language in interpretation"
+
+  - id: multi_group_comparison
+    prompt: prompts/multi_group_comparison.md
+    baseline: baselines/multi_group_comparison.md
+    difficulty: hard
+    tests:
+      - "agent selects ANOVA or Kruskal-Wallis based on normality check"
+      - "agent applies multiple comparison correction for 4 pairwise tests"
+      - "agent reports effect size and flags practically negligible results"

@@ -1,0 +1,47 @@
+{
+  "skill_name": "magic-linguistic-corpus",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "yoruba-corpus-build",
+      "prompt": "Help me build a monolingual training corpus for Yoruba. What sources should I use and how should I dedup?",
+      "expected_output": "Should: (1) recommend MADLAD-400 + CulturaX + Wikipedia + MasakhaNER (mention overlap warning between MADLAD/CulturaX); (2) flag Bible-NLP availability + register-drift risk if > 30%; (3) require ethics routing per source; (4) recommend GlotLID at paragraph granularity; (5) MinHash threshold 0.9 (NOT 0.8) for low-resource; (6) confusable fold via magic-linguistic-scripts BEFORE MinHash; (7) document-level LID is insufficient for code-switched Yoruba/English content.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["MADLAD-400", "CulturaX", "MasakhaNER"]},
+        {"type": "must_contain_one", "values": ["paragraph", "GlotLID", "paragraph-level"]},
+        {"type": "must_contain", "values": ["0.9"]},
+        {"type": "must_contain_one", "values": ["overlap", "duplicate", "deduplicate"]},
+        {"type": "must_contain_one", "values": ["Bible", "register"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "contamination-flores-on-llama3",
+      "prompt": "We're evaluating Llama-3 (cutoff March 2024) on FLORES-200. Are we okay?",
+      "expected_output": "Should: (1) flag side-(b) contamination risk: FLORES released 2022-07, well before Llama-3 cutoff; (2) note FLORES is in many 2024+ pretrain mixes (The Pile, MADLAD, etc.); (3) recommend NTREX-128 or custom held-out instead; (4) explain 13-gram check is necessary even if alternative not used (transparent reporting); (5) note: still report FLORES for comparability but as a *lower bound* on quality.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["contamination", "memorize", "leakage"]},
+        {"type": "must_contain_one", "values": ["NTREX", "alternative", "held-out", "custom"]},
+        {"type": "must_contain_one", "values": ["lower bound", "transparent", "report", "model card"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "cebuano-wikipedia-trap",
+      "prompt": "Cebuano Wikipedia has 6 million articles. Should I treat Cebuano as a Class 5 high-resource language for tokenizer training?",
+      "expected_output": "Should: (1) NO — flag bot-generated nature of Cebuano Wikipedia (Lsjbot); (2) explain raw size ≠ corpus quality; (3) recommend downweighting or excluding bot-generated entries; (4) note Joshi class needs benchmark + tooling signals, not just Wiki size; (5) recommend register-balance audit; (6) similar warning applies to Waray, Volapük.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "not", "don't", "avoid"]},
+        {"type": "must_contain_one", "values": ["bot-generated", "bot", "Lsjbot", "automated"]},
+        {"type": "must_contain_one", "values": ["downweight", "exclude", "filter"]},
+        {"type": "must_not_contain", "values": ["yes, treat as Class 5", "high-resource"]}
+      ]
+    }
+  ]
+}

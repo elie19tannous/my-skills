@@ -1,0 +1,68 @@
+{
+  "skill_name": "magic-linguistic-eval",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "bleu-on-mrl-trap",
+      "prompt": "I'm reporting BLEU = 12 for my Turkish MT model. Should I publish this?",
+      "expected_output": "Should: (1) NOT BLEU as primary — Turkish is agglutinative; BLEU is pathological; (2) recommend chrF++ as primary + COMET-22 (high coverage for Turkish) + spBLEU; (3) report BLEU only as supplementary (for backwards comparison) if at all; (4) explain single-morpheme edits wreck BLEU; (5) per-direction breakdown also needed; (6) flag NLLB-related contamination if FLORES-200 was the test set.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not publish BLEU as primary", "pathological"]},
+        {"type": "must_contain_one", "values": ["chrF++", "chrF", "COMET"]},
+        {"type": "must_contain_one", "values": ["agglutinative", "morphology", "single-morpheme"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "comet-coverage-yoruba",
+      "prompt": "Reporting COMET-22 score for my En-Yoruba MT model. Anything to watch out for?",
+      "expected_output": "Should: (1) flag COMET coverage for Yoruba is medium — verify per-language reliability; (2) recommend chrF++ as primary; (3) GEMBA-MQM as alternative cheap LLM-judge; (4) report per-direction (En→Yor and Yor→En differ); (5) per-register breakdown; (6) cite known coverage gaps for Bantu / Niger-Congo in COMET.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["coverage", "varies", "check per-language"]},
+        {"type": "must_contain_one", "values": ["chrF", "GEMBA"]},
+        {"type": "must_contain_one", "values": ["per-direction", "per-stratum", "per-register"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "flores-contamination-llama3",
+      "prompt": "Evaluating Llama-3 (cutoff March 2024) on FLORES-200. What do I need to flag in the model card?",
+      "expected_output": "Should: (1) flag FLORES-200 contamination — released 2022-07, well before Llama-3 cutoff; (2) FLORES is in many 2024+ pretrains (The Pile, MADLAD, CulturaX); (3) recommend NTREX-128 or custom held-out as alternative; (4) report FLORES as LOWER BOUND on quality; (5) transparency in model card mandatory; (6) cross-reference magic-linguistic-corpus contamination audit.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["contamination", "lower bound", "memorize"]},
+        {"type": "must_contain_one", "values": ["NTREX", "custom held-out", "alternative"]},
+        {"type": "must_contain_one", "values": ["model card", "transparency", "disclose"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "asr-mandarin-cer-vs-wer",
+      "prompt": "I have a Mandarin ASR model. Reporting WER = 18%. Is this the right metric?",
+      "expected_output": "Should: (1) NO — Mandarin is space-less; WER not meaningful (depends on word-segmentation choice); (2) recommend CER as primary; (3) WER can supplement only after explicit segmenter (Jieba, etc.); (4) generalize to Khmer / Thai / Lao / Burmese / Japanese; (5) hand off to magic-linguistic-speech for tone-preservation check.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not", "instead"]},
+        {"type": "must_contain_one", "values": ["CER", "Character Error Rate", "character"]},
+        {"type": "must_contain_one", "values": ["space-less", "no spaces", "word-segmentation"]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "per-dialect-breakdown-arabic",
+      "prompt": "Our Arabic LLM scores 0.78 chrF on FLORES Arabic. Sufficient to ship?",
+      "expected_output": "Should: (1) NOT sufficient — aggregate Arabic score hides per-dialect performance; (2) flag macrolanguage (MSA / Egyptian / Levantine / Maghrebi etc. all 'Arabic'); (3) require per-dialect breakdown via MADAR or equivalent; (4) Egyptian dialect performance often dramatically different from MSA; (5) per-register breakdown also needed (formal/news vs colloquial); (6) hand off to magic-linguistic-scope for macrolang disambiguation, magic-linguistic-ethics for release decision.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["per-dialect", "per dialect", "macrolang", "MSA"]},
+        {"type": "must_contain_one", "values": ["Egyptian", "MADAR", "Levantine"]},
+        {"type": "must_contain_one", "values": ["NOT sufficient", "not enough", "aggregate hides", "stratify"]}
+      ]
+    }
+  ]
+}

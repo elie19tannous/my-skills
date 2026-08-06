@@ -4,7 +4,7 @@ description: |
   CRITICAL: Use for Makepad Splash scripting language. Triggers on:
   splash language, makepad script, makepad scripting, script!, cx.eval,
   makepad dynamic, makepad AI, splash 语言, makepad 脚本
-risk: unknown
+risk: critical
 source: community
 ---
 
@@ -62,7 +62,7 @@ script!{
 
 ```rust
 // Evaluate Splash code at runtime
-cx.eval(code_string);
+cx.eval(code_string); // security-allowlist: Makepad runtime API; require trusted code_string
 
 // With context
 cx.eval_with_context(code, context);

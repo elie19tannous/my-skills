@@ -1,0 +1,32 @@
+skill: magic-data-transformation
+version: 2.0.0
+evals:
+  - id: basic_reshape
+    prompt: prompts/basic_reshape.md
+    baseline: baselines/basic_reshape.md
+    difficulty: easy
+    tests:
+      - "agent generates code that melts wide-format data to long"
+      - "agent tracks row count change (rows_out == rows_in * value_columns)"
+      - "agent validates output shape after reshape"
+
+  - id: multi_table_merge
+    prompt: prompts/multi_table_merge.md
+    baseline: baselines/multi_table_merge.md
+    difficulty: medium
+    tests:
+      - "agent checks join key cardinality before merging"
+      - "agent casts join keys to matching types"
+      - "agent detects or prevents join explosion"
+      - "agent validates row count after merge"
+
+  - id: complex_pipeline
+    prompt: prompts/complex_pipeline.md
+    baseline: baselines/complex_pipeline.md
+    difficulty: hard
+    tests:
+      - "agent applies transformations in correct order (type cast -> join -> filter -> derive -> aggregate -> reshape)"
+      - "agent checks cardinality before join"
+      - "agent derives conditional columns using np.where or equivalent"
+      - "agent aggregates at correct grain"
+      - "agent validates final output shape and data integrity"

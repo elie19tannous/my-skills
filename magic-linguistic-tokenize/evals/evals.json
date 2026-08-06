@@ -1,0 +1,71 @@
+{
+  "skill_name": "magic-linguistic-tokenize",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "latin-extension-french",
+      "prompt": "We've fine-tuned Llama-3 on French. Fertility is 1.7× English baseline. Should we extend the vocab?",
+      "expected_output": "Should: (1) note ratio is in 1.5-2.0 'mild' range; (2) recommend OPTIONAL extension — depends on cost sensitivity (latency-sensitive yes; budget-tight maybe not); (3) for French specifically, FOCUS is the right method (same script, high overlap with English vocab); (4) NOT recommend mandatory extension for this ratio.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["1.7", "mild", "MILD", "optional"]},
+        {"type": "must_contain_one", "values": ["FOCUS", "same script"]},
+        {"type": "must_not_contain", "values": ["mandatory", "MANDATORY"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "agglutinative-turkish-mandatory",
+      "prompt": "I'm seeing Llama-3 produce 2.4× the tokens for Turkish vs English. Is this a problem?",
+      "expected_output": "Should: (1) confirm 2.4× is HIGH (in 2.0-3.0 range); (2) flag Turkish as agglutinative (morphology-driven fertility); (3) recommend vocab extension; (4) suggest OFA (Turkish has parallel data) or FOCUS for shared Latin script; (5) note byte-fallback should already be on; (6) explain cost — 2.4× tokens means 2.4× inference cost, halved effective context window.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["2.4", "HIGH"]},
+        {"type": "must_contain_one", "values": ["agglutinative", "morphology"]},
+        {"type": "must_contain_one", "values": ["vocab extension", "OFA", "FOCUS"]},
+        {"type": "must_contain_one", "values": ["context window", "inference cost", "latency"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "abugida-khmer-tokenizer-config",
+      "prompt": "We're training a SentencePiece tokenizer for Khmer from scratch. What hyperparameters?",
+      "expected_output": "Should: (1) set character_coverage=0.99999 (NOT 0.9995); (2) byte_fallback=true MANDATORY; (3) Unigram LM > BPE for low-resource; (4) add_dummy_prefix=false (Khmer is space-less); (5) note word segmentation needs to be done upstream (Khmer has no spaces between words); (6) vocab_size around 30K-50K depending on data.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain", "values": ["0.99999", "byte_fallback"]},
+        {"type": "must_contain_one", "values": ["unigram", "Unigram"]},
+        {"type": "must_contain_one", "values": ["space-less", "word segmentation", "no spaces", "PyThaiNLP", "khmernltk"]},
+        {"type": "must_not_contain", "values": ["0.9995", "byte_fallback=false"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "ideographic-mandarin-coverage",
+      "prompt": "For a Mandarin LLM, my SentencePiece config has character_coverage=0.9995. The model is bad at proper names. Why?",
+      "expected_output": "Should: (1) diagnose: 0.9995 drops 0.05% of characters which includes thousands of rare names; (2) recommend 0.99999 for Han script; (3) recommend byte_fallback=true; (4) note vocab_size should be 100K+ for Han; (5) add_dummy_prefix=false (Han is space-less); (6) explain that name-handling is the canonical symptom of low coverage on ideographic scripts.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["0.99999", "increase coverage"]},
+        {"type": "must_contain", "values": ["character_coverage"]},
+        {"type": "must_contain_one", "values": ["rare characters", "rare chars", "rare names", "thousands"]},
+        {"type": "must_contain_one", "values": ["byte_fallback", "byte fallback"]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "mixed-script-hinglish-strategy",
+      "prompt": "Our chatbot needs to handle Hinglish (Hindi-English code-switching) — text sometimes in Devanagari, sometimes in Latin transliteration. How should we structure the tokenizer?",
+      "expected_output": "Should: (1) recognize this as a mixed-script tokenization problem; (2) train a single tokenizer covering BOTH scripts (don't use separate tokenizers); (3) byte_fallback=true MANDATORY (mixed scripts → unpredictable input); (4) higher vocab_size (~80K) to cover both Devanagari and Latin Hindi adequately; (5) consider language tags `<script_deva>` `<script_latn>` as user-defined symbols; (6) audit fertility per script after training, not just aggregate.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["mixed-script", "mixed script", "both scripts", "single tokenizer"]},
+        {"type": "must_contain", "values": ["byte_fallback"]},
+        {"type": "must_contain_one", "values": ["per script", "per-script", "fertility per", "audit per"]}
+      ]
+    }
+  ]
+}

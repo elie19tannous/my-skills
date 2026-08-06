@@ -1,13 +1,16 @@
 ---
 name: modern-javascript-patterns
-description: Master ES6+ features including async/await, destructuring, spread operators, arrow functions, promises, modules, iterators, generators, and functional programming patterns for writing clean, efficient JavaScript code. Use when refactoring legacy code, implementing modern patterns, or optimizing JavaScript applications.
+description: "Comprehensive guide for mastering modern JavaScript (ES6+) features, functional programming patterns, and best practices for writing clean, maintainable, and performant code."
+risk: safe
+source: community
+date_added: "2026-02-27"
 ---
 
 # Modern JavaScript Patterns
 
 Comprehensive guide for mastering modern JavaScript (ES6+) features, functional programming patterns, and best practices for writing clean, maintainable, and performant code.
 
-## When to Use This Skill
+## Use this skill when
 
 - Refactoring legacy JavaScript to modern syntax
 - Implementing functional programming patterns
@@ -18,26 +21,23 @@ Comprehensive guide for mastering modern JavaScript (ES6+) features, functional 
 - Migrating from callbacks to Promises/async-await
 - Implementing data transformation pipelines
 
-## Detailed patterns and worked examples
+## Do not use this skill when
 
-Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
+- The task is unrelated to modern javascript patterns
+- You need a different domain or tool outside this scope
 
-## Best Practices
+## Instructions
 
-1. **Use const by default**: Only use let when reassignment is needed
-2. **Prefer arrow functions**: Especially for callbacks
-3. **Use template literals**: Instead of string concatenation
-4. **Destructure objects and arrays**: For cleaner code
-5. **Use async/await**: Instead of Promise chains
-6. **Avoid mutating data**: Use spread operator and array methods
-7. **Use optional chaining**: Prevent "Cannot read property of undefined"
-8. **Use nullish coalescing**: For default values
-9. **Prefer array methods**: Over traditional loops
-10. **Use modules**: For better code organization
-11. **Write pure functions**: Easier to test and reason about
-12. **Use meaningful variable names**: Self-documenting code
-13. **Keep functions small**: Single responsibility principle
-14. **Handle errors properly**: Use try/catch with async/await
-15. **Use strict mode**: `'use strict'` for better error catching
+- Clarify goals, constraints, and required inputs.
+- Apply relevant best practices and validate outcomes.
+- Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
 
-For common pitfalls (this binding, promise anti-patterns, memory leaks), see [references/advanced-patterns.md](references/advanced-patterns.md).
+## Resources
+
+- `resources/implementation-playbook.md` for detailed patterns and examples.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

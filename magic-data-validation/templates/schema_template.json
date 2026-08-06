@@ -1,0 +1,43 @@
+{
+  "$description": "Template for agent-generated data schemas. Fill in column definitions based on data inspection.",
+  "columns": {
+    "example_numeric": {
+      "dtype": "numeric",
+      "nullable": false,
+      "constraints": {
+        "min": 0,
+        "max": 100000
+      }
+    },
+    "example_text": {
+      "dtype": "text",
+      "nullable": true,
+      "constraints": {
+        "max_length": 500
+      }
+    },
+    "example_categorical": {
+      "dtype": "categorical",
+      "nullable": false,
+      "constraints": {
+        "allowed_values": ["active", "inactive", "pending"]
+      }
+    },
+    "example_email": {
+      "dtype": "text",
+      "nullable": true,
+      "constraints": {
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      }
+    },
+    "example_date": {
+      "dtype": "datetime",
+      "nullable": false,
+      "constraints": {}
+    }
+  },
+  "row_count_range": {
+    "min": 1,
+    "max": 10000000
+  }
+}

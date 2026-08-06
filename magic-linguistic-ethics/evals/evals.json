@@ -1,0 +1,72 @@
+{
+  "skill_name": "magic-linguistic-ethics",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "fpic-obtained-masakhane",
+      "prompt": "We want to train a Yoruba MT model on MasakhaNER 2.0 + FLORES-200 Yoruba + a Yoruba Bible translation. License audit?",
+      "expected_output": "Should: (1) per-source license check (MasakhaNER CC-BY; FLORES-200 CC-BY-SA; Bible per-translation); (2) flag SA propagation from FLORES → entire model output license SA; (3) flag Bible-only-MT register concern + community-norms-on-commercial-use even if license permits; (4) recommend community-gated release mode; (5) attribution registry entry per source; (6) note this is OK to proceed with documented FPIC for Bible source.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["CC-BY", "ShareAlike", "SA"]},
+        {"type": "must_contain_one", "values": ["Bible", "register", "community norms", "community-gated"]},
+        {"type": "must_contain_one", "values": ["attribution registry", "attribution"]},
+        {"type": "must_not_contain", "values": ["just use it", "no concerns", "fully open"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "fpic-unclear-indigenous",
+      "prompt": "I found a great dataset of Cherokee text on the Internet Archive. Can I use it for training?",
+      "expected_output": "Should: (1) NOT say yes immediately; (2) flag Cherokee as Indigenous Americas → community-controlled; (3) require FPIC investigation BEFORE training; (4) recommend contacting Cherokee Nation language program / AmericasNLP; (5) note 'on the internet' ≠ 'permission'; (6) recommend route via DELAMAN/AILLA archive if applicable; (7) BLOCK until community partner identified.",
+      "files": [],
+      "assertions": [
+        {"type": "must_not_contain_one", "values": ["yes, use it", "go ahead", "fair game"]},
+        {"type": "must_contain_one", "values": ["Cherokee Nation", "AmericasNLP", "community", "FPIC", "Indigenous"]},
+        {"type": "must_contain_one", "values": ["BLOCK", "do not", "wait", "before", "obtain"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "sacred-text-quranic",
+      "prompt": "Building a chatbot that speaks Arabic. Should I include Qur'anic Arabic text in training?",
+      "expected_output": "Should: (1) apply sacred-text framework: source community involvement + use intent (chatbot generates) + distribution (public-facing) + safeguards; (2) note training-on is widely accepted for Arabic LM coverage; (3) note GENERATING Quranic-style text is widely contested and should be safeguarded against (refusal patterns); (4) recommend community sign-off for any deployment that could generate religious content; (5) reference framework, not blanket ban.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["framework", "sacred-text", "Quranic"]},
+        {"type": "must_contain_one", "values": ["safeguard", "refusal", "refuse", "guardrail"]},
+        {"type": "must_contain_one", "values": ["generating", "generation", "chatbot output"]},
+        {"type": "must_not_contain", "values": ["never use Arabic", "blanket ban", "always block"]}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "commercial-license-conflict",
+      "prompt": "Our training mix is mostly CC-BY-4.0 plus one CC-BY-NC-4.0 dataset. We want to ship a commercial product. Any issues?",
+      "expected_output": "Should: (1) IMMEDIATELY flag the conflict — CC-BY-NC blocks commercial use of the resulting model; (2) explain most-restrictive-wins for mixed training; (3) options: remove the NC dataset; or non-commercial-only release; or contact source for commercial license; (4) NOT recommend ignoring; (5) note this is a common gotcha with public dataset mixes.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["CC-BY-NC", "non-commercial", "NC"]},
+        {"type": "must_contain_one", "values": ["block", "violate", "conflict", "prevent"]},
+        {"type": "must_contain_one", "values": ["remove", "non-commercial release", "commercial license", "contact"]},
+        {"type": "must_not_contain", "values": ["it should be fine", "minor issue"]}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "community-gated-release-decision",
+      "prompt": "We trained a Te Reo Māori model with our community partner Te Hiku Media. They've signed off. What release mode?",
+      "expected_output": "Should: (1) recommend COMMUNITY-GATED release (not OPEN); (2) note Te Hiku Media's Kaitiakitanga License as a precedent for community-controlled access; (3) require model card cites Te Hiku Media as community partner + use restrictions; (4) document opt-out / revocation path; (5) align with Māori Data Sovereignty principles; (6) NOT default to open release just because the model 'works'.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["community-gated", "COMMUNITY-GATED", "community gated"]},
+        {"type": "must_contain_one", "values": ["Te Hiku", "Kaitiakitanga", "Māori Data Sovereignty"]},
+        {"type": "must_contain_one", "values": ["model card", "ethics statement", "attribution"]},
+        {"type": "must_not_contain", "values": ["just open-source it", "fully open release", "ungated"]}
+      ]
+    }
+  ]
+}

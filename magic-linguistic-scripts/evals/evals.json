@@ -1,0 +1,48 @@
+{
+  "skill_name": "magic-linguistic-scripts",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "nfkc-policy-arabic",
+      "prompt": "I'm preprocessing an Arabic Wikipedia dump for tokenizer training. Should I apply NFKC normalization?",
+      "expected_output": "Should: (1) say NO — NFKC is destructive for Arabic; (2) explain that Arabic presentation forms (U+FExx) carry contextual rendering info that NFKC collapses; (3) recommend NFC instead; (4) note NFKC may be appropriate ONLY for dedup keys (not stored canonical text); (5) cite UAX #15.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "do not", "don't", "avoid"]},
+        {"type": "must_contain", "values": ["NFC"]},
+        {"type": "must_contain_one", "values": ["presentation form", "FExx", "FE70", "destructive"]},
+        {"type": "must_not_contain", "values": ["just use NFKC", "NFKC is fine"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "confusable-dedup-mixed-script",
+      "prompt": "We're building a multilingual web crawl corpus that mixes Cyrillic and Latin script content. Dedup is over-merging some pages but missing others. What's wrong?",
+      "expected_output": "Should: (1) diagnose confusable issue (Cyrillic а / Latin a, etc.); (2) recommend TR39 confusable folding BEFORE deduplication; (3) clarify fold = dedup key only, NEVER store folded text as canonical; (4) suggest detect-mode first to audit corpus impact; (5) mention typical 5-15% impact in mixed-script crawls.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["confusable", "TR39", "homoglyph"]},
+        {"type": "must_contain_one", "values": ["dedup key", "key only", "never store"]},
+        {"type": "must_contain", "values": ["fold"]},
+        {"type": "must_not_contain", "values": ["store folded as canonical", "fold then save"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "yoruba-diacritic-stripping-bug",
+      "prompt": "Our preprocessing pipeline calls unidecode() on text before tokenization. We're seeing terrible Yoruba MT quality. Could the two be related?",
+      "expected_output": "Should: (1) immediately say YES — unidecode strips diacritics; (2) explain Yoruba is a tone language where diacritics carry meaning (ọkọ̀ vs ọkọ vs okọ́); (3) flag this as catastrophic data corruption, not just degradation; (4) recommend removing unidecode from pipeline; (5) suggest NFC instead of unidecode; (6) generalize to other tone languages (Vietnamese, Hausa, Igbo, Twi, Mandarin pinyin).",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["YES", "yes", "definitely"]},
+        {"type": "must_contain_one", "values": ["tone", "diacritic"]},
+        {"type": "must_contain", "values": ["unidecode"]},
+        {"type": "must_contain_one", "values": ["catastrophic", "destructive", "data corruption", "non-negotiable"]},
+        {"type": "must_contain_one", "values": ["Vietnamese", "Hausa", "Mandarin", "Igbo", "Twi"]}
+      ]
+    }
+  ]
+}

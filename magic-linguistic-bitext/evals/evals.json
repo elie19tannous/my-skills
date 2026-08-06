@@ -1,0 +1,46 @@
+{
+  "skill_name": "magic-linguistic-bitext",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "yoruba-mining-recipe",
+      "prompt": "I have ~3K real En-Yoruba parallel pairs. I want to build a bigger MT corpus. What's the recipe?",
+      "expected_output": "Should: (1) Class 2 target → recommend SONAR over LASER3 (Niger-Congo coverage); (2) margin threshold 1.04 + spot-check 50 (NOT 1.06); (3) length-ratio [0.5, 2.0]; (4) synthetic bitext ESSENTIAL — recommend back-translation T=0.9, dictionary substitution if lexicon available, pivot via En-Sw-Yor possibly; (5) flag Bible-NLP register risk if used; (6) hand off to magic-linguistic-tokenize for fertility audit + magic-linguistic-transfer for LoRA planning.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["SONAR", "Bantu", "Niger-Congo"]},
+        {"type": "must_contain_one", "values": ["1.04", "lower threshold", "below 1.06"]},
+        {"type": "must_contain_one", "values": ["back-translation", "synthetic"]},
+        {"type": "must_contain_one", "values": ["temperature", "T=0.9", "T=0.7", "0.9", "0.8"]},
+        {"type": "must_not_contain", "values": ["margin 1.06 is fine", "T=0 is OK"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "polysynthetic-length-ratio-trap",
+      "prompt": "I'm aligning English-Inuktitut parallel data and 60% of pairs are getting filtered as misaligned because the Inuktitut side is much shorter (length ratio ~0.3). Bug?",
+      "expected_output": "Should: (1) NOT a bug — Inuktitut is polysynthetic; ratio 0.3 is correct; (2) recommend widening length-ratio filter to [0.2, 1.5]; (3) explain polysynthetic morphology compresses meaning; (4) note typological-distance-aware filtering should already be applied via magic-linguistic-scope output; (5) recommend manual spot-check to confirm valid pairs are surviving.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["polysynth", "morphology"]},
+        {"type": "must_contain_one", "values": ["0.2", "0.3", "widen", "lower bound"]},
+        {"type": "must_not_contain_one", "values": ["misalignment", "true bug", "tighten the filter"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "bible-only-register-drift",
+      "prompt": "Our En-Twi MT model trained on Bible-only parallel data sounds weirdly archaic in casual settings. Why?",
+      "expected_output": "Should: (1) immediately diagnose register drift from Bible-only training; (2) explain Bible/liturgical register dominates and bleeds into general output; (3) recommend supplementing with at least 10% non-Bible parallel (news, conversations, web); (4) note this is the dominant low-resource MT failure mode; (5) suggest synthetic back-translation from Twi monolingual web/news to expand register; (6) note this should have been flagged at corpus + bitext audit time.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["register", "archaic", "liturgical"]},
+        {"type": "must_contain_one", "values": ["10%", "supplement", "non-Bible", "news", "conversations"]},
+        {"type": "must_contain_one", "values": ["back-translation", "synthetic"]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "skill_name": "magic-linguistic-discourse",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "framework-selection-summarization",
+      "prompt": "I'm building a summarization eval for long Wikipedia articles. Which discourse framework should I use?",
+      "expected_output": "Should: (1) recommend RST — it models hierarchical nucleus/satellite which directly maps to summarization (which units to keep, which to compress); (2) note RST-DT as English training; (3) compare with PDTB (local relations, less suitable for summarization-coherence); (4) mention GUM if multi-layer eval needed; (5) flag per-language RST coverage gaps; (6) Stede textbook as canonical reference.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["RST", "Rhetorical Structure"]},
+        {"type": "must_contain_one", "values": ["nucleus", "satellite", "hierarchical"]},
+        {"type": "must_contain_one", "values": ["PDTB", "GUM", "framework"]},
+        {"type": "must_contain_one", "values": ["Stede"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "pro-drop-zero-anaphora-mandarin",
+      "prompt": "I'm running coreference resolution on Mandarin Wikipedia using a model trained on OntoNotes English. The pronoun chains look incomplete. Bug?",
+      "expected_output": "Should: (1) NOT a bug per se — Mandarin is pro-drop; 30-40% of pronouns are dropped; (2) English-trained coref doesn't model zero anaphora; chains silently miss the dropped pronouns; (3) recommend wl-coref with zero-anaphora extension OR a Mandarin-specific coref model (CRAC participants); (4) generalize to Japanese, Korean, Spanish, Italian — all pro-drop; (5) for RAG / entity extraction in pro-drop, don't trust English-coref output without explicit zero-anaphora handling.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["pro-drop", "zero anaphora", "zero-anaphora", "dropped pronoun"]},
+        {"type": "must_contain_one", "values": ["wl-coref", "CRAC", "Mandarin-specific", "pro-drop-aware"]},
+        {"type": "must_contain_one", "values": ["Japanese", "Korean", "Spanish", "Italian", "generalize"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "rag-citation-faithfulness",
+      "prompt": "Our RAG system passes a 'citation overlap' check (cited source contains the claimed phrase). But users complain about wrong citations. What's missing?",
+      "expected_output": "Should: (1) citation overlap is INCOMPLETE — checks (a) phrase appears in source but misses (b) the claim coreferentially matches what the user asked; (2) recommend NLI for claim-source entailment + coref check for question-answer alignment; (3) note this is a discourse-coherence problem disguised as a retrieval problem; (4) suggest concrete probe construction for citation-faithfulness eval.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["coreference", "coref", "coreferentially"]},
+        {"type": "must_contain_one", "values": ["NLI", "entailment", "claim", "discourse"]},
+        {"type": "must_contain_one", "values": ["incomplete", "missing", "INCOMPLETE", "doesn't catch"]}
+      ]
+    }
+  ]
+}

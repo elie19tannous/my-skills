@@ -1,146 +1,414 @@
 ---
 name: market-research
-description: Use when doing upstream market-research methodology — sizing a market as TAM/SAM/SOM computed BOTH top-down and bottoms-up (never a single unsourced number), planning a survey sample size with finite-population correction and per-segment minimums, or scoring candidate market segments against Kotler's measurable/substantial/accessible/differentiable/actionable criteria. Outputs always show the method and the assumptions. For market-research analysts and product-marketing at the sizing/survey/segmentation moment. Distinct from marketing-skill (campaign analytics, attribution, demand-gen) — this is the evidence-building methodology, not live-campaign optimization.
-version: 2.9.0
-author: claude-code-skills
-license: MIT
-tags: [research-ops, market-research, tam-sam-som, market-sizing, survey, sampling, segmentation, competitive-intelligence]
-compatible_tools: [claude-code, codex-cli, cursor, antigravity, opencode, gemini-cli]
+description: "Conduct comprehensive market research including competitive analysis, customer persona development, market sizing (TAM/SAM/SOM), survey design, and trend analysis. Synthesize insights for strategic decision-making."
 ---
 
-# market-research
+# Market Research
 
-Upstream market-research methodology: market sizing, survey/sampling design, and segmentation. The discipline here is **method + assumptions**: a TAM is never a single number, a survey is never powered only in aggregate, and a segment is never a demographic slice.
+## Overview
+The Market Research skill enables marketers to gather, analyze, and synthesize data about markets, competitors, customers, and trends. It provides frameworks for understanding market opportunity, competitive positioning, and customer needs to inform strategy.
 
-## Purpose
+## When to Use This Skill
+- Evaluating new market or product opportunity
+- Developing customer personas and segments
+- Understanding competitive landscape
+- Sizing market opportunity
+- Validating customer assumptions
+- Planning product positioning and messaging
+- Understanding industry trends and shifts
 
-Market-research analysts, product marketers, and strategy teams need rigorous evidence *before* anyone optimizes a campaign or sets a strategy. This skill structures three methodology decisions:
+## Competitive Analysis Framework
 
-Three deterministic tools:
+### Competitive Landscape Mapping
 
-1. `market_sizer.py` — Computes TAM/SAM/SOM by **both** top-down and bottoms-up methods side-by-side, reports the divergence, and flags failed triangulation. Never returns a single number.
-2. `sample_size_planner.py` — Survey sample size from confidence, margin of error, and expected proportion, with the finite-population correction and **per-segment minimums** (a survey powered overall is not powered per reported segment).
-3. `segmentation_scorer.py` — Scores candidate segments against Kotler's five criteria and enforces a substantiality + accessibility gate; a slice that is too small or unreachable is dropped.
+**Step 1: Identify Competitors**
 
-## When to use
+**Direct Competitors** (Same product, same market)
+- Head-to-head competition
+- Similar feature sets and pricing
+- Fighting for same customers
+- Example: "Slack vs. Microsoft Teams"
 
-Invoke this skill when:
+**Indirect Competitors** (Different product, same need)
+- Alternative solutions to same problem
+- Different approach or technology
+- Broader competitive threat
+- Example: "Slack vs. email"
 
-- A board or exec asks "how big is this market?" and you need a defensible, triangulated answer.
-- You are fielding a survey and need a sample size that holds up per segment, not just overall.
-- You have a list of candidate segments and need to know which are real markets vs demographic slices.
-- You are synthesizing competitive intelligence and need a methodological backbone.
+**Emerging Competitors** (New/growing threats)
+- Recently funded startups
+- Companies entering your space
+- Potential disruption risk
+- Example: "AI-powered alternatives"
 
-**Do NOT use this skill to**: measure a live campaign (attribution, ROAS, CPA → `marketing-skill/campaign-analytics`), build demand-gen / paid-media plans (`marketing-skill/marketing-demand-acquisition`), set positioning / GTM strategy (`marketing-skill/marketing-strategy-pmm`), or set pricing (`commercial/pricing-strategist`).
+**Substitutes** (Workarounds)
+- DIY solutions
+- Generic tools repurposed
+- Lower-cost alternatives
+- Example: "Slack vs. WhatsApp groups"
 
-## Workflow
+### Competitive Positioning Matrix
 
-1. **Write the brief** — Fill `assets/market_research_brief_template.md` (objective, the decision this informs, sizing approach, sampling plan, assumptions register).
-2. **Size the market** — Run `market_sizer.py --input market.json --method both --profile {b2b-saas|consumer|enterprise|marketplace|hardware|services}`. Reconcile the top-down/bottoms-up delta before quoting anything.
-3. **Plan the survey** — Run `sample_size_planner.py --input survey.json`. Fund the per-segment floors, not just the overall n.
-4. **Score the segments** — Run `segmentation_scorer.py --input segments.json --profile <same>`. Drop segments failing the substantiality/accessibility gate.
-5. **Assemble the evidence pack** — Combine into a brief. Every number carries its method + assumptions + confidence.
+| Competitor | Price | Features | Ease of Use | Customer Support | Market Position |
+|------------|-------|----------|------------|------------------|-----------------|
+| [Competitor 1] | $$$$ | ★★★★ | ★★ | ★★★ | Premium |
+| [Competitor 2] | $$ | ★★★ | ★★★★ | ★★ | Value |
+| [Competitor 3] | $ | ★★ | ★★★ | ★★★★ | Budget |
+| Our Product | $$$ | ★★★★★ | ★★★★ | ★★★★ | [Target] |
 
-## Scripts
+### Detailed Competitor Analysis Template
 
-| Script | Purpose | Profiles |
-|---|---|---|
-| `scripts/market_sizer.py` | TAM/SAM/SOM top-down AND bottoms-up + triangulation flag | b2b-saas, consumer, enterprise, marketplace, hardware, services |
-| `scripts/sample_size_planner.py` | Survey n + FPC + per-segment minima | n/a (parameter-driven) |
-| `scripts/segmentation_scorer.py` | Kotler 5-criteria scoring + gate | b2b-saas, consumer, enterprise, marketplace, hardware, services |
+**Competitor Name:** [Company]
 
-All three: stdlib-only, `--help`, `--sample`, `--output {human,json}`.
+**Company Overview:**
+- Founded: [Year]
+- Headquarters: [Location]
+- Funding: [Total raised, stage]
+- Team size: [Number]
+- Website traffic: [Estimate]
 
-## Onboarding & customization
+**Product/Service:**
+- Core offering: [Description]
+- Key features: [Top 5-7 features]
+- Pricing model: [Free/freemium/paid/enterprise]
+- Price point: [Base to premium tier]
+- Target customer: [Persona/segment]
 
-Run the onboarding questionnaire **once before you start** — it captures your defaults so every tool in this skill is pre-configured. Customization is the point: the answers actually change tool behavior.
+**Market Position:**
+- Market share: [Estimated percentage]
+- Key customers: [Notable customers/logos]
+- Strengths: [Top 3-4 competitive advantages]
+- Weaknesses: [Areas of vulnerability]
+- Growth signals: [Recent hires, funding, product launches]
 
-```bash
-python3 scripts/onboard.py            # interactive (also: --defaults, --set key=value, --reset)
-python3 scripts/onboard.py --show     # see the questions + current effective config
+**Go-to-Market Strategy:**
+- Sales model: [Direct, self-serve, partnership]
+- Marketing channels: [Primary acquisition channels]
+- Messaging: [Core positioning]
+- Brand voice: [Tone and personality]
+
+**Strategic Implications for Us:**
+- Opportunities to differentiate: [Specific areas]
+- Threats to monitor: [What could impact us]
+- Positioning recommendations: [How we should position against them]
+
+## Customer Persona Development
+
+### Persona Research Methodology
+
+**Step 1: Gather Data** (Combine multiple sources)
+- Customer interviews (8-12 depth interviews)
+- Surveys (50-100 responses minimum)
+- Sales team insights (actual customer interactions)
+- Support tickets (pain points revealed)
+- Analytics data (behavior patterns)
+- Market research reports (industry standards)
+
+**Step 2: Identify Patterns**
+- Job titles and roles across customers
+- Common challenges and objectives
+- Buying decision criteria
+- Success metrics they care about
+- Information sources and preferences
+
+**Step 3: Create Personas**
+- Develop 3-5 primary personas
+- Make them realistic and specific
+- Include quantitative and qualitative data
+- Create narrative to make them memorable
+
+### Detailed Persona Template
+
+**Persona Name:** [Memorable name reflecting archetype]
+**Title/Role:** [Specific job title, potential alt titles]
+**Organization:** [Company size, industry, revenue]
+
+**Demographics:**
+- Age: [Range, typical]
+- Gender: [If relevant]
+- Geographic location: [If relevant]
+- Education: [Degree, field]
+- Experience level: [Years in role]
+
+**Responsibilities:**
+- Primary job duties: [Main activities]
+- Team/reporting: [Who they manage, who they report to]
+- Budget authority: [Annual budget, approval authority]
+- Cross-functional dependencies: [Who they work with]
+
+**Goals (Professional):**
+- Primary goal 1: [What they want to achieve]
+- Primary goal 2: [Next priority]
+- Success metrics: [How they measure success]
+- Success criteria: [Qualitative and quantitative]
+
+**Pain Points (Challenges):**
+- Pain 1: [Specific problem]
+  - Frequency: [How often]
+  - Impact: [Business consequence]
+- Pain 2: [Second major problem]
+- Pain 3: [Third frustration]
+
+**Barriers to Adoption:**
+- Technical: [Systems integration, learning curve]
+- Organizational: [Change management, budget approval]
+- Personal: [Risk aversion, job security concerns]
+
+**Information Preferences:**
+- Primary sources: [Where they get information]
+- Content types: [Articles, videos, webinars, podcasts]
+- Engagement style: [Self-serve vs. direct contact]
+- Decision-making: [Data-driven, peer influence, expert opinion]
+
+**Key Quote (From actual interviews):**
+"[Representative quote that captures their perspective]"
+
+**Example Persona - Persona A: Enterprise Sophia**
+
+Title: VP of Marketing, B2B SaaS Company
+Organization: 200-1000 person tech company
+Age: 35-45
+
+Goals:
+- Increase lead generation by 30% YoY
+- Reduce customer acquisition cost
+- Improve marketing team efficiency
+- Demonstrate marketing ROI to C-suite
+
+Pain Points:
+- Scattered data across 12+ marketing tools
+- Manual reporting taking 40 hours/month
+- Team frustrated with tool complexity
+- Missing attribution data for budget decisions
+
+Barriers:
+- 6-month vendor evaluation cycle
+- IT security requirements
+- Multiple budget approvers
+- Fear of team learning curve
+
+## Market Sizing (TAM/SAM/SOM)
+
+### TAM (Total Addressable Market)
+
+**Definition:** Total possible revenue in ideal scenario with 100% market penetration
+
+**Calculation Methods:**
+
+**Bottom-up approach:**
+```
+Identified target segment size × Average selling price = TAM
+Example:
+- 100,000 potential companies × $10,000 avg contract value = $1B TAM
 ```
 
-Answers are saved to `~/.config/research-ops/market-research.json` (global) or `./.research-ops/market-research.json` (`--scope project`) and are read automatically by `config_loader.py`. They set the default market **profile**, the default survey **confidence** and **margin of error**, and the default **sizing method**. CLI flags always override saved config; `RESEARCH_OPS_NO_CONFIG=1` ignores it.
-
-**The four questions:** market profile · survey confidence · margin of error · sizing method.
-
-## Optimize with autoresearch (opt-in)
-
-This skill ships an **isolated, opt-in** bridge to `engineering/autoresearch-agent`. Only when you ask to "optimize" / "reconcile the sizing" / "run a loop" does an autoresearch experiment iteratively reconcile your market model so top-down and bottoms-up triangulate. `scripts/ar_evaluator.py` is the ground-truth evaluator; it prints `tam_divergence: <fraction>` (**lower** is better).
-
-```bash
-/ar:setup --domain custom --name tam-triangulation \
-  --target market.json \
-  --eval "python3 ar_evaluator.py --target market.json" \
-  --metric tam_divergence --direction lower
-/ar:loop custom/tam-triangulation
+**Top-down approach:**
+```
+Global market size × Relevant percentage = TAM
+Example:
+- $500B enterprise software market × 20% applicable = $100B TAM
 ```
 
-Isolated: no hard dependency — autoresearch runs only on demand, and the loop edits `market.json`, never the evaluator.
-
-## References
-
-- `references/market_sizing_canon.md` — TAM/SAM/SOM frameworks (Bessemer, a16z); top-down vs bottoms-up; Fermi estimation; market-model conventions; common sizing fallacies.
-- `references/survey_methodology.md` — Cochran *Sampling Techniques*; Dillman *Tailored Design Method*; Groves *Survey Methodology*; question-wording bias (Schuman & Presser); AAPOR standards.
-- `references/segmentation_and_ci.md` — Kotler segmentation criteria; needs-based vs firmographic; Porter Five Forces; SCIP ethics; Christensen JTBD; conjoint/MaxDiff primer.
-
-## Assumptions
-
-- The sizer reports both methods but cannot validate your inputs — a top-down "1% of a $40B market" is only as good as the cited source and the serviceable fraction.
-- Sample-size uses the conservative p=0.5 (maximum variance) unless you supply an expected proportion.
-- Segment scores are inputs you provide; the tool enforces the gates and the weighting, it does not gather the underlying evidence.
-- Competitive intelligence must follow the SCIP code of ethics — no misrepresentation, no protected information.
-
-## Anti-patterns
-
-- **A single TAM number with no method.** Always triangulate top-down against bottoms-up.
-- **Spurious precision.** Size to the decision's tolerance; "$3.7142B" implies a confidence you do not have.
-- **Powering only the total.** Each reported segment needs its own sample floor.
-- **Leading or double-barreled survey questions.** Pre-test wording against the bias literature.
-- **Calling a demographic slice a segment.** It must be substantial AND accessible.
-
-## Distinct from
-
-| Neighbor | Scope | Difference |
-|---|---|---|
-| `marketing-skill/campaign-analytics` | Attribution, ROAS, CPA, funnel of a live campaign | That **measures spend deployed**; this is **upstream methodology** |
-| `marketing-skill/marketing-demand-acquisition` | Demand-gen, paid media, channel mix | That **runs acquisition**; this **builds the evidence** |
-| `marketing-skill/marketing-strategy-pmm` | Positioning, GTM, category | That **sets strategy**; this **sizes and segments the market** |
-| `commercial/pricing-strategist` | Pricing model + WTP + packaging | That **sets price**; this **sizes the market** |
-| `product-research` (sibling) | User/product discovery methods | That studies **users**; this studies **the market** |
-
-## Quick examples
-
-```bash
-python3 scripts/market_sizer.py --sample
-python3 scripts/sample_size_planner.py --population 62000 --confidence 0.95 --moe 0.05
-python3 scripts/segmentation_scorer.py --sample --output json
+**Value-based approach:**
+```
+Estimated annual value created × potential penetration = TAM
+Example:
+- Annual time saved (2,000 hours) × labor cost ($50/hr) × 100K companies = $10B TAM
 ```
 
-The sample market triangulates a ~$1.47B top-down SAM against the bottoms-up figure and flags the divergence; the segmentation sample drops the "solopreneurs who might want analytics" slice for failing the substantiality and accessibility gates.
+### SAM (Serviceable Addressable Market)
 
-## Forcing-question library (Matt Pocock grill discipline)
+**Definition:** Market segment you can realistically target and serve
 
-Walked one at a time by `/cs:grill-research-ops` or the orchestrator. Recommended answer + canon citation per question. Never bundled.
+**Considerations:**
+- Geographic limitations (US only, specific regions)
+- Company size focus (SMB vs. enterprise)
+- Industry vertical focus (Finance, healthcare, tech)
+- Language and regulatory requirements
+- Sales and support delivery model
 
-1. **"Is your TAM top-down or bottoms-up — and have you computed it both ways to triangulate?"**
-   Recommended: both; reconcile the delta before quoting a number.
-   Canon: Bessemer / a16z market-sizing; Fermi estimation.
+**Example:**
+- TAM: $1B global market
+- Geographic limitation: US only (50% of market)
+- Company size: Mid-market focus only (30% of US market)
+- SAM: $1B × 50% × 30% = $150M
 
-2. **"What decision will this market size actually drive — and at what precision does it matter?"**
-   Recommended: size to the decision's tolerance, not to a spurious-precision number.
-   Canon: market-model conventions (Gartner/Forrester); decision-driven analysis.
+### SOM (Serviceable Obtainable Market)
 
-3. **"What's your target margin of error and confidence — and does your sample clear it per segment, not just overall?"**
-   Recommended: power each reported segment, not only the total.
-   Canon: Cochran *Sampling Techniques*; AAPOR standards.
+**Definition:** Realistic market share you can capture in 5-year period
 
-4. **"Are your survey questions free of leading and double-barreled wording?"**
-   Recommended: pre-test the wording; cite the bias source.
-   Canon: Schuman & Presser; Dillman *Tailored Design Method*.
+**Realistic targets by stage:**
+- Seed stage: 0.5-1% of SAM
+- Series A: 1-2% of SAM
+- Series B+: 2-5% of SAM
+- Mature company: 5-10% of SAM
 
-5. **"Do your segments pass measurable / substantial / accessible / actionable — or are they just demographic slices?"**
-   Recommended: drop segments that fail substantiality or accessibility.
-   Canon: Kotler segmentation criteria.
+**Example:**
+- SAM: $150M
+- Target year-5 market share: 3% (aggressive but realistic)
+- SOM: $150M × 3% = $4.5M annual revenue
 
-Walk depth-first. Lock 1-2 before opening 3-5. After all are answered, invoke `market_sizer.py` → `sample_size_planner.py` → `segmentation_scorer.py`.
+**Market Size Table Template:**
+
+| Market Segment | Company Count | Avg Contract Value | TAM | Penetration Target | SOM Year 5 |
+|---|---|---|---|---|---|
+| Enterprise (1000+) | 1,000 | $50,000 | $50M | 2% | $1M |
+| Mid-market (250-1000) | 5,000 | $20,000 | $100M | 3% | $3M |
+| SMB (50-250) | 15,000 | $5,000 | $75M | 1% | $0.75M |
+| **TOTAL** | **21,000** | | **$225M** | | **$4.75M** |
+
+## Survey Design and Analysis
+
+### Survey Objectives and Design
+
+**Survey Goals (Choose 1-2 primary):**
+- Validate customer assumptions
+- Understand feature priorities
+- Test messaging or positioning
+- Assess competitive alternatives
+- Gather pricing sensitivity
+- Measure satisfaction/NPS
+
+**Survey Structure:**
+
+**Section 1: Qualification (3-5 questions)**
+- Confirm they're target audience
+- Assess job role and company size
+- Determine decision-making authority
+- Gate to ensure quality responses
+
+**Section 2: Problem Validation (4-6 questions)**
+- Current pain points (multi-select)
+- Problem severity/frequency
+- Current solution approach
+- Budget allocated to solving
+
+**Section 3: Solution Exploration (4-6 questions)**
+- Feature importance ranking
+- Pricing sensitivity
+- Competitive alternatives awareness
+- Must-have vs. nice-to-have features
+
+**Section 4: Messaging Testing (3-5 questions)**
+- Message resonance rating
+- Message clarity assessment
+- Preferred benefit focus
+- Brand perception
+
+**Section 5: Demographics (4-5 questions)**
+- Company size and industry
+- Job title and department
+- Time in role
+- Budget authority level
+
+### Survey Question Templates
+
+**Open-ended Problem Question:**
+"What is your biggest challenge with [current solution area]?"
+
+**Ranked Priority Question:**
+"Rank these features by importance to you:
+1. Feature A
+2. Feature B
+3. Feature C"
+
+**Pricing Sensitivity Question:**
+"What price point would be too expensive? $ __
+What price would be too cheap? $ __
+What would be fair price? $ __"
+
+**Messaging Test Question:**
+"Which message resonates most with you?
+A) [Value proposition 1]
+B) [Value proposition 2]
+C) [Value proposition 3]"
+
+**NPS (Net Promoter Score) Question:**
+"How likely are you to recommend [solution] to a colleague?
+0 (Not likely) --- 10 (Extremely likely)"
+
+## Trend Analysis Framework
+
+### Industry Trend Research
+
+**Sources:**
+- Industry analyst reports (Gartner, Forrester, IDC)
+- Trade publications and newsletters
+- Startup funding data (Crunchbase, PitchBook)
+- Patent filings and research papers
+- Social listening and mentions
+- Conference keynotes and panels
+
+### Trend Evaluation Matrix
+
+| Trend | Hype Level | Market Impact | Adoption Timeline | Opportunity | Risk |
+|-------|-----------|---------------|------------------|------------|------|
+| AI/ML integration | Very High | High | 1-2 years | High | Medium |
+| Remote work tools | Medium | Medium | Established | Medium | Low |
+| Zero-trust security | High | Very High | 2-3 years | Very High | Medium |
+| Automation | High | High | 1-2 years | High | Low |
+
+### Emerging Trend Assessment
+
+**Trend Name:** [What trend are we evaluating]
+**Current Hype Level:** [Nascent, mainstream, mature]
+**Market Maturity:** [Early adopters, early majority, mainstream]
+
+**Why it matters:**
+- Customer expectations shifting: [How expectations changing]
+- Competitive pressure: [How competitors responding]
+- New use cases enabled: [Possibilities created]
+- Regulatory implications: [Compliance considerations]
+
+**How to respond:**
+- Timing: [Wait, monitor, start experimenting, commit]
+- Investment required: [Low, medium, high]
+- Resource allocation: [% of R&D budget]
+- Success metric: [How we'll know if right]
+
+## Research Output and Recommendations
+
+### Synthesis Process
+
+1. **Gather all research** - Consolidate findings from all sources
+2. **Identify patterns** - Look for themes across interviews, surveys, data
+3. **Validate findings** - Cross-reference insights across multiple sources
+4. **Develop implications** - What do these insights mean for strategy?
+5. **Create recommendations** - Specific actions based on learnings
+
+### Research Deliverables
+
+- **Competitive Analysis Report** - Market landscape and positioning recommendations
+- **Customer Personas** - 3-5 detailed personas with supporting data
+- **Market Sizing Analysis** - TAM/SAM/SOM with justification
+- **Survey Report** - Findings, visualizations, conclusions
+- **Trend Analysis** - Implications and recommended responses
+- **Strategic Recommendations** - Specific actions based on research
+- **Data Visualizations** - Charts, heat maps, positioning matrices
+- **Detailed Source Document** - Bibliography and data sources
+
+## Market Research Checklist
+
+- [ ] Competitive landscape identified and analyzed
+- [ ] 3-5 customer personas developed with research support
+- [ ] Customer interviews completed (8-12 minimum)
+- [ ] Survey designed and distributed (50+ responses)
+- [ ] TAM/SAM/SOM calculated with methodology documented
+- [ ] Industry trends identified and evaluated
+- [ ] Key findings synthesized and validated
+- [ ] Strategic recommendations developed
+- [ ] All data sources documented
+- [ ] Visual deliverables created (matrices, charts)
+- [ ] Stakeholder presentation prepared
+- [ ] Research archived for future reference
+
+## Output Deliverables
+
+1. **Competitive Analysis Report** - Landscape, positioning, opportunities
+2. **Customer Personas Document** - 3-5 detailed personas with data
+3. **Market Sizing Analysis** - TAM/SAM/SOM calculations
+4. **Survey Report** - Methodology, findings, conclusions
+5. **Trend Analysis** - Emerging trends and implications
+6. **Strategic Recommendations** - Action items by priority
+7. **Data Visualization Deck** - Charts and matrices
+8. **Research Database** - All raw data and source materials

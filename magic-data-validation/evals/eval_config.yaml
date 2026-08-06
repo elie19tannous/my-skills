@@ -1,0 +1,35 @@
+skill: magic-data-validation
+version: 2.0.0
+evals:
+  - id: basic_schema_validation
+    prompt: prompts/basic_schema_validation.md
+    baseline: baselines/basic_schema_validation.md
+    difficulty: easy
+    tests:
+      - "agent infers schema from the dataset"
+      - "agent validates data against the inferred schema"
+      - "agent reports type mismatches and null violations"
+      - "agent follows schema -> constraints -> content -> sanity ordering"
+
+  - id: constraint_checking
+    prompt: prompts/constraint_checking.md
+    baseline: baselines/constraint_checking.md
+    difficulty: medium
+    tests:
+      - "agent defines appropriate range constraints for numeric columns"
+      - "agent defines enum constraints for categorical columns"
+      - "agent checks cross-column constraints (start_date < end_date)"
+      - "agent distinguishes text columns from numeric and uses content validation for text"
+      - "agent detects sentinel values in text columns"
+
+  - id: fitness_for_use
+    prompt: prompts/fitness_for_use.md
+    baseline: baselines/fitness_for_use.md
+    difficulty: hard
+    tests:
+      - "agent asks about downstream use case before defining validation rules"
+      - "agent calibrates strictness differently for ML training vs reporting"
+      - "agent runs sanity checks and identifies statistical pitfalls"
+      - "agent differentiates inferred schema from target schema"
+      - "agent detects Simpson's paradox or join explosion risks"
+      - "agent recommends content validation for free-text fields"

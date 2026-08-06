@@ -1,0 +1,43 @@
+{
+  "skill_name": "magic-linguistic-codeswitch",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "filter-cs-as-noise-trap",
+      "prompt": "Our Hindi-language chatbot is performing poorly. Logs show ~40% of user messages are Hinglish (Hindi-English mixed). Should we filter those out of training?",
+      "expected_output": "Should: (1) NO — Hinglish is the norm for many users, NOT noise; (2) filtering 40% of conversational data leaves model trained on register that doesn't match deployment; (3) recommend treating CS as first-class via LinCE / GLUECoS data; (4) per-paragraph LID + CS-aware tokenizer; (5) flag English-trained Hindi model fails at CS in characteristic ways.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "do not filter", "first-class"]},
+        {"type": "must_contain_one", "values": ["LinCE", "GLUECoS", "Hinglish"]},
+        {"type": "must_not_contain", "values": ["filter as noise", "treat as noise"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "matrix-language-frame",
+      "prompt": "How should I think about Spanglish text — is it Spanish with English words or English with Spanish words?",
+      "expected_output": "Should: (1) introduce Matrix Language Frame model (Myers-Scotton); (2) Spanglish typically has Spanish or English as matrix language depending on speaker context; (3) detection methods exist for matrix-vs-embedded distinction; (4) implications for tokenizer + corpus stratification; (5) cite Poplack 1980.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["Matrix Language Frame", "Myers-Scotton", "matrix"]},
+        {"type": "must_contain_one", "values": ["Poplack", "embedded", "stratification"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "arabic-dialect-cs",
+      "prompt": "Building an Arabic chatbot. Do I need to handle MSA + dialect Arabic separately?",
+      "expected_output": "Should: (1) YES — MSA + dialects (Egyptian, Levantine, Maghrebi, Gulf) routinely alternate in real text; (2) MADAR + DART corpora handle this; (3) per-dialect LID + tokenizer-aware policy; (4) Arabic chatbot trained on MSA-only fails at colloquial deployments; (5) cross-reference magic-linguistic-scope for Arabic macrolanguage disambiguation.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["MADAR", "DART", "dialect"]},
+        {"type": "must_contain_one", "values": ["YES", "yes", "handle separately", "alternate"]},
+        {"type": "must_contain_one", "values": ["MSA", "Egyptian", "Levantine"]}
+      ]
+    }
+  ]
+}

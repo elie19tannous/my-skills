@@ -1,0 +1,29 @@
+skill: magic-data-lifecycle
+version: 2.0.0
+evals:
+  - id: basic_pipeline_routing
+    prompt: prompts/basic_pipeline_routing.md
+    baseline: baselines/basic_pipeline_routing.md
+    difficulty: easy
+    tests:
+      - "agent routes loading to magic-data-loading"
+      - "agent runs profiling after loading"
+      - "agent follows Discover-Plan-Execute sequence"
+
+  - id: multi_skill_pipeline
+    prompt: prompts/multi_skill_pipeline.md
+    baseline: baselines/multi_skill_pipeline.md
+    difficulty: medium
+    tests:
+      - "agent routes each operation to the correct MAGIC skill"
+      - "agent defines success criteria before execution"
+      - "agent validates after cleaning"
+
+  - id: complex_orchestration
+    prompt: prompts/complex_orchestration.md
+    baseline: baselines/complex_orchestration.md
+    difficulty: hard
+    tests:
+      - "agent sequences skills correctly across multiple datasets"
+      - "agent uses quality gating between phases"
+      - "agent handles refinement loop when validation fails"

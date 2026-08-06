@@ -1,0 +1,65 @@
+{
+  "snapshot_date": "2026-04-23",
+  "rubric": "softaworks/agent-toolkit/skills/skill-judge",
+  "tier": "A-",
+  "description": "Routing-decision evals for the entry-point orchestrator. Covers ambiguous triage, multi-skill sequential routing, in-domain-no-match decomposition fallback (Q12 from 0010), cross-suite handoff to magic-data, and phase-transition routing.",
+  "evals": [
+    {
+      "name": "ambiguous-triage-yoruba-bootstrap",
+      "prompt": "I have a Yoruba dataset and don't know what to do with it. Help me get started.",
+      "expected_phase": "Scope",
+      "assertions": [
+        {"type": "must_contain", "values": ["magic-linguistic-scope", "resource class"]},
+        {"type": "must_contain_one", "values": ["Joshi", "vitality", "EGIDS", "typology"]},
+        {"type": "must_not_contain", "values": ["just start training", "skip ethics"]},
+        {"type": "max_length_words", "values": [250]}
+      ],
+      "rationale": "An ambiguous starting query must trigger Scope-phase routing first (resource-class triage before any acquisition or training). Failure mode: agent jumps straight to corpus or transfer without understanding language vitality/typology."
+    },
+    {
+      "name": "multi-skill-sequential-routing-tokenize-ethics",
+      "prompt": "Audit my Yoruba SentencePiece tokenizer for ethics issues — I'm worried about scraping religious texts without consent.",
+      "assertions": [
+        {"type": "must_contain", "values": ["magic-linguistic-tokenize", "magic-linguistic-ethics"]},
+        {"type": "must_contain_one", "values": ["fertility", "BPE", "byte fallback"]},
+        {"type": "must_not_contain", "values": ["tokenize alone is enough", "no need for ethics"]},
+        {"type": "max_length_words", "values": [300]}
+      ],
+      "rationale": "Multi-skill query with explicit signals for both tokenize (SentencePiece, fertility) and ethics (consent, religious text). Routes must include BOTH in order. Failure mode: routing to one and dropping the other."
+    },
+    {
+      "name": "in-domain-no-match-decomposition-dialect-classifier",
+      "prompt": "Help me build a dialect classifier for Hausa varieties — I want to detect whether a tweet is in Standard Hausa or one of the regional dialects.",
+      "assertions": [
+        {"type": "must_contain", "values": ["magic-linguistic-scope", "magic-linguistic-corpus", "magic-linguistic-ethics"]},
+        {"type": "must_contain_one", "values": ["partial match", "no single skill", "decompose", "decomposing"]},
+        {"type": "must_not_contain", "values": ["I cannot help with this", "this is outside scope"]},
+        {"type": "max_length_words", "values": [350]}
+      ],
+      "rationale": "Q12 fallback test (0010): in-linguistic-domain query (dialect, Hausa, classifier) but NO single skill covers dialect classification end-to-end. Orchestrator MUST decompose + route to ≥2 nearest skills (scope for variety enumeration, corpus for dialect-balanced data, ethics for variety politics) AND state 'partial match' caveat. Classifier training is out-of-suite — handed back to magic-data-pipelines."
+    },
+    {
+      "name": "cross-suite-handoff-magic-data",
+      "prompt": "I have a CSV of Yoruba sentences with junk encoding. Clean it up and then prep it for tokenizer training.",
+      "assertions": [
+        {"type": "must_contain", "values": ["magic-data", "magic-linguistic-tokenize"]},
+        {"type": "must_contain_one", "values": ["magic-data-cleaning", "encoding", "CSV"]},
+        {"type": "must_not_contain", "values": ["only linguistic suite", "we don't handle CSV"]},
+        {"type": "max_length_words", "values": [250]}
+      ],
+      "rationale": "Cross-suite query (CSV cleanup is data-engineering, tokenizer prep is linguistic). Orchestrator must route to magic-data-cleaning FIRST then hand off to magic-linguistic-tokenize. Failure mode: trying to do CSV cleanup inside the linguistic suite, or refusing the cross-suite step."
+    },
+    {
+      "name": "phase-transition-corpus-to-bitext",
+      "prompt": "I finished collecting monolingual Yoruba corpus (about 2GB cleaned). What's the next phase and which skill?",
+      "assertions": [
+        {"type": "must_contain", "values": ["Acquire", "magic-linguistic-bitext"]},
+        {"type": "must_contain_one", "values": ["bitext", "parallel", "Phase 2"]},
+        {"type": "must_not_contain", "values": ["jump to evaluation", "skip parallel data"]},
+        {"type": "max_length_words", "values": [200]}
+      ],
+      "rationale": "Phase-transition query (Acquire phase, monolingual → parallel). Orchestrator must recognize the Acquire phase, route to magic-linguistic-bitext (parallel data acquisition) as the next step. Failure mode: skipping ahead to evaluation or transfer without parallel data acquisition."
+    }
+  ],
+  "skill_name": "magic-linguistic-orchestrator"
+}

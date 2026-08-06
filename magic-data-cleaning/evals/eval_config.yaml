@@ -1,0 +1,30 @@
+skill: magic-data-cleaning
+version: 2.0.0
+evals:
+  - id: missing_value_handling
+    prompt: prompts/missing_value_handling.md
+    baseline: baselines/missing_value_handling.md
+    difficulty: easy
+    tests:
+      - "agent detects missing values before choosing a strategy"
+      - "agent selects imputation strategy based on data type and missing percentage"
+      - "agent validates after imputation to confirm nulls reduced"
+
+  - id: string_normalization
+    prompt: prompts/string_normalization.md
+    baseline: baselines/string_normalization.md
+    difficulty: medium
+    tests:
+      - "agent identifies text quality issues (whitespace, encoding, casing)"
+      - "agent applies normalization in correct order (trim before whitespace collapse)"
+      - "agent validates text columns after normalization"
+
+  - id: complex_cleaning_plan
+    prompt: prompts/complex_cleaning_plan.md
+    baseline: baselines/complex_cleaning_plan.md
+    difficulty: hard
+    tests:
+      - "agent generates a multi-step cleaning plan before executing"
+      - "agent distinguishes cleaning from synthesis tasks and routes accordingly"
+      - "agent checkpoints between cleaning stages for rollback"
+      - "agent validates after each stage, not just at the end"

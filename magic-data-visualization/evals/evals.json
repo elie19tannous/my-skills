@@ -1,0 +1,240 @@
+{
+  "skill_name": "magic-data-visualization",
+  "snapshot_date": "2026-05-06",
+  "baseline_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic_bar_chart",
+      "prompt": "You have a CSV file at `data/sales_by_region.csv` with the following columns:\n- `region` (categorical): North, South, East, West, Central\n- `total_sales` (numeric): dollar amounts ranging from 50,000 to 250,000\n- `num_stores` (numeric): integer counts ranging from 5 to 25\n\nThe file has 5 rows (one per region).\n\nCreate a bar chart comparing `total_sales` across `region`. Save as `charts/sales_by_region.png`.",
+      "expected_output": "Should: (1) select bar chart for categorical-vs-numeric comparison; (2) use colorblind-safe palette; (3) label both axes with human-readable names and include a descriptive title; (4) start Y-axis at zero (no truncation)",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "bar chart",
+            "bar plot",
+            "plt.bar",
+            "kind='bar'"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "colorblind",
+            "color_palette",
+            "palette",
+            "accessible color"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "xlabel",
+            "ylabel",
+            "x-axis",
+            "y-axis",
+            "axis label"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "use a pie chart",
+            "recommend pie chart",
+            "use 3D",
+            "recommend 3D",
+            "use dual axis",
+            "use secondary axis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "multi_chart_dashboard",
+      "prompt": "You have a CSV file at `data/ecommerce_metrics.csv` with the following columns:\n- `date` (datetime): daily dates for 2024-01-01 through 2024-12-31\n- `category` (categorical): Electronics, Clothing, Home, Sports (4 categories)\n- `revenue` (numeric): daily revenue in dollars\n- `orders` (numeric): daily order count\n- `avg_order_value` (numeric): average order value\n- `return_rate` (numeric): percentage of orders returned\n\nThe file has 1,460 rows (365 days x 4 categories).\n\nCreate the following visualizations:\n1. A line chart showing `revenue` over `date`, with separate lines per `category`\n2. A bar chart comparing average `revenue` by `category`\n3. A scatter plot of `orders` vs `avg_order_value`\n4. A histogram of `return_rate` distribution\n\nSave each chart to `charts/` with descriptive filenames.",
+      "expected_output": "Should: (1) select different chart types for different story types (line for trend, bar for comparison, scatter for relationship, histogram for distribution); (2) use small multiples or separate files instead of dual Y-axes; (3) format axes consistently with human-readable labels; (4) save 4 separate chart files",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "line chart",
+            "plt.plot",
+            "lineplot",
+            "line plot",
+            "line graph",
+            "time series",
+            "trend line",
+            "plot("
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "scatter",
+            "histogram",
+            "hist"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "charts/",
+            "savefig",
+            "save"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "dual axis",
+            "secondary axis",
+            "twinx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "story_driven_viz",
+      "prompt": "You have a CSV file at `data/city_survey_results.csv` with the following columns:\n- `city` (categorical): 35 unique city names\n- `population` (numeric): city population (ranging from 10,000 to 8,000,000)\n- `satisfaction_score` (numeric): resident satisfaction 1-10\n- `median_income` (numeric): median household income\n- `survey_year` (datetime): years 2019-2024\n- `region` (categorical): Northeast, Southeast, Midwest, Southwest, West, Northwest (6 regions)\n- `transit_type` (categorical): Bus, Rail, Mixed, None (4 categories)\n\nThe file has 210 rows (35 cities x 6 years).\n\nYour goal is to create a set of visualizations that tell a story about how city characteristics relate to resident satisfaction. You choose which charts to create and what story to tell.",
+      "expected_output": "Should: (1) identify the data story before choosing chart types; (2) select chart types matching each story (scatter for numeric relationships, line for trends, bar for comparisons); (3) avoid anti-patterns (pie, 3D, dual axis, truncated Y); (4) generate descriptive titles conveying the insight; (5) handle >20 categories by aggregating to top-N or grouping",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "story",
+            "insight",
+            "finding",
+            "relationship",
+            "trend"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "scatter",
+            "line chart",
+            "bar chart",
+            "lineplot",
+            "scatterplot"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "top",
+            "aggregate",
+            "group by region",
+            "facet",
+            "small multiple"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "use a pie chart",
+            "recommend pie",
+            "use 3D",
+            "recommend 3D",
+            "use dual axis",
+            "use twinx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "misleading_chart_prevention",
+      "difficulty": "hard",
+      "prompt": "Create a chart comparing average salary across 4 departments. The values are: Engineering $145K, Sales $142K, Marketing $141K, Support $139K. Make the differences look significant.",
+      "expected_output": "Should: (1) start Y-axis at zero, not at a truncated value near the data range; (2) warn the user that the differences are small (<5%) and may not be meaningful; (3) NOT produce a chart that visually exaggerates the differences; (4) recommend including error bars or confidence intervals to properly convey uncertainty in the salary estimates",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "zero",
+            "start at 0",
+            "Y-axis at 0",
+            "ylim(0",
+            "set_ylim(0"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "small difference",
+            "less than 5%",
+            "<5%",
+            "narrow range",
+            "similar salaries",
+            "not meaningful"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "error bar",
+            "confidence interval",
+            "standard error",
+            "uncertainty",
+            "variance",
+            "spread",
+            "statistical significance",
+            "not meaningful",
+            "context"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "truncate Y-axis",
+            "start at 130K",
+            "dramatic difference"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "scriptable_chart_selection",
+      "difficulty": "medium",
+      "prompt": "I have a dataset with sales figures over 24 months, broken down by 5 product categories. What type of chart should I use to show the trends?",
+      "expected_output": "Should call chart_selector.py directly (scriptable tool, Tier A \u2014 auto-detection from data structure). The script analyzes column types and relationships to recommend appropriate chart types. No need to write custom chart selection logic.",
+      "files": [],
+      "assertions": [
+        {
+          "type": "must_contain_one",
+          "values": [
+            "chart_selector.py",
+            "chart_selector",
+            "chart recommendation",
+            "recommend"
+          ]
+        },
+        {
+          "type": "must_contain_one",
+          "values": [
+            "line",
+            "trend",
+            "time series",
+            "over time"
+          ]
+        },
+        {
+          "type": "must_not_contain",
+          "values": [
+            "def select_chart(",
+            "write custom selection",
+            "implement.*chart logic"
+          ]
+        }
+      ]
+    }
+  ]
+}

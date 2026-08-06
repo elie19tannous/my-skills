@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "matter-intake-scoping",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "This skill encodes an intake/scoping methodology, not jurisdiction-specific legal facts. Claims below are about the method and the authoritative professional-conduct standards it aligns to, plus the local script self-check. No live matter was reviewed and no conflicts search was run. The core discipline is anti-assumption: conflicts are never treated as clear without a real records search, and no fee number goes out without its scope attached.",
+  "claims": [
+    {
+      "claim_id": "conflicts-before-acting",
+      "claim": "A lawyer must check for and manage conflicts of interest before acting for a client; a conflicts check requires searching the firm's actual client/adverse-party records, not judging from memory, and a positive conflict blocks opening the file absent informed consent.",
+      "source_url": "https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_7_conflict_of_interest_current_clients/",
+      "raw_snippet": "ABA Model Rule 1.7: a lawyer shall not represent a client if the representation involves a concurrent conflict of interest, absent informed written consent where waivable.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL_HE.md \u05e9\u05dc\u05d1 3", "SKILL.md Reference Links", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "fee-reasonable-communicated",
+      "claim": "Legal fees must be reasonable and the basis of the fee should be communicated to the client, preferably in writing; this underpins attaching scope and assumptions to any fee estimate and distinguishing an estimate from a fixed quote.",
+      "source_url": "https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_5_fees/",
+      "raw_snippet": "ABA Model Rule 1.5: a lawyer shall not charge an unreasonable fee; the basis or rate of the fee should be communicated to the client, preferably in writing.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 6", "SKILL_HE.md \u05e9\u05dc\u05d1 6", "SKILL.md Reference Links"]
+    },
+    {
+      "claim_id": "client-care-costs-info",
+      "claim": "Regulatory client-care rules require checking for conflicts and giving the client clear information on costs at the outset of a matter, supporting the intake gate of conflicts-cleared plus scope-and-fee-in-writing before opening.",
+      "source_url": "https://www.sra.org.uk/solicitors/standards-regulations/code-conduct-solicitors/",
+      "raw_snippet": "SRA Code of Conduct: solicitors must not act where there is an own-interest or client conflict, and must give clients information on costs and how the matter will be handled.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Reference Links", "SKILL_HE.md \u05e7\u05d9\u05e9\u05d5\u05e8\u05d9 \u05de\u05e7\u05d5\u05e8"]
+    },
+    {
+      "claim_id": "limitation-highest-risk",
+      "claim": "The limitation/prescription (time-bar) date is the highest-stakes item in intake; if unknown or contested it must be resolved first, because a missed limitation date is a classic negligence exposure and an imminent bar can decide whether the firm accepts the matter at all.",
+      "source_url": "local:references/scoping-and-fees.md",
+      "raw_snippet": "The limitation/prescription date is the highest-stakes row. If unknown or contested -> HIGH, resolve first. Always record the source and the calculation, never a bare date.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md \u05e9\u05dc\u05d1 4", "references/scoping-and-fees.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled intake_check.py is Python stdlib only (no network, no third-party deps) and ships an embedded self-check runnable via --selftest, which passes; it scores intake completeness and blocks file-opening on pending conflicts or a missing limitation date, and does NOT run the conflicts search or judge the merits.",
+      "source_url": "local:scripts/intake_check.py",
+      "raw_snippet": "`python scripts/intake_check.py --selftest` prints 'selftest OK'. Verified 2026-07-09 on python3.11. Completeness checker only; does not run the conflicts search or judge merits.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/intake_check.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}

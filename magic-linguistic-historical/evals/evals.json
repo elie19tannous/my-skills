@@ -1,0 +1,43 @@
+{
+  "skill_name": "magic-linguistic-historical",
+  "snapshot_date": "2026-04-23",
+  "baseline_model": "claude-sonnet-4-6",
+  "with_skill_model": "claude-sonnet-4-6",
+  "evals": [
+    {
+      "id": 1,
+      "name": "swadesh-bootstrap-class0",
+      "prompt": "I have basically no data for Aymara but Spanish is well-resourced and there's been long contact. Can comparative linguistics help bootstrap?",
+      "expected_output": "Should: (1) limited — Aymara and Spanish are unrelated families (Aymaran vs Indo-European), so cognate-based bootstrap doesn't directly apply; (2) Quechua-Aymara have Spanish loanwords from contact (cheap parallel from Spanish); (3) Swadesh-list + targeted bilingual lexicon can bootstrap basic vocabulary; (4) URIEL / typology check via magic-linguistic-scope first; (5) flag this is a contact-loan situation, not genetic-cognate.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["unrelated", "different families", "Aymaran", "not genetically related"]},
+        {"type": "must_contain_one", "values": ["loanword", "contact", "borrowing"]},
+        {"type": "must_contain_one", "values": ["Swadesh"]}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "italian-portuguese-cognates",
+      "prompt": "I'm building MT for European Portuguese. Can I use Italian (much higher-resource) cognates to augment?",
+      "expected_output": "Should: (1) yes, both Romance — cognate sets exist; (2) recommend LingPy / Lexibank cognate databases; (3) sound-correspondence rules between Italian and Portuguese well-documented; (4) cognate-based bilingual lexicon augmentation; (5) caveat: Portuguese is already Class 5 high-resource — cognate bootstrap value is marginal compared to direct Portuguese data.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["Romance", "cognate", "Lexibank", "LingPy"]},
+        {"type": "must_contain_one", "values": ["high-resource", "Class 5", "marginal"]}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "swadesh-as-production-lexicon-trap",
+      "prompt": "I have a Swadesh list for Cherokee. Can I use it as the lexicon for my Cherokee MT system?",
+      "expected_output": "Should: (1) NO — Swadesh is core-vocabulary bootstrap (~200 words), NOT a complete lexicon; (2) recommend it as starting point only; (3) cite community partnership for proper Cherokee lexicon work; (4) modern / cultural / technical vocabulary absent from Swadesh; (5) flag ethics — Cherokee Nation language program for partnership.",
+      "files": [],
+      "assertions": [
+        {"type": "must_contain_one", "values": ["NO", "no", "not enough", "starting point"]},
+        {"type": "must_contain_one", "values": ["modern vocabulary", "technical", "cultural", "incomplete"]},
+        {"type": "must_contain_one", "values": ["community", "Cherokee Nation", "ethics"]}
+      ]
+    }
+  ]
+}

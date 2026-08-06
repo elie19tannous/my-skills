@@ -1,0 +1,30 @@
+skill: data-exploration
+version: 2.0.0
+evals:
+  - id: basic_pattern_detection
+    prompt: prompts/basic_pattern_detection.md
+    baseline: baselines/basic_pattern_detection.md
+    difficulty: easy
+    tests:
+      - "agent runs detect_patterns.py or generates equivalent pattern detection code"
+      - "agent reports findings with confidence levels"
+      - "agent uses uncertainty language in interpretations"
+
+  - id: correlation_investigation
+    prompt: prompts/correlation_investigation.md
+    baseline: baselines/correlation_investigation.md
+    difficulty: medium
+    tests:
+      - "agent filters out derived-column correlations before reporting"
+      - "agent checks whether correlations persist across subgroups"
+      - "agent distinguishes correlation from causation in language"
+
+  - id: multi_segment_analysis
+    prompt: prompts/multi_segment_analysis.md
+    baseline: baselines/multi_segment_analysis.md
+    difficulty: hard
+    tests:
+      - "agent prepares text columns before running exploration scripts"
+      - "agent runs segment analysis across multiple group columns"
+      - "agent checks for Simpson's paradox by comparing aggregate vs subgroup patterns"
+      - "agent presents findings ranked by confidence with actionable next steps"
