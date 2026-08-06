@@ -1,16 +1,16 @@
 # My Claude Skills
 
-Collection of **0 skills** gathered with Claude Code since day 1.
+Collection of **14,888 skills** gathered with Claude Code since day 1.
 
 Each top-level folder is one skill — see its `SKILL.md` for what it does and when it triggers.
-16400 `SKILL.md` files in total (some skills bundle sub-skills).
+16,400 `SKILL.md` files in total (some skills bundle sub-skills).
 
 ## History
 
 | Date | Skills |
 |------|--------|
 | 2026-07-23 | 4,140 |
-| 2026-08-06 | 0 |
+| 2026-08-06 | 14,888 |
 
 Latest addition: a GitHub-wide sweep of 345 agent-skill repositories, 238 of them installed —
 covering security/DFIR, academic publishing (per-journal packs), game development,
