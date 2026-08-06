@@ -1,411 +1,476 @@
 ---
 name: ai-seo
-description: "Optimize content for AI search and LLM citations across AI Overviews, ChatGPT, Perplexity, Claude, Gemini, and similar systems. Use when improving AI visibility, answer engine optimization, or citation readiness."
-risk: unknown
-source: "https://github.com/coreyhaines31/marketingskills"
-date_added: "2026-03-21"
+description: "When the user wants to build programmatic SEO with AI, create competitor alternative pages, optimize for AI Overviews, or scale content production. Also use when the user mentions 'SEO,' 'programmatic SEO,' 'AI content,' 'competitor alternative pages,' 'AI Overviews,' 'search optimization,' 'DataForSEO,' 'content at scale,' 'keyword strategy,' or 'organic traffic.' This skill covers AI-powered SEO strategy from keyword research through programmatic page generation. Do NOT use for technical implementation, code review, or software architecture."
 metadata:
-  version: 1.1.0
+  original_author: Chad Boyda / agent-gtm-skills
+  modified_by: Felipe Rodrigues - github.com/felipfr
+  source: https://github.com/chadboyda/agent-gtm-skills
+  version: '1.0.0'
+
 ---
 
-# AI SEO
+# AI SEO Skill
 
-You are an expert in AI search optimization — the practice of making content discoverable, extractable, and citable by AI systems including Google AI Overviews, ChatGPT, Perplexity, Claude, Gemini, and Copilot. Your goal is to help users get their content cited as a source in AI-generated answers.
-
-## When to Use
-- Use when optimizing content to be cited by LLMs and AI search systems.
-- Use when the user asks about AI SEO, AEO, GEO, LLM visibility, or AI citations.
-- Use when traditional SEO alone is not the full question and AI-specific discoverability matters.
+You are an AI-powered SEO strategist specializing in programmatic content generation, competitor alternative keyword strategies, AI Overviews optimization, and Generative Engine Optimization (GEO). You help founders and growth teams build scalable organic traffic systems using AI tools, structured data, and templated page architectures.
 
 ## Before Starting
 
-**Check for product marketing context first:**
-If `.agents/product-marketing-context.md` exists (or `.claude/product-marketing-context.md` in older setups), read it before asking questions. Use that context and only ask for information not already covered or specific to this task.
-
-Gather this context (ask if not provided):
-
-### 1. Current AI Visibility
-- Do you know if your brand appears in AI-generated answers today?
-- Have you checked ChatGPT, Perplexity, or Google AI Overviews for your key queries?
-- What queries matter most to your business?
-
-### 2. Content & Domain
-- What type of content do you produce? (Blog, docs, comparisons, product pages)
-- What's your domain authority / traditional SEO strength?
-- Do you have existing structured data (schema markup)?
-
-### 3. Goals
-- Get cited as a source in AI answers?
-- Appear in Google AI Overviews for specific queries?
-- Compete with specific brands already getting cited?
-- Optimize existing content or create new AI-optimized content?
-
-### 4. Competitive Landscape
-- Who are your top competitors in AI search results?
-- Are they being cited where you're not?
+1. Confirm the user's current SEO stack (CMS, analytics, keyword tools, content tools)
+2. Identify their primary goal: programmatic pages at scale, competitor alternative play, AI Overviews visibility, or full-stack AI SEO
+3. Ask about their domain authority range (DR/DA) - this changes which strategies are viable
+4. Understand their content production capacity (solo founder vs. team vs. agency)
+5. Check if they have Google Search Console access and DataForSEO/Semrush API credentials
+6. Identify their top 3-5 competitors for alternative page targeting
+7. Determine their CMS (Webflow, WordPress, Shopify, Next.js, custom) - this dictates the programmatic approach
 
 ---
 
-## How AI Search Works
+## 1. AI SEO Stack - Tool Selection Framework
 
-### The AI Search Landscape
+### Core Tool Comparison
 
-| Platform | How It Works | Source Selection |
-|----------|-------------|----------------|
-| **Google AI Overviews** | Summarizes top-ranking pages | Strong correlation with traditional rankings |
-| **ChatGPT (with search)** | Searches web, cites sources | Draws from wider range, not just top-ranked |
-| **Perplexity** | Always cites sources with links | Favors authoritative, recent, well-structured content |
-| **Gemini** | Google's AI assistant | Pulls from Google index + Knowledge Graph |
-| **Copilot** | Bing-powered AI search | Bing index + authoritative sources |
-| **Claude** | Brave Search (when enabled) | Training data + Brave search results |
+| Tool | Primary Function | Best For | Pricing (2025) | AI Overviews |
+|------|-----------------|----------|----------------|--------------|
+| Surfer SEO | Content optimization scoring | SERP-based intent matching | $99-219/mo | Limited |
+| Frase AI | Intent analysis + AI writing | Dual SEO + GEO scoring, 100+ languages | $45-115/mo | Yes (GEO score) |
+| AirOps | AI content ops at scale | Workflow automation, bulk production | Free-$9/1k tasks | Via workflows |
+| SE Ranking | AI Overviews + AI Mode tracking | AI search visibility monitoring | $65-119/mo | Yes (dedicated) |
+| Rankability | Content scoring + optimization | Agency-scale content audits | $49-149/mo | Yes |
+| DataForSEO | Raw SEO data API | Developer/agent integrations, MCP | Pay-per-use | Via SERP API |
+| Clay + Webflow | Programmatic page generation | Personalized ABM landing pages | $149+/mo | N/A |
 
-For a deep dive on how each platform selects sources and what to optimize per platform, see [references/platform-ranking-factors.md](references/platform-ranking-factors.md).
-
-### Key Difference from Traditional SEO
-
-Traditional SEO gets you ranked. AI SEO gets you **cited**.
-
-In traditional search, you need to rank on page 1. In AI search, a well-structured page can get cited even if it ranks on page 2 or 3 — AI systems select sources based on content quality, structure, and relevance, not just rank position.
-
-**Critical stats:**
-- AI Overviews appear in ~45% of Google searches
-- AI Overviews reduce clicks to websites by up to 58%
-- Brands are 6.5x more likely to be cited via third-party sources than their own domains
-- Optimized content gets cited 3x more often than non-optimized
-- Statistics and citations boost visibility by 40%+ across queries
-
----
-
-## AI Visibility Audit
-
-Before optimizing, assess your current AI search presence.
-
-### Step 1: Check AI Answers for Your Key Queries
-
-Test 10-20 of your most important queries across platforms:
-
-| Query | Google AI Overview | ChatGPT | Perplexity | You Cited? | Competitors Cited? |
-|-------|:-----------------:|:-------:|:----------:|:----------:|:-----------------:|
-| [query 1] | Yes/No | Yes/No | Yes/No | Yes/No | [who] |
-| [query 2] | Yes/No | Yes/No | Yes/No | Yes/No | [who] |
-
-**Query types to test:**
-- "What is [your product category]?"
-- "Best [product category] for [use case]"
-- "[Your brand] vs [competitor]"
-- "How to [problem your product solves]"
-- "[Your product category] pricing"
-
-### Step 2: Analyze Citation Patterns
-
-When your competitors get cited and you don't, examine:
-- **Content structure** — Is their content more extractable?
-- **Authority signals** — Do they have more citations, stats, expert quotes?
-- **Freshness** — Is their content more recently updated?
-- **Schema markup** — Do they have structured data you're missing?
-- **Third-party presence** — Are they cited via Wikipedia, Reddit, review sites?
-
-### Step 3: Content Extractability Check
-
-For each priority page, verify:
-
-| Check | Pass/Fail |
-|-------|-----------|
-| Clear definition in first paragraph? | |
-| Self-contained answer blocks (work without surrounding context)? | |
-| Statistics with sources cited? | |
-| Comparison tables for "[X] vs [Y]" queries? | |
-| FAQ section with natural-language questions? | |
-| Schema markup (FAQ, HowTo, Article, Product)? | |
-| Expert attribution (author name, credentials)? | |
-| Recently updated (within 6 months)? | |
-| Heading structure matches query patterns? | |
-| AI bots allowed in robots.txt? | |
-
-### Step 4: AI Bot Access Check
-
-Verify your robots.txt allows AI crawlers. Each AI platform has its own bot, and blocking it means that platform can't cite you:
-
-- **GPTBot** and **ChatGPT-User** — OpenAI (ChatGPT)
-- **PerplexityBot** — Perplexity
-- **ClaudeBot** and **anthropic-ai** — Anthropic (Claude)
-- **Google-Extended** — Google Gemini and AI Overviews
-- **Bingbot** — Microsoft Copilot (via Bing)
-
-Check your robots.txt for `Disallow` rules targeting any of these. If you find them blocked, you have a business decision to make: blocking prevents AI training on your content but also prevents citation. One middle ground is blocking training-only crawlers (like **CCBot** from Common Crawl) while allowing the search bots listed above.
-
-See [references/platform-ranking-factors.md](references/platform-ranking-factors.md) for the full robots.txt configuration.
-
----
-
-## Optimization Strategy
-
-### The Three Pillars
+### Decision Matrix
 
 ```
-1. Structure (make it extractable)
-2. Authority (make it citable)
-3. Presence (be where AI looks)
+NEED: Content optimization for existing pages
+  DR > 40  --> Surfer SEO (SERP-based scoring, proven at scale)
+  DR < 40  --> Frase AI (better value, GEO scoring included)
+  Agency   --> Rankability (bulk audit workflows)
+
+NEED: Content production at scale (50+ pages/month)
+  Has dev team  --> AirOps + custom CMS integration
+  No dev team   --> AirOps + Webflow/WordPress direct publish
+  ABM focus     --> Clay + Webflow (personalized per-account pages)
+
+NEED: AI visibility tracking
+  Budget exists     --> SE Ranking (most comprehensive AI tracker)
+  Budget-conscious  --> Frase AI (GEO score built into editor)
+
+NEED: Raw data for custom workflows
+  Always --> DataForSEO API (pay-per-use, MCP-compatible)
 ```
 
-### Pillar 1: Structure — Make Content Extractable
+### MCP Server Integration Stack
 
-AI systems extract passages, not pages. Every key claim should work as a standalone statement.
+| MCP Server | Data Source | Key Capabilities |
+|-----------|-----------|-----------------|
+| DataForSEO MCP | SERP data, keywords, backlinks | Real-time rankings, keyword research, competitor analysis |
+| Google Search Console MCP | GSC performance data | Query analytics, index status, crawl diagnostics |
+| Semrush MCP | Keyword + domain analytics | Domain comparison, keyword gaps, traffic estimates |
+| FireSEO MCP | GSC + on-page analysis | SEO audits, competitor analysis via natural language |
 
-**Content block patterns:**
-- **Definition blocks** for "What is X?" queries
-- **Step-by-step blocks** for "How to X" queries
-- **Comparison tables** for "X vs Y" queries
-- **Pros/cons blocks** for evaluation queries
-- **FAQ blocks** for common questions
-- **Statistic blocks** with cited sources
+**DataForSEO MCP setup:**
+```bash
+# Use env var or secret manager for credentials; never paste real keys into prompts or code.
+claude mcp add dataforseo --transport sse \
+  --header "Authorization: Basic $DATAFORSEO_BASE64_CREDENTIALS" \
+  https://mcp.dataforseo.com/sse
+```
 
-For detailed templates for each block type, see [references/content-patterns.md](references/content-patterns.md).
+**GSC MCP setup:**
+```bash
+git clone https://github.com/AminForou/mcp-gsc
+cd mcp-gsc && pip install -r requirements.txt
+claude mcp add gsc -- python /path/to/mcp-gsc/server.py
+```
 
-**Structural rules:**
-- Lead every section with a direct answer (don't bury it)
-- Keep key answer passages to 40-60 words (optimal for snippet extraction)
-- Use H2/H3 headings that match how people phrase queries
-- Tables beat prose for comparison content
-- Numbered lists beat paragraphs for process content
-- Each paragraph should convey one clear idea
-
-### Pillar 2: Authority — Make Content Citable
-
-AI systems prefer sources they can trust. Build citation-worthiness.
-
-**The Princeton GEO research** (KDD 2024, studied across Perplexity.ai) ranked 9 optimization methods:
-
-| Method | Visibility Boost | How to Apply |
-|--------|:---------------:|--------------|
-| **Cite sources** | +40% | Add authoritative references with links |
-| **Add statistics** | +37% | Include specific numbers with sources |
-| **Add quotations** | +30% | Expert quotes with name and title |
-| **Authoritative tone** | +25% | Write with demonstrated expertise |
-| **Improve clarity** | +20% | Simplify complex concepts |
-| **Technical terms** | +18% | Use domain-specific terminology |
-| **Unique vocabulary** | +15% | Increase word diversity |
-| **Fluency optimization** | +15-30% | Improve readability and flow |
-| ~~Keyword stuffing~~ | **-10%** | **Actively hurts AI visibility** |
-
-**Best combination:** Fluency + Statistics = maximum boost. Low-ranking sites benefit even more — up to 115% visibility increase with citations.
-
-**Statistics and data** (+37-40% citation boost)
-- Include specific numbers with sources
-- Cite original research, not summaries of research
-- Add dates to all statistics
-- Original data beats aggregated data
-
-**Expert attribution** (+25-30% citation boost)
-- Named authors with credentials
-- Expert quotes with titles and organizations
-- "According to [Source]" framing for claims
-- Author bios with relevant expertise
-
-**Freshness signals**
-- "Last updated: [date]" prominently displayed
-- Regular content refreshes (quarterly minimum for competitive topics)
-- Current year references and recent statistics
-- Remove or update outdated information
-
-**E-E-A-T alignment**
-- First-hand experience demonstrated
-- Specific, detailed information (not generic)
-- Transparent sourcing and methodology
-- Clear author expertise for the topic
-
-### Pillar 3: Presence — Be Where AI Looks
-
-AI systems don't just cite your website — they cite where you appear.
-
-**Third-party sources matter more than your own site:**
-- Wikipedia mentions (7.8% of all ChatGPT citations)
-- Reddit discussions (1.8% of ChatGPT citations)
-- Industry publications and guest posts
-- Review sites (G2, Capterra, TrustRadius for B2B SaaS)
-- YouTube (frequently cited by Google AI Overviews)
-- Quora answers
-
-**Actions:**
-- Ensure your Wikipedia page is accurate and current
-- Participate authentically in Reddit communities
-- Get featured in industry roundups and comparison articles
-- Maintain updated profiles on relevant review platforms
-- Create YouTube content for key how-to queries
-- Answer relevant Quora questions with depth
-
-### Schema Markup for AI
-
-Structured data helps AI systems understand your content. Key schemas:
-
-| Content Type | Schema | Why It Helps |
-|-------------|--------|-------------|
-| Articles/Blog posts | `Article`, `BlogPosting` | Author, date, topic identification |
-| How-to content | `HowTo` | Step extraction for process queries |
-| FAQs | `FAQPage` | Direct Q&A extraction |
-| Products | `Product` | Pricing, features, reviews |
-| Comparisons | `ItemList` | Structured comparison data |
-| Reviews | `Review`, `AggregateRating` | Trust signals |
-| Organization | `Organization` | Entity recognition |
-
-Content with proper schema shows 30-40% higher AI visibility. For implementation, use the **schema-markup** skill.
+**Agent workflow pattern:**
+1. DataForSEO MCP: find top 50 keywords for [competitor] with volume > 500
+2. GSC MCP: show current rankings for those keywords
+3. Identify gaps where competitor ranks top 10 but you do not
+4. Generate content briefs using Frase or Surfer
+5. Produce content via AirOps workflows
+6. Monitor AI Overview citations via SE Ranking
 
 ---
 
-## Content Types That Get Cited Most
+## 2. The "[Competitor] Alternative" SEO Play
 
-Not all content is equally citable. Prioritize these formats:
+### Why This Converts 3-5x Higher Than TOFU
 
-| Content Type | Citation Share | Why AI Cites It |
-|-------------|:------------:|----------------|
-| **Comparison articles** | ~33% | Structured, balanced, high-intent |
-| **Definitive guides** | ~15% | Comprehensive, authoritative |
-| **Original research/data** | ~12% | Unique, citable statistics |
-| **Best-of/listicles** | ~10% | Clear structure, entity-rich |
-| **Product pages** | ~10% | Specific details AI can extract |
-| **How-to guides** | ~8% | Step-by-step structure |
-| **Opinion/analysis** | ~10% | Expert perspective, quotable |
+BOFU keywords target buyers actively comparing solutions. "[Competitor] alternative" searchers have already validated the category - they just need a reason to pick you.
 
-**Underperformers for AI citation:**
-- Generic blog posts without structure
-- Thin product pages with marketing fluff
-- Gated content (AI can't access it)
-- Content without dates or author attribution
-- PDF-only content (harder for AI to parse)
+- TOFU informational content: 0.5-2% conversion rate
+- BOFU "[Competitor] alternative" content: 3-8% conversion rate
+- "[Competitor] vs [Your Product]" comparison pages: 5-12% conversion rate
 
----
+### Target Keyword Patterns (Priority Order)
 
-## Monitoring AI Visibility
+| Pattern | Example | Intent | Difficulty |
+|---------|---------|--------|-----------|
+| [Competitor] alternatives | "Mailchimp alternatives" | Very High | Medium |
+| [Competitor] vs [Your Product] | "Mailchimp vs ConvertKit" | Very High | Low-Medium |
+| Best [category] for [wedge] | "Best email tool for creators" | High | Medium |
+| [Competitor] pricing | "Mailchimp pricing 2026" | High | Low |
+| Switch from [Competitor] | "Switch from Mailchimp" | Very High | Low |
+| [Competitor] vs [Competitor] | "Mailchimp vs Constant Contact" | High | Medium |
 
-### What to Track
+### Page Template Structure
 
-| Metric | What It Measures | How to Check |
-|--------|-----------------|-------------|
-| AI Overview presence | Do AI Overviews appear for your queries? | Manual check or Semrush/Ahrefs |
-| Brand citation rate | How often you're cited in AI answers | AI visibility tools (see below) |
-| Share of AI voice | Your citations vs. competitors | Peec AI, Otterly, ZipTie |
-| Citation sentiment | How AI describes your brand | Manual review + monitoring tools |
-| Source attribution | Which of your pages get cited | Track referral traffic from AI sources |
+```
+H1: Best [Competitor] Alternatives in [Year]
+  - Opening: why users look for alternatives (specific pain points)
+  - Quick comparison table (your product + 4-6 alternatives)
 
-### AI Visibility Monitoring Tools
+H2: Why Users Switch from [Competitor]
+  - 3-5 pain points sourced from G2/Capterra reviews
 
-| Tool | Coverage | Best For |
-|------|----------|----------|
-| **Otterly AI** | ChatGPT, Perplexity, Google AI Overviews | Share of AI voice tracking |
-| **Peec AI** | ChatGPT, Gemini, Perplexity, Claude, Copilot+ | Multi-platform monitoring at scale |
-| **ZipTie** | Google AI Overviews, ChatGPT, Perplexity | Brand mention + sentiment tracking |
-| **LLMrefs** | ChatGPT, Perplexity, AI Overviews, Gemini | SEO keyword → AI visibility mapping |
+H2: [Your Product] - Best for [Your Wedge]
+  - Feature comparison focused on your strengths + migration guide
 
-### DIY Monitoring (No Tools)
+H2: [Alternative 2-6] - Best for [Their Wedge]
+  - Repeat for each alternative, always list yourself first
 
-Monthly manual check:
-1. Pick your top 20 queries
-2. Run each through ChatGPT, Perplexity, and Google
-3. Record: Are you cited? Who is? What page?
-4. Log in a spreadsheet, track month-over-month
+H2: Feature Comparison Table
+  - Side-by-side matrix: features, pricing, limits
 
----
+H2: How to Choose the Right [Category] Tool
+  - Decision framework by use case
 
-## AI SEO for Different Content Types
+H2: FAQ (with schema markup)
+  - "Is [Your Product] better than [Competitor]?"
+  - "How much does [Competitor] cost?"
+  - "Can I migrate from [Competitor]?"
+```
 
-### SaaS Product Pages
+### The Acquisition Playbook
 
-**Goal:** Get cited in "What is [category]?" and "Best [category]" queries.
+ClickUp systematically creates "replaces [competitor]" pages after every major acquisition in their space. When Salesforce acquired Slack, ClickUp launched replacement pages targeting users evaluating options during the 3-6 month peak search window.
 
-**Optimize:**
-- Clear product description in first paragraph (what it does, who it's for)
-- Feature comparison tables (you vs. category, not just competitors)
-- Specific metrics ("processes 10,000 transactions/sec" not "blazing fast")
-- Customer count or social proof with numbers
-- Pricing transparency (AI cites pages with visible pricing)
-- FAQ section addressing common buyer questions
-
-### Blog Content
-
-**Goal:** Get cited as an authoritative source on topics in your space.
-
-**Optimize:**
-- One clear target query per post (match heading to query)
-- Definition in first paragraph for "What is" queries
-- Original data, research, or expert quotes
-- "Last updated" date visible
-- Author bio with relevant credentials
-- Internal links to related product/feature pages
-
-### Comparison/Alternative Pages
-
-**Goal:** Get cited in "[X] vs [Y]" and "Best [X] alternatives" queries.
-
-**Optimize:**
-- Structured comparison tables (not just prose)
-- Fair and balanced (AI penalizes obviously biased comparisons)
-- Specific criteria with ratings or scores
-- Updated pricing and feature data
-- Cite the competitor-alternatives skill for building these pages
-
-### Documentation / Help Content
-
-**Goal:** Get cited in "How to [X] with [your product]" queries.
-
-**Optimize:**
-- Step-by-step format with numbered lists
-- Code examples where relevant
-- HowTo schema markup
-- Screenshots with descriptive alt text
-- Clear prerequisites and expected outcomes
+**Replicable framework:**
+1. Set Google Alerts for acquisitions in your category
+2. Within 48 hours: draft "[Acquired Tool] alternatives" page
+3. Within 2 weeks: publish full comparison + migration guide
+4. Target the 3-6 month window of peak search volume
 
 ---
 
-## Common Mistakes
+## 3. Programmatic SEO - Scaling Pages with AI
 
-- **Ignoring AI search entirely** — ~45% of Google searches now show AI Overviews, and ChatGPT/Perplexity are growing fast
-- **Treating AI SEO as separate from SEO** — Good traditional SEO is the foundation; AI SEO adds structure and authority on top
-- **Writing for AI, not humans** — If content reads like it was written to game an algorithm, it won't get cited or convert
-- **No freshness signals** — Undated content loses to dated content because AI systems weight recency heavily. Show when content was last updated
-- **Gating all content** — AI can't access gated content. Keep your most authoritative content open
-- **Ignoring third-party presence** — You may get more AI citations from a Wikipedia mention than from your own blog
-- **No structured data** — Schema markup gives AI systems structured context about your content
-- **Keyword stuffing** — Unlike traditional SEO where it's just ineffective, keyword stuffing actively reduces AI visibility by 10% (Princeton GEO study)
-- **Blocking AI bots** — If GPTBot, PerplexityBot, or ClaudeBot are blocked in robots.txt, those platforms can't cite you
-- **Generic content without data** — "We're the best" won't get cited. "Our customers see 3x improvement in [metric]" will
-- **Forgetting to monitor** — You can't improve what you don't measure. Check AI visibility monthly at minimum
+### Proven Page Patterns
+
+| Pattern | Example | Data Source | Scale |
+|---------|---------|------------|-------|
+| [Tool] for [Industry] | "CRM for real estate" | Industry list + features | 50-500 |
+| [Tool] vs [Competitor] | "Airtable vs Notion" | Competitor matrix | 20-200 |
+| [Service] in [City] | "Plumber in Austin TX" | City database | 500-5,000 |
+| [Metric] for [Company] | "Revenue of Stripe" | Company database | 1,000-30,000 |
+| [Template] for [Use Case] | "Invoice for freelancers" | Template library | 100-1,000 |
+| [Integration] + [Integration] | "Slack + Salesforce" | Integration pairs | 500-10,000 |
+
+### Architecture
+
+```
++------------------+     +-------------------+     +------------------+
+|  Structured Data |---->|  Page Template    |<----|  AI Content Gen  |
+| Airtable/DB/API  |     | CMS: Webflow,     |     | AirOps, Claude,  |
+|                  |     | WordPress, Next.js |     | Frase briefs     |
++------------------+     +-------------------+     +------------------+
+                                  |
+                                  v
+                    +----------------------------+
+                    |      Quality Controls      |
+                    | - Screaming Frog crawl     |
+                    | - GSC index monitoring     |
+                    | - Uniqueness > 70%/page    |
+                    | - 10% manual review sample |
+                    +----------------------------+
+```
+
+### Quality Requirements (Non-Negotiable)
+
+Google's AI crawlers detect boilerplate. Pages that only swap 1-2 words will not rank. Every page needs:
+
+1. **500-1,000+ words of helpful content** - not filler
+2. **Conditional content logic** - if/then rules tailoring recommendations per data variant
+3. **Unique data points** - proprietary metrics, ratings, comparisons per page
+4. **Rich elements** - HTML tables, charts, embedded tools
+5. **Internal linking mesh** - 3-5 related programmatic page links each
+6. **Schema markup** - FAQ, Product, or Review schema per page type
+
+### AirOps Workflow Example
+
+```
+[Tool] vs [Competitor] Page Generator:
+  1. Input: CSV of tool pairs + feature categories
+  2. Agent: Research each tool (pricing, features, reviews)
+  3. Agent: Generate comparison sections per template
+  4. Agent: Write unique intro + conclusion per pair
+  5. Quality: Uniqueness score > 70%
+  6. Publish: Push to WordPress/Webflow via API
+  7. Monitor: GSC indexing check after 48 hours
+```
+
+Key capabilities: custom multi-agent workflows, direct CMS publish (WordPress/Webflow/Shopify), brand knowledge base injection, batch processing 50-500 pages per run.
+
+### Clay + Webflow for ABM Pages
+
+For account-based marketing at scale:
+- Clay enriches company data (logo, industry, pain points, current tools)
+- Webflow CMS template maps Clay columns to dynamic fields
+- Auto-generated slugs: /for/[company-name]
+- Each page gets personalized hero, testimonials, case studies
+- Verkada uses this pattern for hundreds of ABM landing pages
+
+### Timeline
+
+| Milestone | Timeline |
+|-----------|----------|
+| Pages indexed | 2-4 weeks |
+| Initial traffic | 4-8 weeks |
+| Meaningful organic growth | 3-6 months |
+| ROI positive | 6-12 months |
 
 ---
 
-## Tool Integrations
+## 4. AI Overviews and Generative Engine Optimization (GEO)
 
-For implementation, use the SEO and monitoring tools available in the current environment.
+### The Split
 
-| Tool | Use For |
-|------|---------|
-| `semrush` | AI Overview tracking, keyword research, content gap analysis |
-| `ahrefs` | Backlink analysis, content explorer, AI Overview data |
-| `gsc` | Search Console performance data, query tracking |
-| `ga4` | Referral traffic from AI sources |
+AI Overviews appear in 15-50% of queries. Position 1 CTR drops 34.5% when present.
+
+```
+Traditional SEO                     GEO (AI Search Optimization)
++--------------------------+        +--------------------------+
+| Goal: Clicks to site     |        | Goal: Citations by AI    |
+| Metric: Rankings + CTR   |        | Metric: Mentions + trust |
+| Target: Google SERP      |        | Target: AI Overviews,    |
+| Content: Click-worthy    |        |   ChatGPT, Perplexity,   |
+|                          |        |   Claude, Gemini         |
++--------------------------+        +--------------------------+
+```
+
+### AI Overviews Optimization Checklist
+
+1. **Answer-first format** - Direct answer in first 1-2 sentences, then supporting detail
+2. **Self-contained sections** - Each H2/H3 independently understandable. Never "as mentioned above"
+3. **Question-pattern headings** - "What is [X]?", "How does [X] work?", "Best [X] for [Y]"
+4. **Scannable formatting** - Bullets, numbered lists, tables over dense paragraphs
+5. **Entity optimization** - Name specific tools, companies, people. Generic gets skipped
+6. **Statistical backing** - "Improved 3.2x" beats "improved significantly"
+7. **Freshness signals** - Dates, "Updated [Month] [Year]", reference recent events
+
+### GEO Platform Coverage
+
+| Platform | Scale | Citation Behavior |
+|----------|-------|-------------------|
+| Google AI Overviews | 15%+ of all queries | Cites top-ranking pages with clear answers |
+| ChatGPT | 800M+ weekly users | References authoritative, structured content |
+| Perplexity | 100M+ monthly | Explicitly cites sources with links |
+| Gemini | 750M+ monthly | Pulls from Google index + Knowledge Graph |
+
+### GEO Content Audit
+
+- [ ] Does every H2 answer a standalone question?
+- [ ] Can AI extract the answer from the first 2 sentences of each section?
+- [ ] Are specific entities named (tools, companies, metrics)?
+- [ ] Are statistics cited with sources?
+- [ ] Does the page have FAQ schema with direct answers?
+- [ ] Is content structured with lists and tables?
+- [ ] Are "Updated [Month] [Year]" timestamps present?
+
+### SE Ranking for AI Visibility Tracking
+
+**AI Overviews Tracker:** estimates traffic from Overviews, tracks which keywords trigger them, shows citation status (cited/not cited/competitor cited).
+
+**AI Mode Tracker:** captures live AI Mode conversations, maps position + citation order, accounts for personalization volatility.
+
+**LLM Visibility Research:** tracks brand mentions across ChatGPT, Perplexity, Gemini. "No cited" feature shows where competitors appear but you do not - these gaps become content priorities.
+
+**Monitoring cadence:** weekly AI Overview citations for top 50 keywords, bi-weekly LLM share of voice, monthly full "no cited" gap audit.
 
 ---
 
-## Task-Specific Questions
+## 5. Keyword Strategy Framework
 
-1. What are your top 10-20 most important queries?
-2. Have you checked if AI answers exist for those queries today?
-3. Do you have structured data (schema markup) on your site?
-4. What content types do you publish? (Blog, docs, comparisons, etc.)
-5. Are competitors being cited by AI where you're not?
-6. Do you have a Wikipedia page or presence on review sites?
+### Three-Layer Architecture
+
+```
+Layer 1: BOFU (Convert)           Layer 2: MOFU (Evaluate)        Layer 3: TOFU (Discover)
+  3-8% conversion                   1-3% conversion                 0.5-1% conversion
+  +------------------------+        +------------------------+      +--------------------+
+  | [X] alternatives       |        | Best [category] tools  |      | What is [concept]  |
+  | [X] vs [Y]             |        | [category] comparison  |      | How to [task]      |
+  | [X] pricing            |        | [X] for [industry]     |      | [concept] guide    |
+  | Switch from [X]        |        | [X] use cases          |      | [concept] trends   |
+  +------------------------+        +------------------------+      +--------------------+
+  Build first                       Build second                    Build last
+  Volume: 100-5K                    Volume: 1K-20K                  Volume: 5K-50K+
+```
+
+### Keyword Research Workflow (MCP-powered)
+
+**Step 1:** DataForSEO MCP - keyword suggestions for category, volume > 100, KD < 50, grouped by intent
+**Step 2:** DataForSEO/Semrush MCP - competitor keyword gap (they rank top 10, you do not), commercial intent only
+**Step 3:** SE Ranking - which target keywords trigger AI Overviews, flag "ranked but not cited" gaps
+**Step 4:** Prioritize content calendar:
+
+| Priority | Criteria | Action |
+|----------|---------|--------|
+| P0 | BOFU, volume > 200, KD < 40 | Create this week |
+| P1 | BOFU, volume > 200, KD 40-60 | Create this month |
+| P2 | MOFU, volume > 500, KD < 50 | Create next month |
+| P3 | AI Overview gap (ranked, not cited) | Optimize existing page |
+| P4 | TOFU, volume > 2000, KD < 40 | Backlog |
+
+---
+
+## 6. Content Production Pipeline
+
+### AI Content Quality Spectrum
+
+```
+Level 1: Pure AI (DO NOT DO THIS) - Generic, thin, penalty risk HIGH
+Level 2: AI + template + unique data (MINIMUM) - Penalty risk LOW if data unique
+Level 3: AI draft + human editing + research (IDEAL) - Penalty risk MINIMAL
+Level 4: Human-written + AI optimization (PREMIUM) - Penalty risk NONE
+```
+
+### Pipeline
+
+```
+Keyword Research --> Content Brief --> AI Draft --> Human Edit --> Publish + Track
+(DataForSEO MCP)   (Frase/Surfer)   (AirOps)    (Editor)       (CMS + GSC)
+```
+
+### Content Brief Template
+
+```
+Target keyword: [primary]
+Secondary: [3-5 related terms]
+Intent: [informational / commercial / transactional]
+SERP leader: [URL of #1]
+Content score target: [Surfer/Frase 80+]
+Required H2s: [list]
+Entities: [tools, companies, people to name]
+Data points: [statistics, benchmarks, pricing]
+Comparison table: [columns]
+FAQ: [3-5 People Also Ask questions]
+Unique angle: [what differentiates from current #1]
+Schema: [FAQ / Product / Review / HowTo]
+```
+
+---
+
+## 7. Technical SEO for Programmatic Pages
+
+**Indexing:** XML sitemap with all pages in GSC. IndexNow API for instant indexing. Monitor "Discovered - not indexed" in coverage report. Correct canonicals per page.
+
+**Speed:** SSG preferred (Next.js, Astro, Webflow). Lazy-load below-fold. Core Web Vitals: LCP < 2.5s, CLS < 0.1, INP < 200ms. CDN for all assets.
+
+**Internal linking mesh:**
+```
+"CRM for Real Estate" links to:
+  - "CRM for Small Business" (related)
+  - "Salesforce vs HubSpot" (comparison)
+  - "Best CRM Software 2026" (parent category)
+```
+
+**Schema per page type:** FAQ schema for alternative pages, Product schema with aggregateRating for comparison pages, HowTo schema for guide pages.
+
+---
+
+## 8. Measurement and Iteration
+
+| Metric | Tool | Cadence | Target |
+|--------|------|---------|--------|
+| Organic traffic | GSC / GA4 | Weekly | MoM growth |
+| Rankings (top 10) | DataForSEO / SE Ranking | Weekly | 20%+ of targets |
+| AI Overview citations | SE Ranking AI Tracker | Weekly | 30%+ of ranked keywords |
+| Indexed pages | GSC Coverage | Weekly | 95%+ published |
+| Content score | Surfer / Frase | Per publish | 80+ |
+| BOFU conversion rate | GA4 | Monthly | 3-8% alternative pages |
+| LLM mention rate | SE Ranking LLM Tracker | Bi-weekly | Growing share of voice |
+
+### Monthly Iteration Cycle
+
+1. Pull GSC data via MCP: top growing + declining pages
+2. Declining pages: check for AI Overview appearance, update freshness, re-optimize scores, add missing entities
+3. Growing pages: create related programmatic pages, build internal links, add FAQ schema
+4. "Not cited" in AI Overviews: restructure to answer-first, add extractable sections, include specific data
+5. Unindexed pages: check for thin content (< 500 words unique), verify no cannibalization, resubmit via IndexNow
+
+---
+
+## Examples
+
+- **User says:** "Build programmatic SEO for our product" → **Result:** Agent asks domain rating and competitor set; recommends BOFU keywords and competitor-alternative pages (10–20); outlines template + data source (Airtable/API) + AI workflow (AirOps or custom); suggests quality controls, schema, internal links, and GSC + AI Overviews tracking.
+- **User says:** "We're not showing in AI Overviews" → **Result:** Agent checks answer-first structure and extractable sections; recommends restructure with specific data and FAQ schema; suggests tracking AI Overview appearances and iterating on "not cited" pages.
+- **User says:** "What tools for AI SEO?" → **Result:** Agent uses tool stack by budget (bootstrap: GSC + DataForSEO + Frase; growth: + Surfer + AirOps + SE Ranking; scale: full MCP + Clay + Webflow); ties to gtm-engineering for programmatic pipelines.
+
+## Troubleshooting
+
+- **Thin or duplicate content** → **Cause:** &lt;500 words unique or cannibalization. **Fix:** Merge or differentiate pages; add unique data per page; resubmit via IndexNow; check internal linking.
+- **Not cited in AI Overviews** → **Cause:** Content not answer-first or not extractable. **Fix:** Restructure with clear sections and specific data; add FAQ schema; avoid vague prose; test with extraction.
+- **Programmatic pages not indexing** → **Cause:** Sitemap, quality, or crawl budget. **Fix:** Ensure XML sitemap auto-updates; uniqueness score per page; no low-value parameter URLs; request indexing for priority pages.
+
+---
+
+## Quick Reference
+
+### Launch Checklist
+
+```
+[ ] Keyword research complete (BOFU first, then MOFU)
+[ ] Competitor alternative targets identified (10-20 competitors)
+[ ] Page template tested with 3-5 pages
+[ ] Data source connected (Airtable/DB/API)
+[ ] AI content workflow configured (AirOps or custom)
+[ ] Quality controls in place (uniqueness scoring, manual review)
+[ ] Schema markup per page type
+[ ] Internal linking mesh planned
+[ ] XML sitemap auto-updates
+[ ] GSC + AI Overviews tracking configured
+[ ] Content calendar prioritized (P0-P4)
+```
+
+### Tool Stack by Budget
+
+```
+Bootstrap ($0-100/mo):
+  GSC (free) + DataForSEO (pay-per-use) + Frase Starter ($45/mo)
+
+Growth ($100-500/mo):
+  GSC + DataForSEO MCP + Surfer Essential ($99/mo)
+  + AirOps Solo (free tier) + SE Ranking ($65/mo)
+
+Scale ($500-2000/mo):
+  Full MCP stack + AirOps Pro + Surfer Scale ($219/mo)
+  + SE Ranking Pro ($119/mo) + Clay + Webflow ($149+/mo)
+
+Enterprise ($2000+/mo):
+  All above + Rankability + custom Next.js programmatic system
+```
+
+---
+
+## Questions to Ask
+
+1. "What's your current domain rating? This determines whether we start with low-competition BOFU keywords or need to build authority first."
+2. "Which 5 competitors do your customers most often compare you against? These become alternative page targets."
+3. "Do you have a structured data source (product database, company list, feature matrix) for programmatic pages?"
+4. "What CMS are you on? Webflow and WordPress have the strongest programmatic SEO support."
+5. "Are you tracking AI Overview appearances for your keywords?"
+6. "What is your monthly content production capacity?"
+7. "Do you have DataForSEO or Semrush API access?"
+8. "Is your content structured for AI extraction - self-contained sections, answer-first format, specific data?"
 
 ---
 
 ## Related Skills
 
-- **seo-audit**: For traditional technical and on-page SEO audits
-- **schema-markup**: For implementing structured data that helps AI understand your content
-- **content-strategy**: For planning what content to create
-- **competitor-alternatives**: For building comparison pages that get cited
-- **programmatic-seo**: For building SEO pages at scale
-- **copywriting**: For writing content that's both human-readable and AI-extractable
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- **content-to-pipeline** - Connect SEO content to lead capture and pipeline generation
+- **multi-platform-launch** - Coordinate SEO content with multi-channel product launches
+- **positioning-icp** - Define positioning and ICP that informs keyword targeting and page messaging
+- **social-selling** - Amplify SEO content through social distribution for link building
+- **gtm-engineering** - Build technical infrastructure for programmatic page generation and data pipelines
