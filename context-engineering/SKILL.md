@@ -1,6 +1,13 @@
 ---
 name: context-engineering
 description: Optimizes agent context setup. Use when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure rules files and context for a project.
+risk: critical
+source: https://github.com/addyosmani/agent-skills/tree/main/skills/context-engineering
+source_repo: addyosmani/agent-skills
+source_type: community
+date_added: 2026-07-01
+license: MIT
+license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
 ---
 
 # Context Engineering
@@ -287,3 +294,9 @@ After setting up context, confirm:
 - [ ] Agent output follows the patterns shown in the rules file
 - [ ] Agent references actual project files and APIs (not hallucinated ones)
 - [ ] Context is refreshed when switching between major tasks
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

@@ -14,7 +14,6 @@
 //   { "url": "https://foo.com", "status": "PASS" | "REJECT" | "UNKNOWN",
 //     "matched_includes": [...], "matched_excludes": [...], "title": "...", "hero": "..." }
 
-import sanitizeFilename from 'sanitize-filename';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { readFileSync } from 'fs';
@@ -26,26 +25,6 @@ import { readFileSync } from 'fs';
 const execFileAsync = promisify(execFile);
 
 const args = process.argv.slice(2);
-function sanitizePathSegments(pathValue) {
-  return String(pathValue ?? '').split(/[\\/]+/).filter(Boolean).map((segment) => {
-    const sanitized = sanitizeFilename(segment);
-    if (sanitized !== segment || !sanitized) {
-      throw new Error(`Unsafe path segment: ${segment}`);
-    }
-    return sanitized;
-  });
-}
-
-function safeCliPath(pathValue, baseDir = process.cwd()) {
-  const root = resolve(baseDir);
-  const target = resolve(root, ...sanitizePathSegments(pathValue));
-  const rel = relative(root, target);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    throw new Error(`Path escapes allowed directory: ${pathValue}`);
-  }
-  return target;
-}
-
 
 if (args.includes('--help') || args.includes('-h')) {
   console.error(`Usage: cat urls.txt | node gate_candidates.mjs [options]
@@ -78,51 +57,6 @@ const concurrency = Math.max(1, parseInt(flag('--concurrency') || '6', 10) || 0)
 const heroChars = parseInt(flag('--hero-chars') || '800', 10);
 const inputFile = flag('--input');
 
-function stripHtml(html) {
-  const withoutActiveContent = removeElementContent(removeElementContent(html, 'script'), 'style');
-  return withoutActiveContent
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function removeElementContent(html, tagName) {
-  let out = '';
-  let cursor = 0;
-  const lower = html.toLowerCase();
-  const openNeedle = `<${tagName}`;
-  const closeNeedle = `</${tagName}`;
-  while (cursor < html.length) {
-    const start = lower.indexOf(openNeedle, cursor);
-    if (start === -1) {
-      out += html.slice(cursor);
-      break;
-    }
-    out += html.slice(cursor, start);
-    const close = lower.indexOf(closeNeedle, start + openNeedle.length);
-    if (close === -1) {
-      cursor = html.length;
-      break;
-    }
-    const closeEnd = html.indexOf('>', close + closeNeedle.length);
-    cursor = closeEnd === -1 ? html.length : closeEnd + 1;
-    out += ' ';
-  }
-  return out;
-}
-
-if (args.includes('--self-test')) {
-  console.assert(stripHtml('<p>A&amp;lt;B</p>') === 'A&lt;B');
-  console.assert(stripHtml('<script>alert(1)</script ignored><p>ok</p>') === 'ok');
-  process.exit(0);
-}
-
 if (includes.length === 0) {
   console.error('Error: --include is required');
   process.exit(1);
@@ -139,6 +73,21 @@ if (inputFile) {
 if (urls.length === 0) {
   console.error('Error: no URLs provided (pipe via stdin or use --input)');
   process.exit(1);
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Position-aware classification:

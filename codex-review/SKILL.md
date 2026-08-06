@@ -1,45 +1,41 @@
 ---
 name: codex-review
-description: "Professional code review with auto CHANGELOG generation, integrated with Codex AI. Use when you want professional code review before commits, you need automatic CHANGELOG generation, or reviewing large-scale refactoring."
-risk: unknown
-source: community
-date_added: "2026-02-27"
+description: "Run AI-powered code review using the codex CLI. Use when the user asks to \"codex review\", \"run codex review\", or \"review a commit with codex\"."
 ---
 
-# codex-review
+# Codex Review
 
-## Overview
-Professional code review with auto CHANGELOG generation, integrated with Codex AI
+AI-powered code review via the codex CLI. Runs non-interactively.
 
-## When to Use
-- When you want professional code review before commits
-- When you need automatic CHANGELOG generation
-- When reviewing large-scale refactoring
+## Uncommitted Changes
 
-## Installation
 ```bash
-npx skills add -g BenedictKing/codex-review
+codex review --uncommitted
 ```
 
-## Step-by-Step Guide
-1. Install the skill using the command above
-2. Ensure Codex CLI is installed
-3. Use `/codex-review` or natural language triggers
+## Against a Base Branch
 
-## Examples
-See [GitHub Repository](https://github.com/BenedictKing/codex-review) for examples.
+```bash
+codex review --base main
+codex review --base develop
+```
 
-## Best Practices
-- Keep CHANGELOG.md in your project root
-- Use conventional commit messages
+## Specific Commit
 
-## Troubleshooting
-See the GitHub repository for troubleshooting guides.
+```bash
+codex review --commit <sha>
+codex review --commit HEAD~1
+```
 
-## Related Skills
-- context7-auto-research, tavily-web, exa-search, firecrawl-scraper
+## Custom Prompt
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Cannot be combined with `--uncommitted`, `--base`, or `--commit`.
+
+```bash
+codex review "Focus on security issues and error handling"
+```
+
+## Options
+
+- Use `--title` to add context when reviewing feature branches or PRs
+- Run via the Bash tool (`timeout: 600000`, do not set `run_in_background`)

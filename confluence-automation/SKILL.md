@@ -1,14 +1,16 @@
 ---
 name: confluence-automation
-description: "Automate Confluence page creation, content search, space management, labels, and hierarchy navigation via Rube MCP (Composio). Always search tools first for current schemas."
-risk: critical
-source: community
-date_added: "2026-02-27"
+description: Automate Confluence page creation, content search, space management, labels, and hierarchy navigation via Rube MCP (Composio). Always search tools first for current schemas.
+requires:
+  mcp: [rube]
+category: storage-docs
 ---
 
 # Confluence Automation via Rube MCP
 
 Automate Confluence operations including page creation and updates, content search with CQL, space management, label tagging, and page hierarchy navigation through Composio's Confluence toolkit.
+
+**Toolkit docs**: [composio.dev/toolkits/confluence](https://composio.dev/toolkits/confluence)
 
 ## Prerequisites
 
@@ -19,6 +21,7 @@ Automate Confluence operations including page creation and updates, content sear
 ## Setup
 
 **Get Rube MCP**: Add `https://rube.app/mcp` as an MCP server in your client configuration. No API keys needed — just add the endpoint and it works.
+
 
 1. Verify Rube MCP is available by confirming `RUBE_SEARCH_TOOLS` responds
 2. Call `RUBE_MANAGE_CONNECTIONS` with toolkit `confluence`
@@ -207,10 +210,5 @@ Confluence uses two pagination styles:
 | Page versions | `CONFLUENCE_GET_PAGE_VERSIONS` | `id` |
 | Space labels | `CONFLUENCE_GET_LABELS_FOR_SPACE` | space ID |
 
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*

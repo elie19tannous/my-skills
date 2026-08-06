@@ -1,39 +1,28 @@
 ---
 name: competitor-analysis
-description: "Research competitors with Browserbase discovery, enrichment lanes, screenshots, matrices, and HTML reports."
+description: |
+  Competitor research and intelligence skill. Takes a user's company (with optional
+  seed competitor URLs), auto-discovers additional competitors via Browserbase Search API,
+  deeply researches each using a 4-lane pattern (marketing surface, external signal,
+  public benchmarks, strategic diff vs the user's company), and compiles the results
+  into an HTML report with four views: overview, per-competitor deep dive, side-by-side
+  feature/pricing matrix, and a chronological mentions feed (news, reviews,
+  social, comparison pages, and public benchmarks).
+  Use when the user wants to: (1) analyze competitors, (2) build a competitive matrix,
+  (3) extract competitor pricing / features, (4) find comparison pages and online
+  mentions of competitors, (5) surface public benchmarks. Triggers: "competitor analysis",
+  "analyze competitors", "competitive intel", "competitor research", "competitor pricing",
+  "feature comparison", "price comparison", "find comparisons", "who's comparing us",
+  "competitor mentions", "competitor benchmarks".
 license: MIT
 compatibility: Requires the browse CLI (npm install -g browse) and BROWSERBASE_API_KEY env var
 allowed-tools: Bash Agent AskUserQuestion
 metadata:
   author: browserbase
   version: "0.2.0"
-category: "marketing"
-risk: "safe"
-source: "official"
-source_repo: "browserbase/skills"
-source_type: "official"
-date_added: "2026-06-19"
-author: "Browserbase"
-license_source: "https://github.com/browserbase/skills/blob/main/skills/competitor-analysis/LICENSE.txt"
-tags:
-  - competitor-analysis
-  - browserbase
-  - market-research
-  - browser-automation
-tools:
-  - claude-code
-  - codex-cli
-  - cursor
 ---
 
 # Competitor Analysis
-
-## When to Use
-
-Use when the user needs structured competitor research with Browserbase discovery, enrichment lanes, screenshots, comparison matrices, and a final HTML report.
-
-
-_Source: [browserbase/skills](https://github.com/browserbase/skills) (MIT)._
 
 Analyze a user's competitors. Uses Browserbase Search API for discovery and a 4-lane Plan→Research→Synthesize pattern for enrichment — outputting an HTML report with overview, per-competitor deep dives, a side-by-side feature/pricing matrix, and a chronological mentions feed.
 
@@ -425,10 +414,3 @@ Cost: ~10-20s per competitor. ~60s for 5 competitors.
 ```
 
 4. Call out the top 3-5 most interesting findings — e.g., "3 competitors have public benchmarks; Rival Co is cheapest; Foo Inc launched a dedicated news-search endpoint 2 weeks ago." Offer to dig deeper into any specific competitor or re-run with different depth.
-
-
-## Limitations
-
-- Requires the upstream tool, account, API key, or local setup when the workflow names one.
-- Does not authorize destructive, production, paid, or external-message actions without explicit user approval.
-- Validate generated artifacts or recommendations against the user's real sources before treating them as final.

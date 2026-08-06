@@ -1,270 +1,85 @@
 ---
 name: context-compression
-description: "When agent sessions generate millions of tokens of conversation history, compression becomes mandatory. The naive approach is aggressive compression to minimize tokens per request."
-risk: unknown
-source: community
+description: "Compresses context to fit within model token limits while preserving the most critical information for the task at hand."
+license: MIT
+metadata:
+  author: awesome-ai-agent-skills
+  version: "1.0.0"
 ---
 
-# Context Compression Strategies
+# Context Compression
 
-When agent sessions generate millions of tokens of conversation history, compression becomes mandatory. The naive approach is aggressive compression to minimize tokens per request. The correct optimization target is tokens per task: total tokens consumed to complete a task, including re-fetching costs when compression loses critical information.
+Context compression is the process of reducing the size of textual context provided to a language model while retaining the information most essential to the task. As conversations grow longer and retrieved documents grow larger, compression becomes critical for staying within token limits and keeping inference costs manageable without sacrificing answer quality.
 
-## When to Use
-Activate this skill when:
-- Agent sessions exceed context window limits
-- Codebases exceed context windows (5M+ token systems)
-- Designing conversation summarization strategies
-- Debugging cases where agents "forget" what files they modified
-- Building evaluation frameworks for compression quality
+## Workflow
 
-## Core Concepts
+1. **Measure the Token Budget**: Determine the model's total context window (e.g., 4K, 32K, 128K tokens) and subtract the tokens reserved for the system prompt, instructions, and the model's generation output. The remainder is your available context budget. If the raw context already fits, compression may be unnecessary.
 
-Context compression trades token savings against information loss. Three production-ready approaches exist:
+2. **Score Information Density**: Analyze each paragraph, sentence, or chunk of the raw context and assign an information-density score based on how many task-relevant facts it contains per token. Sentences that are purely stylistic, redundant, or off-topic receive low scores. This can be done heuristically (keyword overlap with the query) or via a lightweight classifier.
 
-1. **Anchored Iterative Summarization**: Maintain structured, persistent summaries with explicit sections for session intent, file modifications, decisions, and next steps. When compression triggers, summarize only the newly-truncated span and merge with the existing summary. Structure forces preservation by dedicating sections to specific information types.
+3. **Select a Compression Strategy**: Choose the most appropriate technique based on the compression ratio needed and the nature of the content:
+   - *Extractive summarization* — select the most important sentences verbatim.
+   - *Abstractive summarization* — rewrite content in fewer words while preserving meaning.
+   - *Key-point extraction* — pull out only named entities, facts, and figures.
+   - *Selective pruning* — remove low-density sentences, boilerplate, and repeated information.
 
-2. **Opaque Compression**: Produce compressed representations optimized for reconstruction fidelity. Achieves highest compression ratios (99%+) but sacrifices interpretability. Cannot verify what was preserved.
+4. **Apply Compression**: Execute the chosen strategy. For aggressive compression (>80% reduction), combine techniques — for example, first prune boilerplate, then abstractively summarize the remainder. For moderate compression (40–60%), extractive selection is often sufficient and avoids introducing paraphrasing errors.
 
-3. **Regenerative Full Summary**: Generate detailed structured summaries on each compression. Produces readable output but may lose details across repeated compression cycles due to full regeneration rather than incremental merging.
+5. **Validate Information Retention**: Compare the compressed output against the original to ensure no critical facts were lost. A quick validation pass can check that key entities, numbers, and conclusions from the original are still present in the compressed version.
 
-The critical insight: structure forces preservation. Dedicated sections act as checklists that the summarizer must populate, preventing silent information drift.
+6. **Assemble the Final Context**: Insert the compressed text into the prompt in place of the raw context. Include a note to the model indicating the context has been summarized, so it can calibrate its confidence accordingly.
 
-## Detailed Topics
+## Techniques
 
-### Why Tokens-Per-Task Matters
+- **Extractive Summarization**: Selects the top-n most important sentences from the source text based on relevance scoring. Preserves exact wording, which is important when precision matters (legal, medical, code). Tools: TextRank, LexRank, or LLM-based extraction.
+- **Abstractive Summarization**: Generates a new, shorter version of the text that captures the same meaning. Produces more natural and concise output but risks introducing inaccuracies. Best used with a reliable LLM and a validation step.
+- **Key-Point Extraction**: Reduces text to a structured list of facts, entities, and data points. Extremely space-efficient (often 90%+ compression) but loses narrative flow and nuance.
+- **Selective Pruning**: Removes filler sentences, repeated explanations, greetings, and boilerplate while keeping substantive content intact. Low risk of information loss and easy to implement with rule-based heuristics.
+- **Token Budget Management**: Dynamically allocate token budgets across multiple context sources. For example, in a RAG pipeline with 5 retrieved chunks, allocate more tokens to higher-relevance chunks and aggressively compress lower-relevance ones.
 
-Traditional compression metrics target tokens-per-request. This is the wrong optimization. When compression loses critical details like file paths or error messages, the agent must re-fetch information, re-explore approaches, and waste tokens recovering context.
+## Usage
 
-The right metric is tokens-per-task: total tokens consumed from task start to completion. A compression strategy saving 0.5% more tokens but causing 20% more re-fetching costs more overall.
-
-### The Artifact Trail Problem
-
-Artifact trail integrity is the weakest dimension across all compression methods, scoring 2.2-2.5 out of 5.0 in evaluations. Even structured summarization with explicit file sections struggles to maintain complete file tracking across long sessions.
-
-Coding agents need to know:
-- Which files were created
-- Which files were modified and what changed
-- Which files were read but not changed
-- Function names, variable names, error messages
-
-This problem likely requires specialized handling beyond general summarization: a separate artifact index or explicit file-state tracking in agent scaffolding.
-
-### Structured Summary Sections
-
-Effective structured summaries include explicit sections:
-
-```markdown
-## Session Intent
-[What the user is trying to accomplish]
-
-## Files Modified
-- auth.controller.ts: Fixed JWT token generation
-- config/redis.ts: Updated connection pooling
-- tests/auth.test.ts: Added mock setup for new config
-
-## Decisions Made
-- Using Redis connection pool instead of per-request connections
-- Retry logic with exponential backoff for transient failures
-
-## Current State
-- 14 tests passing, 2 failing
-- Remaining: mock setup for session service tests
-
-## Next Steps
-1. Fix remaining test failures
-2. Run full test suite
-3. Update documentation
-```
-
-This structure prevents silent loss of file paths or decisions because each section must be explicitly addressed.
-
-### Compression Trigger Strategies
-
-When to trigger compression matters as much as how to compress:
-
-| Strategy | Trigger Point | Trade-off |
-|----------|---------------|-----------|
-| Fixed threshold | 70-80% context utilization | Simple but may compress too early |
-| Sliding window | Keep last N turns + summary | Predictable context size |
-| Importance-based | Compress low-relevance sections first | Complex but preserves signal |
-| Task-boundary | Compress at logical task completions | Clean summaries but unpredictable timing |
-
-The sliding window approach with structured summaries provides the best balance of predictability and quality for most coding agent use cases.
-
-### Probe-Based Evaluation
-
-Traditional metrics like ROUGE or embedding similarity fail to capture functional compression quality. A summary may score high on lexical overlap while missing the one file path the agent needs.
-
-Probe-based evaluation directly measures functional quality by asking questions after compression:
-
-| Probe Type | What It Tests | Example Question |
-|------------|---------------|------------------|
-| Recall | Factual retention | "What was the original error message?" |
-| Artifact | File tracking | "Which files have we modified?" |
-| Continuation | Task planning | "What should we do next?" |
-| Decision | Reasoning chain | "What did we decide about the Redis issue?" |
-
-If compression preserved the right information, the agent answers correctly. If not, it guesses or hallucinates.
-
-### Evaluation Dimensions
-
-Six dimensions capture compression quality for coding agents:
-
-1. **Accuracy**: Are technical details correct? File paths, function names, error codes.
-2. **Context Awareness**: Does the response reflect current conversation state?
-3. **Artifact Trail**: Does the agent know which files were read or modified?
-4. **Completeness**: Does the response address all parts of the question?
-5. **Continuity**: Can work continue without re-fetching information?
-6. **Instruction Following**: Does the response respect stated constraints?
-
-Accuracy shows the largest variation between compression methods (0.6 point gap). Artifact trail is universally weak (2.2-2.5 range).
-
-## Practical Guidance
-
-### Three-Phase Compression Workflow
-
-For large codebases or agent systems exceeding context windows, apply compression through three phases:
-
-1. **Research Phase**: Produce a research document from architecture diagrams, documentation, and key interfaces. Compress exploration into a structured analysis of components and dependencies. Output: single research document.
-
-2. **Planning Phase**: Convert research into implementation specification with function signatures, type definitions, and data flow. A 5M token codebase compresses to approximately 2,000 words of specification.
-
-3. **Implementation Phase**: Execute against the specification. Context remains focused on the spec rather than raw codebase exploration.
-
-### Using Example Artifacts as Seeds
-
-When provided with a manual migration example or reference PR, use it as a template to understand the target pattern. The example reveals constraints that static analysis cannot surface: which invariants must hold, which services break on changes, and what a clean migration looks like.
-
-This is particularly important when the agent cannot distinguish essential complexity (business requirements) from accidental complexity (legacy workarounds). The example artifact encodes that distinction.
-
-### Implementing Anchored Iterative Summarization
-
-1. Define explicit summary sections matching your agent's needs
-2. On first compression trigger, summarize truncated history into sections
-3. On subsequent compressions, summarize only new truncated content
-4. Merge new summary into existing sections rather than regenerating
-5. Track which information came from which compression cycle for debugging
-
-### When to Use Each Approach
-
-**Use anchored iterative summarization when:**
-- Sessions are long-running (100+ messages)
-- File tracking matters (coding, debugging)
-- You need to verify what was preserved
-
-**Use opaque compression when:**
-- Maximum token savings required
-- Sessions are relatively short
-- Re-fetching costs are low
-
-**Use regenerative summaries when:**
-- Summary interpretability is critical
-- Sessions have clear phase boundaries
-- Full context review is acceptable on each compression
-
-### Compression Ratio Considerations
-
-| Method | Compression Ratio | Quality Score | Trade-off |
-|--------|-------------------|---------------|-----------|
-| Anchored Iterative | 98.6% | 3.70 | Best quality, slightly less compression |
-| Regenerative | 98.7% | 3.44 | Good quality, moderate compression |
-| Opaque | 99.3% | 3.35 | Best compression, quality loss |
-
-The 0.7% additional tokens retained by structured summarization buys 0.35 quality points. For any task where re-fetching costs matter, this trade-off favors structured approaches.
+Provide the raw context text and a target token budget. The skill returns a compressed version of the text that fits within the budget. Optionally specify the compression strategy (extractive, abstractive, key-points, or auto) and a list of must-retain keywords or entities.
 
 ## Examples
 
-**Example 1: Debugging Session Compression**
+### Example 1: Compressing a Document for a Q&A Task
 
-Original context (89,000 tokens, 178 messages):
-- 401 error on /api/auth/login endpoint
-- Traced through auth controller, middleware, session store
-- Found stale Redis connection
-- Fixed connection pooling, added retry logic
-- 14 tests passing, 2 failing
+**Input (excerpt, ~800 tokens):**
+> The Acme Corporation was founded in 1987 by Jane Doe in Austin, Texas. It started as a small consulting firm specializing in environmental compliance. Over the years, the company expanded into waste management technology, receiving its first patent in 1994 for an automated sorting system. By 2005, Acme had grown to 500 employees across 12 offices nationwide. The company went public in 2010 with an IPO price of $18 per share. In 2018, Acme acquired GreenTech Solutions for $240 million, adding recycling automation to its portfolio. As of 2024, Acme reports annual revenue of $1.2 billion and employs 3,400 people. The CEO since 2020 is Michael Chen, who previously served as CTO. Acme's headquarters relocated to Denver, Colorado in 2021. The company's mission statement emphasizes sustainable industrial practices and carbon-neutral operations by 2030.
 
-Structured summary after compression:
+**Compressed Output (key-point extraction, ~150 tokens):**
+> - Acme Corporation: founded 1987 by Jane Doe, Austin TX; now HQ in Denver CO (relocated 2021)
+> - Business: environmental compliance consulting → waste management tech → recycling automation
+> - Key milestones: first patent 1994 (automated sorting), IPO 2010 ($18/share), acquired GreenTech Solutions 2018 ($240M)
+> - Current: CEO Michael Chen (since 2020), 3,400 employees, $1.2B annual revenue
+> - Goal: carbon-neutral operations by 2030
 
-```markdown
-## Session Intent
-Debug 401 Unauthorized error on /api/auth/login despite valid credentials.
+### Example 2: Compressing Conversation History
 
-## Root Cause
-Stale Redis connection in session store. JWT generated correctly but session could not be persisted.
+**Input (long-running chat, ~3,000 tokens across 18 messages):**
+> User asks about setting up a Python virtual environment. Agent explains venv creation, pip usage, and requirements.txt. User then asks about Docker containerization. Agent explains Dockerfiles, docker-compose, and volume mounts. User encounters a port-binding error. Agent helps debug by checking for conflicting processes. User resolves the issue. User then asks about deploying to AWS ECS.
 
-## Files Modified
-- auth.controller.ts: No changes (read only)
-- middleware/cors.ts: No changes (examined)
-- config/redis.ts: Fixed connection pooling configuration
-- services/session.service.ts: Added retry logic for transient failures
-- tests/auth.test.ts: Updated mock setup
+**Compressed Output (abstractive summary, ~400 tokens):**
+> **Conversation summary:** The user is setting up a Python application with Docker and deploying to AWS. Key context:
+> 1. Python environment is configured with venv and requirements.txt (resolved).
+> 2. Docker setup uses a Dockerfile and docker-compose with volume mounts (resolved).
+> 3. A port-binding conflict on port 8080 was resolved by killing a conflicting process.
+> 4. **Current topic:** User is now asking about deploying the Dockerized Python app to AWS ECS. They have a working Docker setup locally and need guidance on ECS task definitions, service configuration, and load balancing.
 
-## Test Status
-14 passing, 2 failing (mock setup issues)
+## Best Practices
 
-## Next Steps
-1. Fix remaining test failures (mock session service)
-2. Run full test suite
-3. Deploy to staging
-```
+- **Compress progressively** — apply light pruning first, measure the result, then apply heavier techniques only if you still exceed the budget. This minimizes unnecessary information loss.
+- **Preserve numbers and names** — quantitative data, proper nouns, dates, and code identifiers are disproportionately important and should be retained even in aggressive compression.
+- **Tag compressed context** — always indicate to the model that the context has been compressed so it can appropriately hedge when details might have been lost.
+- **Prefer extractive methods for code** — abstractive summarization can introduce subtle errors in code snippets. Use extractive selection or selective pruning for technical content.
+- **Keep the most recent turns** — when compressing conversation history, preserve the last 2–3 turns verbatim and summarize earlier turns. Recency is a strong signal for relevance.
+- **Measure information loss** — after compression, check that answers to key questions about the content remain correct. If a fact is lost that the task depends on, the compression was too aggressive.
 
-**Example 2: Probe Response Quality**
+## Edge Cases
 
-After compression, asking "What was the original error?":
-
-Good response (structured summarization):
-> "The original error was a 401 Unauthorized response from the /api/auth/login endpoint. Users received this error with valid credentials. Root cause was stale Redis connection in session store."
-
-Poor response (aggressive compression):
-> "We were debugging an authentication issue. The login was failing. We fixed some configuration problems."
-
-The structured response preserves endpoint, error code, and root cause. The aggressive response loses all technical detail.
-
-## Guidelines
-
-1. Optimize for tokens-per-task, not tokens-per-request
-2. Use structured summaries with explicit sections for file tracking
-3. Trigger compression at 70-80% context utilization
-4. Implement incremental merging rather than full regeneration
-5. Test compression quality with probe-based evaluation
-6. Track artifact trail separately if file tracking is critical
-7. Accept slightly lower compression ratios for better quality retention
-8. Monitor re-fetching frequency as a compression quality signal
-
-## Integration
-
-This skill connects to several others in the collection:
-
-- context-degradation - Compression is a mitigation strategy for degradation
-- context-optimization - Compression is one optimization technique among many
-- evaluation - Probe-based evaluation applies to compression testing
-- memory-systems - Compression relates to scratchpad and summary memory patterns
-
-## References
-
-Internal reference:
-- Evaluation Framework Reference - Detailed probe types and scoring rubrics
-
-Related skills in this collection:
-- context-degradation - Understanding what compression prevents
-- context-optimization - Broader optimization strategies
-- evaluation - Building evaluation frameworks
-
-External resources:
-- Factory Research: Evaluating Context Compression for AI Agents (December 2025)
-- Research on LLM-as-judge evaluation methodology (Zheng et al., 2023)
-- Netflix Engineering: "The Infinite Software Crisis" - Three-phase workflow and context compression at scale (AI Summit 2025)
-
----
-
-## Skill Metadata
-
-**Created**: 2025-12-22
-**Last Updated**: 2025-12-26
-**Author**: Agent Skills for Context Engineering Contributors
-**Version**: 1.1.0
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- **Context already within budget**: Skip compression entirely — unnecessary compression always loses some information. Only compress when the raw context exceeds available tokens.
+- **Highly technical or structured content**: Tables, JSON, and code blocks compress poorly with abstractive methods. Use selective pruning or extract only the relevant rows/fields rather than summarizing.
+- **Multiple languages in context**: Compression models may perform unevenly across languages. Compress each language segment independently or use a multilingual summarization model.
+- **Critical safety information**: Never compress away safety warnings, legal disclaimers, or medical dosage information. Mark these as must-retain before applying any compression.
+- **Near-budget context**: If the context is only 10–15% over budget, simple pruning of whitespace, boilerplate headers, and duplicate sentences is safer than full summarization.

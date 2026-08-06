@@ -1,79 +1,43 @@
 ---
 name: cqrs-implementation
-description: Implement Command Query Responsibility Segregation for scalable architectures. Use when separating read and write models, optimizing query performance, or building event-sourced systems.
+description: "Implement Command Query Responsibility Segregation for scalable architectures. Use when separating read and write models, optimizing query performance, or building event-sourced systems."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # CQRS Implementation
 
 Comprehensive guide to implementing CQRS (Command Query Responsibility Segregation) patterns.
 
-## When to Use This Skill
+## Use this skill when
 
 - Separating read and write concerns
 - Scaling reads independently from writes
 - Building event-sourced systems
 - Optimizing complex query scenarios
-- Different read/write data models needed
-- High-performance reporting requirements
+- Different read/write data models are needed
+- High-performance reporting is required
 
-## Core Concepts
+## Do not use this skill when
 
-### 1. CQRS Architecture
+- The domain is simple and CRUD is sufficient
+- You cannot operate separate read/write models
+- Strong immediate consistency is required everywhere
 
-```
-                    ┌─────────────┐
-                    │   Client    │
-                    └──────┬──────┘
-                           │
-              ┌────────────┴────────────┐
-              │                         │
-              ▼                         ▼
-       ┌─────────────┐          ┌─────────────┐
-       │  Commands   │          │   Queries   │
-       │    API      │          │    API      │
-       └──────┬──────┘          └──────┬──────┘
-              │                         │
-              ▼                         ▼
-       ┌─────────────┐          ┌─────────────┐
-       │  Command    │          │   Query     │
-       │  Handlers   │          │  Handlers   │
-       └──────┬──────┘          └──────┬──────┘
-              │                         │
-              ▼                         ▼
-       ┌─────────────┐          ┌─────────────┐
-       │   Write     │─────────►│    Read     │
-       │   Model     │  Events  │   Model     │
-       └─────────────┘          └─────────────┘
-```
+## Instructions
 
-### 2. Key Components
+- Identify read/write workloads and consistency needs.
+- Define command and query models with clear boundaries.
+- Implement read model projections and synchronization.
+- Validate performance, recovery, and failure modes.
+- If detailed patterns are required, open `resources/implementation-playbook.md`.
 
-| Component           | Responsibility                  |
-| ------------------- | ------------------------------- |
-| **Command**         | Intent to change state          |
-| **Command Handler** | Validates and executes commands |
-| **Event**           | Record of state change          |
-| **Query**           | Request for data                |
-| **Query Handler**   | Retrieves data from read model  |
-| **Projector**       | Updates read model from events  |
+## Resources
 
-## Templates and detailed worked examples
+- `resources/implementation-playbook.md` for detailed CQRS patterns and templates.
 
-Full template library and detailed worked examples live in `references/details.md`. Read that file when you need the concrete templates.
-
-## Best Practices
-
-### Do's
-
-- **Separate command and query models** - Different needs
-- **Use eventual consistency** - Accept propagation delay
-- **Validate in command handlers** - Before state change
-- **Denormalize read models** - Optimize for queries
-- **Version your events** - For schema evolution
-
-### Don'ts
-
-- **Don't query in commands** - Use only for writes
-- **Don't couple read/write schemas** - Independent evolution
-- **Don't over-engineer** - Start simple
-- **Don't ignore consistency SLAs** - Define acceptable lag
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

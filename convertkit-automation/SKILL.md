@@ -1,14 +1,16 @@
 ---
 name: convertkit-automation
 description: "Automate ConvertKit (Kit) tasks via Rube MCP (Composio): manage subscribers, tags, broadcasts, and broadcast stats. Always search tools first for current schemas."
-risk: critical
-source: community
-date_added: "2026-02-27"
+requires:
+  mcp: [rube]
+category: email
 ---
 
 # ConvertKit (Kit) Automation via Rube MCP
 
 Automate ConvertKit (now known as Kit) email marketing operations through Composio's Kit toolkit via Rube MCP.
+
+**Toolkit docs**: [composio.dev/toolkits/kit](https://composio.dev/toolkits/kit)
 
 ## Prerequisites
 
@@ -195,10 +197,5 @@ Kit uses cursor-based pagination:
 | Get broadcast stats | KIT_GET_BROADCAST_STATS | id |
 | Delete broadcast | KIT_DELETE_BROADCAST | id |
 
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*

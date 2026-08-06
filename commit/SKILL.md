@@ -1,172 +1,108 @@
 ---
 name: commit
-description: ALWAYS use this skill when committing code changes — never commit directly without it. Creates commits following Sentry conventions with proper conventional commit format and issue references. Trigger on any commit, git commit, save changes, or commit message task.
-risk: critical
-source: community
+description: >
+  This skill should be used when the user says "commit my changes", "commit this",
+  "create a commit", "git commit", "save my work", or mentions committing code.
+argument-hint: "[push]"
+allowed-tools:
+  - Bash(git:*)
+  - Bash(python3:*)
+  - AskUserQuestion
 ---
 
-# Sentry Commit Messages
+# Commit
 
-Follow these conventions when creating commits for Sentry projects.
+Analyze uncommitted changes and create well-organized commits using conventional commit format.
 
-## When to Use
-- The user asks to commit code, prepare a commit message, or save changes in git.
-- You need Sentry-style commit formatting with conventional commit structure and issue references.
-- The task requires enforcing branch safety before committing, especially avoiding direct commits on `main` or `master`.
+## Workflow
 
-## Prerequisites
+### 1. Discover Changes
 
-Before committing, always check the current branch:
+Current repo state (injected at invocation — no tool calls needed):
+
+- Status: !`git status --porcelain`
+- Diff stats: !`git diff --stat`
+
+Abort before staging if any apply:
+- Not a git repository.
+- No changes ("Nothing to commit").
+- Mid-merge / rebase / cherry-pick / revert — `git add -A` would stage conflict markers as content. Check `$(git rev-parse --git-dir)` for `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge/`, or `rebase-apply/`. If any present, report the in-progress operation and stop.
+- Detached HEAD — `git symbolic-ref -q HEAD` is empty. Commit would land on an unreferenced commit and be lost on branch switch. Report and stop.
+
+### 2. Stage Files
+
+Run `git add -A` to stage all changes.
+
+**Exclude generated or ephemeral files** that should never be version-controlled: `scratch.*`, `temp.*`, `debug.*`, `playground.*`, `*.log`, `dist/`, `build/`, `target/`, `node_modules/`, `__pycache__/`.
+
+If such files detected:
+1. Unstage with `git reset HEAD <file>`
+2. Ask user if they want to add to .gitignore
+
+Proceed when all intended files are staged and ephemeral files are excluded.
+
+### 3. Analyze Commit Boundaries
+
+For each changed file, write a one-line PURPOSE description (not file location).
+
+**Group by PURPOSE, not directory:**
+- Same goal = one commit
+- Different goals = separate commits
+
+Each commit should represent one logical change because atomic commits enable `git bisect` and `git revert` without side-effects.
+
+**Signs of separate concerns:**
+- "Added X" AND "Fixed Y" (feature + bugfix)
+- Changes that could be reverted independently
+- Different conventional-commit types on related work — a fix and its tests go in separate `fix:` and `test:` commits so the fix can be reverted without losing the tests
+
+If multiple concerns: use `git reset HEAD` then `git add <specific-files>` for each group. Commit foundational changes first.
+
+**Handle renames (R status):** When splitting, add BOTH old and new paths. Git detects renames by similarity scoring across the old/new pair — staging only the new path causes git to log a delete + add, losing rename history.
+
+Proceed when every changed file is assigned to exactly one commit group.
+
+### 4. Validate
+
+Run the validation script after staging:
 
 ```bash
-git branch --show-current
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/commit/scripts/validate.py . --output json
 ```
 
-**If you're on `main` or `master`, you MUST create a feature branch first** — unless the user explicitly asked to commit to main. Do not ask the user whether to create a branch; just proceed with branch creation. The `create-branch` skill will still propose a branch name for the user to confirm.
+Interpret the result:
+- Exit 0 → validation passed; proceed to Step 5
+- Exit 1 → validation failed; parse the `output` field, report the error to the user, and stop
+- Exit 2 → validator skipped (no marker file, no staged files match the validator's extensions, or the tool isn't installed); proceed to Step 5. The `output` field names the reason.
 
-Use the `create-branch` skill to create the branch. After `create-branch` completes, verify the current branch has changed before proceeding:
+### 5. Create Commit
 
+Check recent commit style:
 ```bash
-git branch --show-current
+git log --no-merges --oneline -10
 ```
 
-If still on `main` or `master` (e.g., the user aborted branch creation), stop — do not commit.
-
-## Format
-
+Use conventional commit format:
 ```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
+<type>(<scope>): <description>
 ```
 
-The header is required. Scope is optional. All lines must stay under 100 characters.
+**Types:** feat, fix, docs, refactor, test, chore, perf
 
-## Commit Types
+- Lowercase subject, no period, imperative mood
+- Max 72 chars for subject
+- Omit Co-authored-by trailers and AI attribution — these pollute `git log` and break downstream tooling that greps commit metadata
+- No emojis
 
-| Type | Purpose |
-|------|---------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `ref` | Refactoring (no behavior change) |
-| `perf` | Performance improvement |
-| `docs` | Documentation only |
-| `test` | Test additions or corrections |
-| `build` | Build system or dependencies |
-| `ci` | CI configuration |
-| `chore` | Maintenance tasks |
-| `style` | Code formatting (no logic change) |
-| `meta` | Repository metadata |
-| `license` | License changes |
+**If `git commit` fails due to a pre-commit hook:** the commit did NOT land. Check `git status` — the hook may have auto-fixed files (e.g. `auto-version.py` syncing `plugin.json`) and left them modified. Re-stage (`git add -A`) and retry the same `git commit` command with the same message. Do NOT use `--amend` (amends the PREVIOUS commit, not the failed one). Do NOT use `--no-verify` (skips the hook entirely, defeating its guard).
 
-## Subject Line Rules
+Proceed when the commit message is drafted and matches the repo's existing style.
 
-- Use imperative, present tense: "Add feature" not "Added feature"
-- Capitalize the first letter
-- No period at the end
-- Maximum 70 characters
+### 6. Push (only if requested)
 
-## Body Guidelines
+If user mentions "push" or arguments contain "push", run `git push`. If push fails, report the error and stop — do not retry or force-push.
 
-- Explain **what** and **why**, not how
-- Use imperative mood and present tense
-- Include motivation for the change
-- Contrast with previous behavior when relevant
+## Output
 
-## Footer: Issue References
+One line per commit (hash + message). If temporary files were excluded, list them as bullets below.
 
-Reference issues in the footer using these patterns:
-
-```
-Fixes GH-1234
-Fixes #1234
-Fixes SENTRY-1234
-Refs LINEAR-ABC-123
-```
-
-- `Fixes` closes the issue when merged
-- `Refs` links without closing
-
-## AI-Generated Changes
-
-When changes were primarily generated by a coding agent (like Claude Code), include the Co-Authored-By attribution in the commit footer:
-
-```
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-This is the only indicator of AI involvement that should appear in commits. Do not add phrases like "Generated by AI", "Written with Claude", or similar markers in the subject, body, or anywhere else in the commit message.
-
-## Examples
-
-### Simple fix
-
-```
-fix(api): Handle null response in user endpoint
-
-The user API could return null for deleted accounts, causing a crash
-in the dashboard. Add null check before accessing user properties.
-
-Fixes SENTRY-5678
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-### Feature with scope
-
-```
-feat(alerts): Add Slack thread replies for alert updates
-
-When an alert is updated or resolved, post a reply to the original
-Slack thread instead of creating a new message. This keeps related
-notifications grouped together.
-
-Refs GH-1234
-```
-
-### Refactor
-
-```
-ref: Extract common validation logic to shared module
-
-Move duplicate validation code from three endpoints into a shared
-validator class. No behavior change.
-```
-
-### Breaking change
-
-```
-feat(api)!: Remove deprecated v1 endpoints
-
-Remove all v1 API endpoints that were deprecated in version 23.1.
-Clients should migrate to v2 endpoints.
-
-BREAKING CHANGE: v1 endpoints no longer available
-Fixes SENTRY-9999
-```
-
-## Revert Format
-
-```
-revert: feat(api): Add new endpoint
-
-This reverts commit abc123def456.
-
-Reason: Caused performance regression in production.
-```
-
-## Principles
-
-- Each commit should be a single, stable change
-- Commits should be independently reviewable
-- The repository should be in a working state after each commit
-
-## References
-
-- [Sentry Commit Messages](https://develop.sentry.dev/engineering-practices/commit-messages/)
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

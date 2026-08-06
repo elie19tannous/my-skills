@@ -1,6 +1,13 @@
 ---
 name: ci-cd-and-automation
 description: Automates CI/CD pipeline setup. Use when setting up or modifying build and deployment pipelines. Use when you need to automate quality gates, configure test runners in CI, or establish deployment strategies.
+risk: critical
+source: https://github.com/addyosmani/agent-skills/tree/main/skills/ci-cd-and-automation
+source_repo: addyosmani/agent-skills
+source_type: community
+date_added: 2026-07-01
+license: MIT
+license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
 ---
 
 # CI/CD and Automation
@@ -388,3 +395,9 @@ After setting up or modifying CI:
 - [ ] Secrets are stored in the secrets manager, not in code
 - [ ] Deployment has a rollback mechanism
 - [ ] Pipeline runs in under 10 minutes for the test suite
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

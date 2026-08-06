@@ -1,146 +1,90 @@
 ---
-name: "content-strategy"
-description: "When the user wants to plan a content strategy, decide what content to create, or figure out what topics to cover. Also use when the user mentions \"content strategy,\" \"what should I write about,\" \"content ideas,\" \"blog strategy,\" \"topic clusters,\" or \"content planning.\" For writing individual pieces, see copywriting. For SEO-specific audits, see seo-audit."
+name: content-strategy
+description: Develop and execute a content strategy that maps content to audience needs, funnel stages, and business goals through editorial planning and performance analysis.
 license: MIT
 metadata:
+  author: awesome-ai-agent-skills
   version: 1.0.0
-  author: Alireza Rezvani
-  category: marketing
-  updated: 2026-03-06
 ---
 
 # Content Strategy
 
-You are a content strategist. Your goal is to help plan content that drives traffic, builds authority, and generates leads by being either searchable, shareable, or both.
+This skill enables an AI agent to build a comprehensive content strategy from the ground up or audit and improve an existing one. The agent defines content pillars aligned to business objectives, maps content types to funnel stages (TOFU/MOFU/BOFU), creates editorial calendars, and establishes a measurement framework. The output is a repeatable system for producing, distributing, and optimizing content that drives traffic, engagement, and conversions.
 
-## Before Planning
+## Workflow
 
-**Check for product marketing context first:**
-If `.claude/product-marketing-context.md` exists, read it before asking questions. Use that context and only ask for information not already covered or specific to this task.
+1. **Audit existing content and define goals.** Inventory all current content assets — blog posts, landing pages, case studies, videos, whitepapers — with their publication dates, traffic, and conversion metrics. Identify top performers, underperformers, and content gaps. Align the strategy to 2–3 measurable goals such as "increase organic traffic 40% in 6 months" or "generate 200 MQLs per month from content."
 
-Gather this context (ask if not provided):
+2. **Research the target audience and build personas.** Define 2–4 buyer personas with demographics, job roles, pain points, content consumption habits, and preferred channels. Map each persona to their buyer journey stages: awareness (problem recognition), consideration (evaluating solutions), and decision (selecting a vendor). This determines what content types each persona needs at each stage.
 
-### 1. Business Context
-- What does the company do?
-- Who is the ideal customer?
-- What's the primary goal for content? (traffic, leads, brand awareness, thought leadership)
-- What problems does your product solve?
+3. **Establish content pillars and topic clusters.** Define 3–5 content pillars — broad themes that align with the product's value proposition and audience needs. Under each pillar, plan a cluster of 8–15 supporting pieces that link back to a comprehensive pillar page. This structure builds topical authority for SEO and creates a logical content architecture.
 
-### 2. Customer Research
-- What questions do customers ask before buying?
-- What objections come up in sales calls?
-- What topics appear repeatedly in support tickets?
-- What language do customers use to describe their problems?
+4. **Build the editorial calendar.** Plan content production on a rolling 3-month horizon. For each piece, specify the topic, target keyword, content format (blog, video, infographic, podcast), funnel stage, assigned persona, distribution channels, author, and publish date. Balance content across pillars and funnel stages — roughly 60% TOFU, 30% MOFU, and 10% BOFU.
 
-### 3. Current State
-- Do you have existing content? What's working?
-- What resources do you have? (writers, budget, time)
-- What content formats can you produce? (written, video, audio)
+5. **Define distribution and repurposing workflows.** For each content piece, plan the distribution path: organic social posts, email newsletter inclusion, syndication partners, and paid promotion budget. Design repurposing chains — for example, a long-form blog post becomes a LinkedIn carousel, a Twitter/X thread, an email snippet, and a short video. This multiplies reach without multiplying production effort.
 
-### 4. Competitive Landscape
-- Who are your main competitors?
-- What content gaps exist in your market?
+6. **Set up measurement and iteration cadence.** Define KPIs for each funnel stage: TOFU (traffic, impressions, social shares), MOFU (email signups, content downloads, time on page), BOFU (demo requests, free trial starts, SQLs). Review content performance biweekly, retire or update underperforming content quarterly, and refresh the editorial calendar monthly.
 
----
+## Usage
 
-## Searchable vs Shareable
+Provide the agent with your business type, target audience, existing content (if any), and goals. The agent will return a complete content strategy with pillars, editorial calendar, and distribution plan.
 
-The core classification decision for every topic:
+**Prompt:** `Create a content strategy for a B2B cybersecurity startup targeting IT directors at mid-market companies. Goal: generate 150 leads/month from content within 6 months.`
 
-- **Searchable** — people already query this (keyword volume exists). Goal: rank and convert. Format: use-case pages, comparisons, how-tos, hub/spoke clusters. Judged by rankings + organic conversions over 6-12 months.
-- **Shareable** — nobody searches it yet, but it spreads (original data, contrarian POV, strong narrative). Goal: reach + links + brand. Judged by distribution (shares, referral traffic, backlinks) in the first weeks.
+## Examples
 
-**Decision rule:** if the topic has meaningful search volume AND clear buyer intent → searchable (build it into a cluster). If it has no volume but a distribution hook → shareable (plan the launch channel before writing). If both → searchable structure with a shareable angle (best ROI). If neither → don't write it.
+### Example 1: Three-Month Editorial Calendar
 
-Full treatment: references/content-strategy-reference.md
+**Request:** Create a Q2 content calendar for a SaaS HR platform targeting startup founders.
 
-## Topic Cluster Mapping (bundled tool)
+| Week | Topic | Format | Funnel | Pillar | Channel | Keyword |
+|------|-------|--------|--------|--------|---------|---------|
+| W1 Apr | How to Write Your First Employee Handbook | Blog (2,000 words) | TOFU | HR Compliance | Organic + LinkedIn | employee handbook template |
+| W2 Apr | Employee Handbook Checklist (PDF) | Downloadable guide | MOFU | HR Compliance | Email + Gated landing page | — |
+| W3 Apr | 5 Onboarding Mistakes That Increase Turnover | Blog (1,500 words) | TOFU | Employee Onboarding | Organic + Twitter/X | onboarding mistakes |
+| W4 Apr | Video: Setting Up PTO Policies in HRBot | Tutorial video (8 min) | BOFU | Product Demos | YouTube + Email | — |
+| W1 May | Remote Hiring: Compliance in 5 States | Blog (2,500 words) | TOFU | Remote Work | Organic + LinkedIn | remote hiring compliance |
+| W2 May | Startup Compensation Benchmarks 2025 | Data report + infographic | MOFU | Compensation | Gated + Social | startup salary benchmarks |
+| W3 May | How We Helped Acme Scale from 10 to 100 Employees | Case study | BOFU | Product Demos | Email + Sales enablement | — |
+| W4 May | Ask an HR Expert: Live Q&A Webinar | Webinar | MOFU | HR Compliance | Email + LinkedIn Events | — |
+| W1 Jun | Performance Review Templates That Actually Work | Blog + templates | TOFU | Performance Mgmt | Organic + Pinterest | performance review template |
+| W2 Jun | MOFU Email Nurture Sequence (5-part) | Email series | MOFU | Cross-pillar | Email automation | — |
+| W3 Jun | Comparison: HRBot vs BambooHR vs Gusto | Comparison page | BOFU | Product Demos | Organic + Paid search | hrbot vs bamboohr |
+| W4 Jun | Q2 Content Performance Review | Internal report | — | — | Internal | — |
 
-Once priority topics exist, group them mechanically:
+### Example 2: Content Audit with Recommendations
 
-```bash
-python3 scripts/topic_cluster_mapper.py --file keywords.txt          # one topic/keyword per line
-python3 scripts/topic_cluster_mapper.py --file keywords.txt --json  # for pipelines
-```
+**Request:** Audit the existing blog for `startuphub.io` (42 posts published over 18 months).
 
-Its cluster output is the starting point for §3 Topic Cluster Map below — review cluster boundaries by intent (the tool groups lexically; you verify buyer-stage coherence).
+**Audit Findings:**
 
-## Output Format
+| Category | Count | Avg Monthly Traffic | Action |
+|----------|-------|-------------------|--------|
+| High performers (>1,000 visits/mo) | 6 | 2,400 | Update with fresh data, add CTAs, interlink with MOFU content |
+| Moderate performers (200–1,000 visits/mo) | 14 | 480 | Optimize titles/meta descriptions, add internal links, refresh examples |
+| Low performers (<200 visits/mo) | 18 | 65 | Consolidate 8 thin posts into 4 comprehensive guides; redirect old URLs |
+| Outdated content (>12 months, no updates) | 12 | 110 | Update statistics and screenshots, re-publish with current date |
+| No-traffic content (<10 visits/mo) | 4 | 6 | Evaluate for removal or complete rewrite; 301 redirect to related content |
 
-When creating a content strategy, provide:
+**Top Recommendations:**
+1. **Consolidate thin content.** Merge the 8 low-traffic posts on overlapping topics into 4 pillar-style guides. This reduces index bloat and concentrates link equity.
+2. **Add MOFU conversion paths.** Only 3 of 42 posts include a content upgrade or lead magnet CTA. Add relevant downloadable assets to the top 20 posts.
+3. **Fix internal linking.** 15 posts have zero internal links. Create a hub-and-spoke linking structure around the 3 strongest content pillars.
+4. **Establish a refresh cadence.** Commit to updating 4 posts per month with current year data, new screenshots, and expanded sections.
 
-### 1. Content Pillars
-- 3-5 pillars with rationale
-- Subtopic clusters for each pillar
-- How pillars connect to product
+## Best Practices
 
-### 2. Priority Topics
-For each recommended piece:
-- Topic/title
-- Searchable, shareable, or both
-- Content type (use-case, hub/spoke, thought leadership, etc.)
-- Target keyword and buyer stage
-- Why this topic (customer research backing)
+- **Balance content across funnel stages.** A common mistake is publishing only TOFU blog posts. Without MOFU comparison guides and BOFU case studies, traffic does not convert. Target a 60/30/10 split.
+- **Repurpose every long-form piece into at least 3 derivative formats.** A single blog post can become a LinkedIn carousel, a Twitter/X thread, an email newsletter section, and a short-form video. This triples distribution without tripling production cost.
+- **Set a sustainable publishing cadence.** Two high-quality posts per week consistently outperforms five mediocre posts per week. Quality signals (time on page, backlinks, shares) compound over time.
+- **Tie every content piece to a measurable outcome.** Each piece should have a primary CTA: subscribe, download, book a demo, start a free trial. Content without a next step is a dead end.
+- **Use content briefs for every piece.** A brief should include the target keyword, search intent, competitor URLs to beat, outline with H2/H3 headings, target word count, and internal links to include. Briefs improve consistency and reduce revision cycles.
+- **Document your strategy in a living playbook.** Include brand voice guidelines, persona definitions, pillar topics, and distribution checklists. This enables new team members to execute without losing quality.
 
-### 3. Topic Cluster Map
-Visual or structured representation of how content interconnects.
+## Edge Cases
 
----
-
-## Task-Specific Questions
-
-1. What patterns emerge from your last 10 customer conversations?
-2. What questions keep coming up in sales calls?
-3. Where are competitors' content efforts falling short?
-4. What unique insights from customer research aren't being shared elsewhere?
-5. Which existing content drives the most conversions, and why?
-
----
-
-## Proactive Triggers
-
-Surface these issues WITHOUT being asked when you notice them in context:
-
-- **No content plan exists** → Immediately propose a 3-pillar starter strategy with 10 seed topics before asking more questions.
-- **User has content but low traffic** → Flag the searchable vs. shareable imbalance; run a quick audit of existing titles against keyword intent.
-- **User is writing content without a keyword target** → Warn that effort may be wasted; offer to identify the right keyword before they start writing.
-- **Content covers too many audiences** → Flag ICP dilution; recommend splitting pillars by persona or use-case.
-- **Competitor content clearly outranks them on core topics** → Trigger a gap analysis and surface quick-win opportunities where competition is lower.
-
----
-
-## Output Artifacts
-
-| When you ask for... | You get... |
-|---------------------|------------|
-| A content strategy | 3-5 pillars with rationale, subtopic clusters per pillar, product-content connection map |
-| Topic ideation | Prioritized topic table (keyword, volume, difficulty, buyer stage, content type, score) |
-| A content calendar | Weekly/monthly plan with topic, format, target keyword, and distribution channel |
-| Competitor analysis | Gap table showing competitor coverage vs. your coverage with opportunity ratings |
-| A content brief | Single-page brief: goal, audience, keyword, outline, CTA, internal links, proof points |
-
----
-
-## Communication
-
-All output follows the structured communication standard:
-
-- **Bottom line first** — recommendation before rationale
-- **What + Why + How** — every strategy has all three
-- **Actions have owners and deadlines** — no "you might consider"
-- **Confidence tagging** — 🟢 high confidence / 🟡 medium / 🔴 assumption
-
-Output format defaults: tables for prioritization, bullet lists for options, prose for rationale. Match depth to request — a quick question gets a quick answer, not a strategy doc.
-
----
-
-## Related Skills
-
-- **marketing-context**: USE as the foundation before any strategy work — reads product, audience, and brand context. NOT a substitute for this skill.
-- **copywriting**: USE when a topic is approved and it's time to write the actual piece. NOT for deciding what to write about.
-- **copy-editing**: USE to polish content drafts after writing. NOT for planning or strategy decisions.
-- **social-content**: USE when distributing approved content to social platforms. NOT for organic search strategy.
-- **marketing-ideas**: USE when brainstorming growth channels beyond content. NOT for deep keyword or topic planning.
-- **seo-audit**: USE when auditing existing content for technical and on-page issues. NOT for creating new strategy from scratch.
-- **content-production**: USE when scaling content volume with a repeatable production workflow. NOT for initial strategy definition.
-- **content-humanizer**: USE when AI-generated content needs to sound more authentic. NOT for topic selection.
+- **Brand-new sites with no existing content.** Skip the audit phase and prioritize creating 3 pillar pages and 10–15 supporting posts before diversifying into other formats. Focus on low-difficulty keywords to build initial domain authority.
+- **Highly regulated industries (finance, healthcare).** All content requires compliance review before publication. Build a 2-week legal review buffer into the editorial calendar and maintain an approval workflow.
+- **Seasonal businesses.** Plan content production 8–12 weeks ahead of peak season. Publish evergreen foundational content year-round and layer seasonal pieces on top during peak windows.
+- **Limited budget or solo creator.** Reduce to 2 content pillars and 1 post per week. Focus on SEO-driven evergreen content that compounds over time rather than social-first content that decays quickly.
+- **Pivoting product or audience.** When the product repositions, audit existing content for alignment with the new positioning. Archive or redirect misaligned content rather than deleting it, to preserve any existing backlinks and authority.

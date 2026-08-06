@@ -1,0 +1,33 @@
+{
+  "skill": "contract-playbook-review",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Authored the contract-playbook-review skill to the standard Lawcal legal-tech package, merging the 'Contract Playbook Review' and 'Playbook Reviewer' concepts into one skill: SKILL.md (English), SKILL_HE.md (Hebrew mirror), two references (playbook-structure, grading-rubric), an offline stdlib-only clause/trigger scanner, metadata.json, evidence.json, and this log. The skill's central discipline is that a playbook entry is never compliance on its own (the actual clause language must fall inside a stated band), escalation triggers are orthogonal to the position grade, and the firm's positions are never invented where the playbook is silent. Ran the script self-check (--selftest: OK) on python3.12.",
+      "changes": [
+        {"type": "package", "id": "skill-md", "detail": "Authored SKILL.md: playbook loading, clause extraction and mapping, the at-target/within-fallback/off-playbook/redline-breach grading rubric, the orthogonal escalation-trigger layer, the deviation/negotiation worklist, anti-fabrication discipline, three examples, gotchas, reference links, and troubleshooting."},
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the instructions, examples, gotchas, reference links, and troubleshooting."},
+        {"type": "package", "id": "references", "detail": "Added references/playbook-structure.md (target vs fallback band vs hard redline vs escalation trigger, per-term entries, owners, loading by contract type) and references/grading-rubric.md (grading rules, orthogonal escalation layer, grade-DOWN-when-unsure, deviation-report format)."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 5 claims sourced to the method references, playbook-structure guidance, WorldCC/IACCM negotiated-terms research, and the local script self-check."},
+        {"type": "test", "id": "script-selftest", "detail": "Verified scripts/clause_scanner.py --selftest passes on python3.12 (stdlib only, no network)."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-fallback-band-grading",
+          "reason": "Judging whether a clause's actual language falls inside a fallback band requires reading the clause against the firm's real playbook positions, which is outside a static pattern scanner's ability. The script deliberately stops at topic tagging plus redline/trigger signal detection and defers band grading to the human/agent with the playbook, per the anti-fabrication rule.",
+          "status": "deferred"
+        },
+        {
+          "id": "D2-playbook-ingestion-format",
+          "reason": "A machine-readable playbook schema (per-term target/fallback/redline/trigger records the scanner could auto-map against) was not built; the current pass loads the playbook via human reading of references/playbook-structure.md. A structured ingestion format is a possible future enhancement.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

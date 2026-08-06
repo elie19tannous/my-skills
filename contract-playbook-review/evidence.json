@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "contract-playbook-review",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "This skill encodes a contract-review methodology (grading clauses against a firm's negotiation playbook), not jurisdiction-specific legal facts. Claims below are about the method, the playbook structure it assumes, and the authoritative negotiation/practice references it aligns to, plus the local script self-check. No live contract review was performed. The core discipline is anti-fabrication: a playbook entry is never treated as proof a clause is compliant, and the firm's positions are never invented where the playbook is silent.",
+  "claims": [
+    {
+      "claim_id": "entry-not-compliance",
+      "claim": "A clause is playbook-compliant only when its actual language falls inside a stated position band (target or acceptable fallback); a playbook entry existing for the topic is not itself compliance, and deviation from target within the fallback band is acceptable, not a breach.",
+      "source_url": "local:references/grading-rubric.md",
+      "raw_snippet": "Grade the real clause language, never the topic. A playbook entry existing is not compliance. Deviation from target is normal -- within-fallback is an accept, not a fight.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "references/grading-rubric.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "escalation-orthogonal",
+      "claim": "Escalation triggers are orthogonal to the position grade: a clause can be within-fallback and still trip a trigger (deal size, cross-border data, exclusivity, non-standard forum) that requires named approver sign-off before agreeing, and the trigger must never be suppressed because the grade looks clean.",
+      "source_url": "local:references/grading-rubric.md",
+      "raw_snippet": "A trigger is a condition that must be routed to a named approver BEFORE agreeing, regardless of how the clause grades. Never suppress a trigger because the grade looks clean or the team is in a hurry.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "references/grading-rubric.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "playbook-structure-by-type",
+      "claim": "A negotiation playbook is a structured set of per-term positions (target, fallback band, hard redline, escalation trigger, owner) organized by contract type, because the governed terms differ across NDA / MSA / SaaS / DPA / lease / employment agreements.",
+      "source_url": "local:references/playbook-structure.md",
+      "raw_snippet": "Playbooks are organized by contract type because the governed terms differ. Load the section matching the contract type before grading; a term governed in one type may be ungoverned in another.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 1", "SKILL_HE.md שלב 1", "references/playbook-structure.md"]
+    },
+    {
+      "claim_id": "negotiated-terms-priority",
+      "claim": "Empirical research on the most-negotiated and most-disputed contract terms (e.g. limitation of liability, indemnification, termination, price/change) supports prioritizing those terms in a review worklist rather than treating all clauses equally.",
+      "source_url": "https://www.worldcc.com/",
+      "raw_snippet": "WorldCC/IACCM negotiated-terms research consistently ranks limitation of liability, indemnification, and termination among the most negotiated and most disputed contract terms.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Reference Links", "SKILL_HE.md קישורי מקור"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled clause_scanner.py is Python stdlib only (no network, no third-party deps) and ships an embedded self-check runnable via --selftest, which passes; it tags clause topics and surfaces redline/escalation signals but does not judge whether a clause is within a fallback band.",
+      "source_url": "local:scripts/clause_scanner.py",
+      "raw_snippet": "`python scripts/clause_scanner.py --selftest` prints 'selftest OK'. Verified 2026-07-09 on python3.12. First-pass clause/topic/trigger scanner; does not judge fallback-band compliance.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/clause_scanner.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}

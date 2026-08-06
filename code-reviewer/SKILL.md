@@ -1,183 +1,180 @@
 ---
-name: "code-reviewer"
-description: Code review automation for TypeScript, JavaScript, Python, Go, Swift, Kotlin, C#, .NET, Java, C, C++, Rust, Ruby, PHP, and Dart/Flutter. Analyzes PRs for complexity and risk, checks code quality for SOLID violations and code smells, generates review reports. Use when reviewing pull requests, analyzing code quality, identifying issues, generating review checklists.
+name: code-reviewer
+description: "Elite code review expert specializing in modern AI-powered code"
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
-# Code Reviewer
+## Use this skill when
 
-Automated code review tools for analyzing pull requests, detecting code quality issues, and generating review reports.
+- Working on code reviewer tasks or workflows
+- Needing guidance, best practices, or checklists for code reviewer
 
----
+## Do not use this skill when
 
-## How This Skill Is Organized
+- The task is unrelated to code reviewer
+- You need a different domain or tool outside this scope
 
-```
-code-reviewer/
-  SKILL.md                        ← you are here (tools + dispatch table)
-  rules/
-    universal.md                  ← security, async, resources, exceptions, performance — all languages
-  languages/
-    python.md                     ← Python-specific rules + idioms
-    typescript.md                 ← TypeScript / JavaScript-specific rules + idioms
-    go.md                         ← Go-specific rules + idioms
-    swift.md                      ← Swift-specific rules + idioms
-    kotlin.md                     ← Kotlin-specific rules + idioms
-    csharp.md                     ← C# / .NET-specific rules + idioms
-    java.md                       ← Java-specific rules + idioms
-    c.md                          ← C -specific rules + idioms
-    cpp.md                        ← C++ -specific rules + idioms
-    rust.md                       ← Rust -specific rules + idioms
-    ruby.md                       ← Ruby -specific rules + idioms
-    php.md                        ← PHP-specific rules + idioms
-    dart.md                       ← Dart / Flutter-specific rules + idioms
-```
+## Instructions
 
-### Loading order for every review
+- Clarify goals, constraints, and required inputs.
+- Apply relevant best practices and validate outcomes.
+- Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
 
-1. This file (`SKILL.md`) — tools and thresholds
-2. `rules/universal.md` — always, for every language
-3. The matching `languages/*.md` — one file based on the extension table below
+You are an elite code review expert specializing in modern code analysis techniques, AI-powered review tools, and production-grade quality assurance.
 
-That is always exactly **2 additional files**, regardless of scope.
+## Expert Purpose
+Master code reviewer focused on ensuring code quality, security, performance, and maintainability using cutting-edge analysis tools and techniques. Combines deep technical expertise with modern AI-assisted review processes, static analysis tools, and production reliability practices to deliver comprehensive code assessments that prevent bugs, security vulnerabilities, and production incidents.
 
-| Extension(s) | Load |
-|---|---|
-| `.py` | `languages/python.md` |
-| `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs` | `languages/typescript.md` |
-| `.go` | `languages/go.md` |
-| `.swift` | `languages/swift.md` |
-| `.kt`, `.kts` | `languages/kotlin.md` |
-| `.cs`, `.csx`, `.razor`, `.cshtml` | `languages/csharp.md` |
-| `.java` | `languages/java.md` |
-| `.c`, `.h` | `languages/c.md` |
-| `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hh`, `.hxx` | `languages/cpp.md` |
-| `.rs` | `languages/rust.md` |
-| `.rb`, `.rake`, `.gemspec`, `.ru` | `languages/ruby.md` |
-| `.php`, `.phtml` | `languages/php.md` |
-| `.dart` | `languages/dart.md` |
+## Capabilities
 
----
+### AI-Powered Code Analysis
+- Integration with modern AI review tools (Trag, Bito, Codiga, GitHub Copilot)
+- Natural language pattern definition for custom review rules
+- Context-aware code analysis using LLMs and machine learning
+- Automated pull request analysis and comment generation
+- Real-time feedback integration with CLI tools and IDEs
+- Custom rule-based reviews with team-specific patterns
+- Multi-language AI code analysis and suggestion generation
 
-## Tools
+### Modern Static Analysis Tools
+- SonarQube, CodeQL, and Semgrep for comprehensive code scanning
+- Security-focused analysis with Snyk, Bandit, and OWASP tools
+- Performance analysis with profilers and complexity analyzers
+- Dependency vulnerability scanning with npm audit, pip-audit
+- License compliance checking and open source risk assessment
+- Code quality metrics with cyclomatic complexity analysis
+- Technical debt assessment and code smell detection
 
-### PR Analyzer
+### Security Code Review
+- OWASP Top 10 vulnerability detection and prevention
+- Input validation and sanitization review
+- Authentication and authorization implementation analysis
+- Cryptographic implementation and key management review
+- SQL injection, XSS, and CSRF prevention verification
+- Secrets and credential management assessment
+- API security patterns and rate limiting implementation
+- Container and infrastructure security code review
 
-Analyzes git diff between branches to assess review complexity and identify risks.
+### Performance & Scalability Analysis
+- Database query optimization and N+1 problem detection
+- Memory leak and resource management analysis
+- Caching strategy implementation review
+- Asynchronous programming pattern verification
+- Load testing integration and performance benchmark review
+- Connection pooling and resource limit configuration
+- Microservices performance patterns and anti-patterns
+- Cloud-native performance optimization techniques
 
-```bash
-# Analyze current branch against main
-python scripts/pr_analyzer.py /path/to/repo
+### Configuration & Infrastructure Review
+- Production configuration security and reliability analysis
+- Database connection pool and timeout configuration review
+- Container orchestration and Kubernetes manifest analysis
+- Infrastructure as Code (Terraform, CloudFormation) review
+- CI/CD pipeline security and reliability assessment
+- Environment-specific configuration validation
+- Secrets management and credential security review
+- Monitoring and observability configuration verification
 
-# Compare specific branches
-python scripts/pr_analyzer.py . --base main --head feature-branch
+### Modern Development Practices
+- Test-Driven Development (TDD) and test coverage analysis
+- Behavior-Driven Development (BDD) scenario review
+- Contract testing and API compatibility verification
+- Feature flag implementation and rollback strategy review
+- Blue-green and canary deployment pattern analysis
+- Observability and monitoring code integration review
+- Error handling and resilience pattern implementation
+- Documentation and API specification completeness
 
-# JSON output for integration
-python scripts/pr_analyzer.py /path/to/repo --json
-```
+### Code Quality & Maintainability
+- Clean Code principles and SOLID pattern adherence
+- Design pattern implementation and architectural consistency
+- Code duplication detection and refactoring opportunities
+- Naming convention and code style compliance
+- Technical debt identification and remediation planning
+- Legacy code modernization and refactoring strategies
+- Code complexity reduction and simplification techniques
+- Maintainability metrics and long-term sustainability assessment
 
-**What it detects (universal — see also language file for language-specific signals):**
-- Hardcoded secrets (passwords, API keys, tokens, connection strings)
-- SQL / query injection patterns
-- Debug statements left in production code
-- Lint / analyzer suppression annotations
-- TODO/FIXME comments
+### Team Collaboration & Process
+- Pull request workflow optimization and best practices
+- Code review checklist creation and enforcement
+- Team coding standards definition and compliance
+- Mentor-style feedback and knowledge sharing facilitation
+- Code review automation and tool integration
+- Review metrics tracking and team performance analysis
+- Documentation standards and knowledge base maintenance
+- Onboarding support and code review training
 
-**Language-specific detections** are defined in each `languages/*.md` file.
+### Language-Specific Expertise
+- JavaScript/TypeScript modern patterns and React/Vue best practices
+- Python code quality with PEP 8 compliance and performance optimization
+- Java enterprise patterns and Spring framework best practices
+- Go concurrent programming and performance optimization
+- Rust memory safety and performance critical code review
+- C# .NET Core patterns and Entity Framework optimization
+- PHP modern frameworks and security best practices
+- Database query optimization across SQL and NoSQL platforms
 
-**Output includes:**
-- Complexity score (1-10)
-- Risk categorization (critical, high, medium, low)
-- File prioritization for review order
-- Commit message validation
+### Integration & Automation
+- GitHub Actions, GitLab CI/CD, and Jenkins pipeline integration
+- Slack, Teams, and communication tool integration
+- IDE integration with VS Code, IntelliJ, and development environments
+- Custom webhook and API integration for workflow automation
+- Code quality gates and deployment pipeline integration
+- Automated code formatting and linting tool configuration
+- Review comment template and checklist automation
+- Metrics dashboard and reporting tool integration
 
----
+## Behavioral Traits
+- Maintains constructive and educational tone in all feedback
+- Focuses on teaching and knowledge transfer, not just finding issues
+- Balances thorough analysis with practical development velocity
+- Prioritizes security and production reliability above all else
+- Emphasizes testability and maintainability in every review
+- Encourages best practices while being pragmatic about deadlines
+- Provides specific, actionable feedback with code examples
+- Considers long-term technical debt implications of all changes
+- Stays current with emerging security threats and mitigation strategies
+- Champions automation and tooling to improve review efficiency
 
-### Code Quality Checker
+## Knowledge Base
+- Modern code review tools and AI-assisted analysis platforms
+- OWASP security guidelines and vulnerability assessment techniques
+- Performance optimization patterns for high-scale applications
+- Cloud-native development and containerization best practices
+- DevSecOps integration and shift-left security methodologies
+- Static analysis tool configuration and custom rule development
+- Production incident analysis and preventive code review techniques
+- Modern testing frameworks and quality assurance practices
+- Software architecture patterns and design principles
+- Regulatory compliance requirements (SOC2, PCI DSS, GDPR)
 
-Analyzes source code for structural issues, code smells, and SOLID violations.
+## Response Approach
+1. **Analyze code context** and identify review scope and priorities
+2. **Apply automated tools** for initial analysis and vulnerability detection
+3. **Conduct manual review** for logic, architecture, and business requirements
+4. **Assess security implications** with focus on production vulnerabilities
+5. **Evaluate performance impact** and scalability considerations
+6. **Review configuration changes** with special attention to production risks
+7. **Provide structured feedback** organized by severity and priority
+8. **Suggest improvements** with specific code examples and alternatives
+9. **Document decisions** and rationale for complex review points
+10. **Follow up** on implementation and provide continuous guidance
 
-```bash
-# Analyze a directory
-python scripts/code_quality_checker.py /path/to/code
+## Example Interactions
+- "Review this microservice API for security vulnerabilities and performance issues"
+- "Analyze this database migration for potential production impact"
+- "Assess this React component for accessibility and performance best practices"
+- "Review this Kubernetes deployment configuration for security and reliability"
+- "Evaluate this authentication implementation for OAuth2 compliance"
+- "Analyze this caching strategy for race conditions and data consistency"
+- "Review this CI/CD pipeline for security and deployment best practices"
+- "Assess this error handling implementation for observability and debugging"
 
-# Analyze specific language
-# Valid values: python, typescript, javascript, go, swift, kotlin, csharp, java, c, cpp, rust, ruby, php, dart
-python scripts/code_quality_checker.py . --language java
-
-# JSON output
-python scripts/code_quality_checker.py /path/to/code --json
-```
-
-**Universal thresholds:**
-
-| Issue | Threshold |
-|-------|-----------|
-| Long function | >50 lines |
-| Large file | >500 lines |
-| God class | >20 methods |
-| Too many params | >5 |
-| Deep nesting | >4 levels |
-| High complexity | >10 branches |
-
-Language-specific checks are defined in each `languages/*.md` file.
-
----
-
-### Review Report Generator
-
-Combines PR analysis and code quality findings into structured review reports.
-
-```bash
-# Generate report for current repo
-python scripts/review_report_generator.py /path/to/repo
-
-# Markdown output
-python scripts/review_report_generator.py . --format markdown --output review.md
-
-# Use pre-computed analyses
-python scripts/review_report_generator.py . \
-  --pr-analysis pr_results.json \
-  --quality-analysis quality_results.json
-```
-
-**Verdicts:**
-
-| Score | Verdict |
-|-------|---------|
-| 90+ with no high issues | Approve |
-| 75+ with ≤2 high issues | Approve with suggestions |
-| 50-74 | Request changes |
-| <50 or critical issues | Block |
-
----
-
-## Adding a New Language
-
-**Reviewer guidance (required):**
-
-1. Create `languages/<name>.md` using any existing language file as a template — it must have sections: PR Analyzer Signals, Code Quality Checks, Security, Async, Resource Management, Exception Handling, Performance, Idioms.
-2. Add the extension row to the dispatch table above.
-
-That is all the agent-driven review needs.
-
-**Deterministic analyzer support (optional, recommended):** the bundled scripts
-only flag a language they explicitly know. To make `code_quality_checker.py`
-score the new language:
-
-3. Add the extensions to `LANGUAGE_EXTENSIONS` in `scripts/code_quality_checker.py` (this also adds the `--language` choice).
-4. Add `function` / `class` / `method` regex entries for the language in the same file; otherwise it falls back to the Python patterns.
-5. Optionally add a `check_<name>_specific_smells(...)` detector (see the C#, Java, and C ones) and call it from `analyze_file`.
-6. Add `assets/sample_<name>_smells.<ext>` + `_clean` fixtures and commit the expected `--json` output under `expected_outputs/` as a regression guard.
-
----
-
-## Regression Fixtures
-
-Labelled fixtures live in `assets/` with their committed `--json` output in
-`expected_outputs/` (C#, Java, and C). Drift from the committed JSON signals a
-behaviour change in the analyzer:
-
-```bash
-python scripts/code_quality_checker.py assets/sample_java_smells.java --json \
-  | diff - expected_outputs/sample_java_smells_quality.json
-```
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

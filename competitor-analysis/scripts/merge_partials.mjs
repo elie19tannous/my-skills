@@ -18,32 +18,11 @@
 //
 // Usage: node merge_partials.mjs <research-dir>
 
-import sanitizeFilename from 'sanitize-filename';
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { isAbsolute, join, relative, resolve } from 'path';
+import { join } from 'path';
 import { parseFrontmatter, parseBody, parseSections } from './md_utils.mjs';
 
 const args = process.argv.slice(2);
-function sanitizePathSegments(pathValue) {
-  return String(pathValue ?? '').split(/[\\/]+/).filter(Boolean).map((segment) => {
-    const sanitized = sanitizeFilename(segment);
-    if (sanitized !== segment || !sanitized) {
-      throw new Error(`Unsafe path segment: ${segment}`);
-    }
-    return sanitized;
-  });
-}
-
-function safeCliPath(pathValue, baseDir = process.cwd()) {
-  const root = resolve(baseDir);
-  const target = resolve(root, ...sanitizePathSegments(pathValue));
-  const rel = relative(root, target);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    throw new Error(`Path escapes allowed directory: ${pathValue}`);
-  }
-  return target;
-}
-
 if (args.includes('--help') || args.includes('-h') || args.length === 0) {
   console.error(`Usage: node merge_partials.mjs <research-dir>
 
@@ -52,8 +31,8 @@ Reads {dir}/partials/{slug}.{lane}.md files and writes consolidated
   process.exit(args.includes('--help') || args.includes('-h') ? 0 : 1);
 }
 
-const dir = safeCliPath(args[0]);
-const partialsDir = safeCliPath('partials', dir);
+const dir = args[0];
+const partialsDir = join(dir, 'partials');
 
 const LANES = ['marketing', 'discussion', 'social', 'news', 'technical', 'battle'];
 

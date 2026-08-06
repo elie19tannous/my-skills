@@ -1,181 +1,149 @@
 ---
-name: "challenge"
-description: "Pre-mortem plan analysis. Imagine the plan failed 12 months from now and work backwards to find the weaknesses. Surfaces assumptions, dependencies, and execution risks before committing resources. Use when before significant resource commitment, before presenting to a board or investors, when feedback has been one-sidedly positive, or when there is pressure to move fast and figure it out later."
+name: challenge
+description: Challenge mode reviews - rigorous questioning before approving changes. Use when you want thorough scrutiny of Ecto changes, LiveView events, OTP designs, or PR readiness.
+effort: high
+argument-hint: ecto | liveview | pr
 ---
 
-# /em:challenge — Pre-Mortem Plan Analysis
+# Challenge Mode Reviews
 
-**Command:** `/em:challenge <plan>`
+Rigorous, critical review patterns inspired by Boris Cherny's "Grill me" approach. Push beyond first solutions to ensure quality.
 
-Systematically finds weaknesses in any plan before reality does. Not to kill the plan — to make it survive contact with reality.
+## Iron Laws - Never Violate These
 
----
+1. **No approval without verification** - Don't approve until all concerns addressed
+2. **Assume bugs exist** - Look for edge cases, race conditions, missing handlers
+3. **Question everything** - Even "obvious" code can hide issues
+4. **Demand proof** - Ask for tests, show state transitions, verify behavior
 
-## The Core Idea
+## Adversarial Lenses (Apply to ALL Modes)
 
-Most plans fail for predictable reasons. Not bad luck — bad assumptions. Overestimated demand. Underestimated complexity. Dependencies nobody questioned. Timing that made sense in a spreadsheet but not in the real world.
+1. **"What Would Break This?"** — Production failure modes under load, during deploys, with unexpected data
+2. **"Assumption Stress Test"** — List every assumption; which are most fragile?
+3. **"Contradictions Finder"** — Find contradictions between tests/implementation, docs/behavior, or within the changeset
 
-The pre-mortem technique: **imagine it's 12 months from now and this plan failed spectacularly. Now work backwards. Why?**
+## Challenge Modes
 
-That's not pessimism. It's how you build something that doesn't collapse.
+### Ecto Challenge (`/phx:challenge ecto`)
 
----
+Grill the developer on database changes:
 
-## When to Run a Challenge
+**Migration Safety**
 
-- Before committing significant resources to a plan
-- Before presenting to the board or investors
-- When you notice you're only hearing positive feedback about the plan
-- When the plan requires multiple external dependencies to align
-- When there's pressure to move fast and "figure it out later"
-- When you feel excited about the plan (excitement is a signal to scrutinize harder)
+- Will this migration lock the table in production?
+- What happens to existing records without the new field?
+- Is the migration reversible?
+- Are there any unsafe operations (column removal, type change)?
 
----
+**Query Performance**
 
-## The Challenge Framework
+- Have you introduced any N+1 queries?
+- Are there missing indexes for new WHERE clauses?
+- Will this query scale with data growth?
 
-### Step 1: Extract Core Assumptions
-Before you can test a plan, you need to surface everything it assumes to be true.
+**Schema Integrity**
 
-For each section of the plan, ask:
-- What has to be true for this to work?
-- What are we assuming about customer behavior?
-- What are we assuming about competitor response?
-- What are we assuming about our own execution capability?
-- What external factors does this depend on?
+- Are all constraints enforced at database level?
+- What happens during rolling deployment (old code, new schema)?
+- Are foreign key cascades correct?
 
-**Common assumption categories:**
-- **Market assumptions** — size, growth rate, customer willingness to pay, buying cycle
-- **Execution assumptions** — team capacity, velocity, no major hires needed
-- **Customer assumptions** — they have the problem, they know they have it, they'll pay to solve it
-- **Competitive assumptions** — incumbents won't respond, no new entrant, moat holds
-- **Financial assumptions** — burn rate, revenue timing, CAC, LTV ratios
-- **Dependency assumptions** — partner will deliver, API won't change, regulations won't shift
+**Backward Compatibility**
 
-### Step 2: Rate Each Assumption
+- Will old code work during deployment?
+- Are there any breaking changes to the context API?
 
-For every assumption extracted, rate it on two dimensions:
+### LiveView Challenge (`/phx:challenge liveview`)
 
-**Confidence level (how sure are you this is true):**
-- **High** — verified with data, customer conversations, market research
-- **Medium** — directionally right but not validated
-- **Low** — plausible but untested
-- **Unknown** — we simply don't know
+Prove the LiveView handles all cases:
 
-**Impact if wrong (what happens if this assumption fails):**
-- **Critical** — plan fails entirely
-- **High** — major delay or cost overrun
-- **Medium** — significant rework required
-- **Low** — manageable adjustment
+**Event Coverage**
 
-### Step 3: Map Vulnerabilities
+- List every `handle_event` clause and expected socket state
+- What happens if socket assigns are missing when event fires?
+- Are there race conditions between user events and server pushes?
 
-The matrix of Low/Unknown confidence × Critical/High impact = your highest-risk assumptions.
+**PubSub Handling**
 
-**Vulnerability = Low confidence + High impact**
+- List every `handle_info` clause and when it's triggered
+- Do all PubSub subscriptions have corresponding handlers?
+- What happens if a message arrives before mount completes?
 
-These are not problems to ignore. They're the bets you're making. The question is: are you making them consciously?
+**State Transitions**
 
-### Step 4: Find the Dependency Chain
+- Show the event → handler → state transition table
+- Are all error states handled gracefully?
+- What's the recovery path from each error state?
 
-Many plans fail not because any single assumption is wrong, but because multiple assumptions have to be right simultaneously.
+**Memory & Performance**
 
-Map the chain:
-- Does assumption B depend on assumption A being true first?
-- If the first thing goes wrong, how many downstream things break?
-- What's the critical path? What has zero slack?
+- Are large lists using streams?
+- Is transient data using temporary_assigns?
+- What's the memory footprint per connected user?
 
-### Step 5: Test the Reversibility
+### PR Challenge (`/phx:challenge pr`)
 
-For each critical vulnerability: if this assumption turns out to be wrong at month 3, what do you do?
+Senior engineer review checklist:
 
-- Can you pivot?
-- Can you cut scope?
-- Is money already spent?
-- Are commitments already made?
+**Must Pass**
 
-The less reversible, the more rigorously you need to validate before committing.
+- [ ] No direct Repo calls in controllers/LiveViews
+- [ ] All Ecto queries use explicit preloads
+- [ ] Changesets validate all user input
+- [ ] No atoms created from params
+- [ ] Error cases handled (not just happy path)
+- [ ] Tests cover new functionality
 
----
+**Performance**
 
-## Output Format
+- [ ] No queries in Enum.map loops
+- [ ] LiveView streams for lists > 100 items
+- [ ] Indexes exist for WHERE clause columns
 
-**Challenge Report: [Plan Name]**
+**OTP**
 
+- [ ] GenServers have supervision
+- [ ] Timeouts set for GenServer.call
+- [ ] No unbounded process spawning
+
+**Security**
+
+- [ ] No SQL injection via raw queries
+- [ ] No path traversal in file handling
+- [ ] Authorization checks present
+
+## Prior Findings Deduplication (MANDATORY)
+
+CRITICAL: Prevents re-discovering identical issues across consecutive runs.
+
+1. **Search** `.claude/plans/*/reviews/` and `.claude/reviews/` for prior findings
+2. **Read ALL** prior findings before analyzing code
+3. **Check each finding** against priors:
+   - Fixed → **SKIP** | Still present → **PERSISTENT** (one line) | New → **NEW** (full analysis) | Reintroduced → **REGRESSION**
+4. **Present**: NEW first (full), then PERSISTENT (one-line), then REGRESSION
+
+## Example Challenge Output
+
+```markdown
+## Challenge: Ecto — Orders Migration
+
+### FINDING 1: Table lock risk (HIGH)
+AddColumn on `orders` (2.1M rows) will lock table during deploy.
+**Proof needed**: Run `SELECT count(*) FROM orders` — if >1M, use
+`ALTER TABLE ... ADD COLUMN ... DEFAULT NULL` (no lock).
+
+### FINDING 2: Missing index (MEDIUM)
+New `WHERE status = ?` query on line 45 has no index.
+**Action**: Add `create index(:orders, [:status])` to migration.
+
+### Status: BLOCKED — 2 unresolved findings
 ```
-CORE ASSUMPTIONS (extracted)
-1. [Assumption] — Confidence: [H/M/L/?] — Impact if wrong: [Critical/High/Medium/Low]
-2. ...
 
-VULNERABILITY MAP
-Critical risks (act before proceeding):
-• [#N] [Assumption] — WHY it might be wrong — WHAT breaks if it is
+## Usage
 
-High risks (validate before scaling):
-• ...
+Run `/phx:challenge [mode]` to initiate a rigorous review. The reviewer will not approve until all concerns are addressed with evidence.
 
-DEPENDENCY CHAIN
-[Assumption A] → depends on → [Assumption B] → which enables → [Assumption C]
-Weakest link: [X] — if this breaks, [Y] and [Z] also fail
+Example workflow:
 
-REVERSIBILITY ASSESSMENT
-• Reversible bets: [list]
-• Irreversible commitments: [list — treat with extreme care]
-
-KILL SWITCHES
-What would have to be true at [30/60/90 days] to continue vs. kill/pivot?
-• Continue if: ...
-• Kill/pivot if: ...
-
-HARDENING ACTIONS
-1. [Specific validation to do before proceeding]
-2. [Alternative approach to consider]
-3. [Contingency to build into the plan]
-```
-
----
-
-## Challenge Patterns by Plan Type
-
-### Product Roadmap
-- Are we building what customers will pay for, or what they said they wanted?
-- Does the velocity estimate account for real team capacity (not theoretical)?
-- What happens if the anchor feature takes 3× longer than estimated?
-- Who owns decisions when requirements conflict?
-
-### Go-to-Market Plan
-- What's the actual ICP conversion rate, not the hoped-for one?
-- How many touches to close, and do you have the sales capacity for that?
-- What happens if the first 10 deals take 3 months instead of 1?
-- Is "land and expand" a real motion or a hope?
-
-### Hiring Plan
-- What happens if the key hire takes 4 months to find, not 6 weeks?
-- Is the plan dependent on retaining specific people who might leave?
-- Does the plan account for ramp time (usually 3–6 months before full productivity)?
-- What's the burn impact if headcount leads revenue by 6 months?
-
-### Fundraising Plan
-- What's your fallback if the lead investor passes?
-- Have you modeled the timeline if it takes 6 months, not 3?
-- What's your runway at current burn if the round closes at the low end?
-- What assumptions break if you raise 50% of the target amount?
-
----
-
-## The Hardest Questions
-
-These are the ones people skip:
-- "What's the bear case, not the base case?"
-- "If this exact plan was run by a team we don't trust, would it work?"
-- "What are we not saying out loud because it's uncomfortable?"
-- "Who has incentives to make this plan sound better than it is?"
-- "What would an enemy of this plan attack first?"
-
----
-
-## Deliverable
-
-The output of `/em:challenge` is not permission to stop. It's a vulnerability map. Now you can make conscious decisions: validate the risky assumptions, hedge the critical ones, or accept the bets you're making knowingly.
-
-Unknown risks are dangerous. Known risks are manageable.
+1. Run `/phx:challenge ecto` after migration changes
+2. Answer each question with code references or test results
+3. Address all concerns before proceeding to PR

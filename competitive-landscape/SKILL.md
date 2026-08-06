@@ -1,514 +1,373 @@
 ---
 name: competitive-landscape
-description: Analyze competition, identify differentiation opportunities, and develop winning market positioning strategies using Porter's Five Forces, Blue Ocean Strategy, and positioning maps. Use this skill when evaluating competitors, assessing market positioning, identifying sustainable competitive advantages, or preparing competitive strategy analysis for a startup or investor pitch.
-version: 1.0.0
+description:
+  Technology-sector competitive landscape analysis with player tiering, route
+  differentiation, and white-space identification. Use when the user asks for
+  player mapping, sector competitor analysis, technology-track player
+  comparison, domestic-vs-overseas player comparison, or any multi-player
+  competitive assessment in a defined technology domain.
+argument-hint: "[topic + optional region/purpose/player set]"
+provider: "Patsnap Eureka"
+compatibility: "Designed for Claude Code, Codex, and similar agent runtimes that can read/write local files and call whatever search tools are available."
+deliverable-default: "Structured Markdown landscape report plus traceable evidence files; docx/pdf export is optional."
+fallback-policy: "Prefer structured patent/paper retrieval for arena discovery and per-player evidence; otherwise downgrade through domain-specific sources, Exa, Tavily, Brave, web, and a known-URL reader without blocking the run."
 ---
 
-# Competitive Landscape Analysis
+# Competitive Landscape
 
-Comprehensive frameworks for analyzing competition, identifying differentiation opportunities, and developing winning market positioning strategies.
+Provided by Patsnap Eureka.
 
-## Overview
+Produce an evidence-driven competitive landscape report for a technology sector
+or track. The deliverable is a structured report with player tiers, route
+differentiation matrix, top-player profiles, and white-space opportunities —
+conclusion first, evidence second — suitable for strategic planning, market
+entry decisions, and R&D direction setting.
 
-Understand competitive dynamics using proven frameworks (Porter's Five Forces, Blue Ocean Strategy, positioning maps) to identify opportunities and craft defensible competitive advantages.
+## Use When
 
-## Porter's Five Forces
+- Sector or technology-track player mapping and competitive tiering
+- Route differentiation analysis across multiple companies
+- White-space and opportunity identification in a technology domain
+- Multi-company comparison anchored to a technology topic
+- Domestic-vs-overseas player comparison in a defined technical arena
+- "Who are the players in X?" or "What is the competitive landscape for X?"
 
-Analyze industry attractiveness and competitive intensity.
+## Do Not Use
 
-### Force 1: Threat of New Entrants
+- Single company only, no sector scope → route to `company-tech-profile`
+- Pure technology-route comparison with no player/company object → route to
+  `tech-route-comparison`
+- The task is a project/proposal review → route to `rd-initiation-review`
+- Market or commercial analysis without technology depth (pure market sizing,
+  pricing strategy, go-to-market)
+- Legal patent opinion, FTO, or infringement analysis
 
-**Barriers to Entry:**
+## Tool Routing And Fallback
 
-- Capital requirements
-- Economies of scale
-- Switching costs
-- Brand loyalty
-- Regulatory barriers
-- Access to distribution
-- Network effects
+This skill works across multiple tool environments. Before retrieval, detect
+which capabilities are available and select the highest tier that is reachable.
 
-**High Threat:** Low barriers, easy to enter (e.g., simple SaaS tools)
-**Low Threat:** High barriers (e.g., regulated industries, hardware)
+### Tier 1 (Recommended): Structured Patent/Paper Retrieval
 
-**Analysis Questions:**
+- Use the host's best structured patent and paper retrieval stack.
+- This usually means sector search, assignee/entity filtering, and record-level
+  deep fetch.
+- Evidence grade: S/A (primary structured evidence)
+- Required capabilities: sector discovery, entity filtering, route faceting or
+  structured narrowing, and deep-read of shortlisted records.
+- Typical query count per run: 8-15 searches.
 
-- How easy is it for new competitors to enter?
-- What would it cost to launch a competing product?
-- Are there network effects or switching costs protecting incumbents?
+### Tier 2 (Fallback): Web Research + Companion Lanes
 
-### Force 2: Bargaining Power of Suppliers
+- Use the host's best broad web research tool plus scholarly or finance
+  companion lanes when available.
+- Exa, Tavily, Brave, official filings, and domain-specific research databases
+  are good examples, not hard requirements.
+- Evidence grade: A/B
+- Coverage loss vs Tier 1: no structured assignee extraction from patent data,
+  no IPC/CPC faceting, player discovery depends on web article quality
 
-**Supplier Power Factors:**
+### Tier 3 (Fallback): Generic Web Tools
 
-- Supplier concentration
-- Availability of substitutes
-- Importance to supplier
-- Switching costs
-- Forward integration threat
+- Use generic web search and page/PDF reading tools available in the host.
+- Evidence grade: B/C
+- Coverage loss vs Tier 2: no academic-focused ranking, broader noise
 
-**High Power:** Few suppliers, critical inputs (e.g., cloud infrastructure providers)
-**Low Power:** Many alternatives, commoditized (e.g., generic services)
+### Tier 4 (Minimum): Pure LLM + User Materials
 
-**Analysis Questions:**
+- No external tools required
+- Evidence grade: C/U
+- Coverage loss vs Tier 3: no current information, no verifiable citations
 
-- Who are our critical suppliers?
-- Could they raise prices or reduce quality?
-- Can we switch suppliers easily?
+### Routing Rules
 
-### Force 3: Bargaining Power of Buyers
+- Detect available tools at the start of the workflow.
+- Select the highest available tier as the primary retrieval channel.
+- When a tier is unavailable, explicitly state the downgrade in the output
+  and in `method_decisions.md`.
+- Do not pretend lower-tier results have the same coverage as higher tiers.
+- If the tool stack is degraded, lower confidence on player completeness
+  and white-space claims.
 
-**Buyer Power Factors:**
+## Minimum Working Files
 
-- Buyer concentration
-- Volume purchased
-- Product differentiation
-- Price sensitivity
-- Backward integration threat
+Create or update these files in a writable run folder:
 
-**High Power:** Few large customers, standardized products (e.g., enterprise deals)
-**Low Power:** Many small customers, differentiated product (e.g., consumer subscriptions)
+- `request.md`
+- `workplan.md`
+- `method_decisions.md`
+- `query_log.csv`
+- `source_index.csv`
+- `claim_ledger.csv`
+- `report.md`
 
-**Analysis Questions:**
+Recommended subfolders are described in [references/workflow.md](references/workflow.md).
 
-- Can customers easily switch to competitors?
-- Do few customers generate most revenue?
-- How price-sensitive are buyers?
+## Default Workflow
 
-### Force 4: Threat of Substitutes
+### Step 0: Freeze Scope
 
-**Substitute Considerations:**
+Confirm or infer the following before any retrieval:
 
-- Alternative solutions
-- Price-performance tradeoff
-- Switching costs
-- Buyer propensity to substitute
+- **sector / track**: the technology domain to analyze
+- **geography**: default global unless user specifies a region
+- **time_window**: default last 3 years unless user specifies otherwise
+- **known_players**: any companies the user already has in mind (seed set)
+- **purpose**: what decision this landscape supports (market entry / R&D
+  direction / investment screening / strategic planning)
+- **TopN target**: default 5-10 players
 
-**High Threat:** Many alternatives, low switching cost (e.g., productivity software)
-**Low Threat:** Unique solution, high switching cost (e.g., ERP systems)
-
-**Analysis Questions:**
-
-- What alternative ways can customers solve this problem?
-- How do substitutes compare on price and performance?
-- What's the cost to switch to a substitute?
-
-### Force 5: Competitive Rivalry
-
-**Rivalry Intensity Factors:**
-
-- Number of competitors
-- Industry growth rate
-- Product differentiation
-- Exit barriers
-- Strategic stakes
-
-**High Rivalry:** Many competitors, slow growth, commoditized (e.g., email marketing)
-**Low Rivalry:** Few competitors, fast growth, differentiated (e.g., emerging AI tools)
-
-**Analysis Questions:**
-
-- How many direct competitors exist?
-- Is the market growing or stagnant?
-- How differentiated are offerings?
-- Are competitors competing on price or value?
-
-### Forces Analysis Summary
-
-Create a scorecard:
-
-| Force          | Intensity (1-5) | Impact | Key Factors                       |
-| -------------- | --------------- | ------ | --------------------------------- |
-| New Entrants   | 3               | Medium | Low barriers but network effects  |
-| Supplier Power | 2               | Low    | Many cloud providers              |
-| Buyer Power    | 4               | High   | Enterprise customers concentrated |
-| Substitutes    | 3               | Medium | Manual processes alternative      |
-| Rivalry        | 4               | High   | 10+ direct competitors            |
-
-**Overall Assessment:** Moderate industry attractiveness with high rivalry and buyer power
-
-## Blue Ocean Strategy
-
-Identify uncontested market space through value innovation.
-
-### Four Actions Framework
-
-**Eliminate:**
-What factors can be eliminated that the industry takes for granted?
-
-**Reduce:**
-What factors can be reduced well below industry standard?
-
-**Raise:**
-What factors can be raised well above industry standard?
-
-**Create:**
-What factors can be created that the industry never offered?
-
-### Strategy Canvas
-
-Map your offering vs. competitors on key factors.
-
-**Example: Budget Hotels**
+Scope routing decision tree:
 
 ```
-High |                    ★ Traditional Hotels
-     |          ★ Budget Hotels (new)
-     |
-Low  |___________________________________
-     Price  Luxury  Convenience  Cleanliness
-
-Budget Hotel Strategy:
-- Eliminate: Luxury amenities, room service
-- Reduce: Lobby size, staff
-- Raise: Cleanliness, online booking
-- Create: Self-service kiosks, mobile app
+User input shape?
+├─ Technology topic + multiple companies → proceed as player-set landscape
+├─ Technology topic only, no companies → proceed; discover players from evidence
+├─ "Who are the players in X?" → proceed as discovery landscape
+├─ Only 1 company, no sector scope → redirect to company-tech-profile
+├─ "Compare A with B in topic X" with 2+ companies → proceed as landscape
+└─ Pure technology route, no player interest → redirect to tech-route-comparison
 ```
 
-### Value Innovation
+### Step 1: Build Sector Evidence Baseline
 
-Find the sweet spot: Lower cost + higher value
+1. Run 2-3 broad sector searches with core technology terms.
+   - Tier 1: structured sector search across patents and papers
+   - Tier 2: targeted web research across technical reports, official pages, and
+     research coverage
+   - Tier 3/4: generic web or user-provided materials for initial candidate list
+2. Extract candidate player set from patent assignees and paper affiliations
+   in the search results. Aim for 10-20 candidates before filtering.
+3. Run 1-2 sector overview searches to capture market context, recent trends,
+   and players that may not appear in patent/paper data.
+4. Merge candidates from all sources into a single candidate list with
+   preliminary activity indicators.
 
-**Steps:**
+### Step 2: Tier Players
 
-1. Map industry competing factors
-2. Identify factors to eliminate/reduce (cost savings)
-3. Identify factors to raise/create (differentiation)
-4. Validate that combination creates new market space
+For each candidate in the list:
 
-## Competitive Positioning
-
-### Positioning Map
-
-Plot competitors on 2-3 key dimensions.
-
-**Example Dimensions:**
-
-- Price vs. Features
-- Complexity vs. Ease of Use
-- Enterprise vs. SMB Focus
-- Self-Service vs. High-Touch
-- Generalist vs. Specialist
-
-**How to Create:**
-
-1. Choose 2 dimensions most important to customers
-2. Plot all competitors
-3. Identify gaps (white space)
-4. Validate gap represents real customer need
-
-**Example:**
+1. Run a focused search to get patent and paper activity volume and recency.
+   - Tier 1: structured entity-filtered search
+   - Tier 2+: targeted web research across patent indices, official domains, and
+     research pages
+2. Classify each player using the tiering decision tree:
 
 ```
-High Price
-    |
-    |  ★ Enterprise A      ★ Enterprise B
-    |
-    |          ● Our Position (gap)
-    |
-    |  ★ Competitor C      ★ Competitor D
-    |
-Low Price |____________________________________________
-        Simple                           Complex
+Player classification criteria:
+├─ Tier 1 — Leader: high patent/paper activity + shipped products or
+│  demonstrated capability + sustained recent growth
+├─ Tier 2 — Challenger: moderate activity + clear differentiation or
+│  strong niche position + growing trajectory
+├─ Tier 3 — Follower: low activity or narrow focus, but present in the
+│  space with identifiable technology routes
+└─ Watchlist: emerging signals (recent filings, new entrants, pivoting
+   companies) but insufficient evidence for confident tiering
 ```
 
-### Differentiation Strategy
+3. Select top 5-7 players for deep-dive based on tier and relevance to the
+   user's decision context.
+4. If evidence is insufficient to tier confidently, keep the player on the
+   watchlist and note the evidence gap.
 
-**How to Differentiate:**
+Tiering evidence rule:
 
-1. **Product Differentiation**
-   - Unique features
-   - Superior performance
-   - Better design/UX
-   - Integration ecosystem
+- Full-scope counts and route breadth must come from aggregation, not samples
+- Final tiers must combine patent evidence with paper and product signals
+- Do not assign tiers from one noisy search or one source family alone
 
-2. **Service Differentiation**
-   - Customer support quality
-   - Onboarding experience
-   - Response time
-   - Success programs
+### Step 3: Deep-Dive Top Players Individually
 
-3. **Brand Differentiation**
-   - Trust and reputation
-   - Thought leadership
-   - Community
-   - Values alignment
+For EACH top player, analyze independently — never merge conclusions across players:
 
-4. **Price Differentiation**
-   - Premium positioning
-   - Value positioning
-   - Transparent pricing
-   - Flexible packaging
+1. **Patent route analysis**: key IPC clusters, filing trend, representative patents.
+   - Tier 1: structured per-player search; for large footprints, use optional
+     host-specific automation if available
+   - Tier 2+: targeted web research across patent indices, official domains, and
+     technical publications
+2. Deep-read 2-3 representative patents per player to extract route-specific
+   technical detail and differentiation evidence.
+3. **Paper focus**: research themes, collaboration network, publication venues.
+4. **Product signals**: shipped products, benchmarks, partnerships, market presence.
 
-### Positioning Statement Framework
+Per-player sampling defaults (Tier 1 with structured retrieval):
+
+- `k = 6` for a focused challenger or niche player
+- `k = 8` for a normal Tier 1 / Tier 2 player
+- `k = 10` for highly diversified leaders
+
+Two-level sampling rule (when sampling is used):
+
+1. **Sector sample first**: use it to understand routes, terminology, and
+   ecosystem structure
+2. **Player sample second**: use it to understand each shortlisted player's
+   real route emphasis
+
+Never substitute one for the other:
+
+- Sector sample ≠ player proof
+- Player sample ≠ sector white-space proof
+
+Adjust analysis emphasis by industry type:
 
 ```
-For [target customer]
-Who [statement of need or opportunity]
-Our product is [product category]
-That [statement of key benefit]
-Unlike [primary competitive alternative]
-Our product [statement of primary differentiation]
+Industry type?
+├─ Semiconductor → emphasize: process node, EDA/IP, foundry vs fabless split,
+│  patent family breadth
+├─ Biopharma → emphasize: pipeline stage, target coverage, clinical results,
+│  regulatory milestones
+├─ AI / Software → emphasize: model benchmarks, open-source presence, API
+│  adoption, paper citation impact
+├─ New Energy / Materials → emphasize: material routes, production capacity,
+│  cost trajectory, supply chain position
+└─ General Manufacturing → balanced patent families + standard participation
+   + supply chain signals
 ```
 
-**Example:**
+### Step 4: Route Differentiation And White Spaces
 
-```
-For e-commerce companies
-Who struggle with email marketing automation
-Our product is an AI-powered email platform
-That increases conversion rates by 40%
-Unlike Klaviyo and Mailchimp
-Our product uses AI to personalize at scale
-```
+1. Build a route differentiation matrix: rows = top players, columns = key
+   technology routes or sub-tracks. Cells indicate strength level
+   (Strong / Moderate / Emerging / Absent) with brief evidence notes.
 
-## Competitive Intelligence
+Example format:
 
-### Information Gathering
-
-**Public Sources:**
-
-- Company websites and blogs
-- Press releases and news
-- Job postings (hint at strategy)
-- Customer reviews (G2, Capterra)
-- Social media and forums
-- Glassdoor (employee insights)
-- SEC filings (public companies)
-- Patent filings
-
-**Direct Research:**
-
-- Customer interviews
-- Win/loss analysis
-- Sales team feedback
-- Product demos and trials
-- Conference attendance
-
-### Competitor Profile Template
-
-For each key competitor, document:
-
-**Company Overview:**
-
-- Founded, HQ, funding, size
-- Leadership team
-- Company stage and trajectory
-
-**Product:**
-
-- Core features
-- Target customers
-- Pricing and packaging
-- Technology stack
-- Recent launches
-
-**Go-to-Market:**
-
-- Sales model (self-serve, sales-led)
-- Marketing strategy
-- Distribution channels
-- Partnerships
-
-**Strengths:**
-
-- What they do better than anyone
-- Key competitive advantages
-- Market position
-
-**Weaknesses:**
-
-- Gaps in product
-- Customer complaints
-- Operational challenges
-
-**Strategy:**
-
-- Stated direction
-- Inferred priorities
-- Likely next moves
-
-## Competitive Pricing Analysis
-
-### Price Positioning
-
-**Premium (Top 25%):**
-
-- Superior product/service
-- Strong brand
-- High-touch sales
-- Enterprise focus
-
-**Mid-Market (Middle 50%):**
-
-- Balanced value
-- Standard features
-- Mixed sales model
-- Broad market
-
-**Value (Bottom 25%):**
-
-- Basic functionality
-- Self-service
-- Cost leadership
-- High volume, low margin
-
-### Pricing Comparison Matrix
-
-| Competitor   | Entry Price | Mid Tier | Enterprise | Model        |
-| ------------ | ----------- | -------- | ---------- | ------------ |
-| Competitor A | $29/mo      | $99/mo   | Custom     | Subscription |
-| Competitor B | $49/mo      | $199/mo  | $499/mo    | Subscription |
-| Us           | $39/mo      | $129/mo  | Custom     | Subscription |
-
-**Analysis:**
-
-- Are we priced competitively?
-- What does our pricing signal?
-- Are there gaps in our packaging?
-
-## Go-to-Market Strategy
-
-### Market Entry Strategies
-
-**Direct Competition:**
-
-- Head-to-head against established players
-- Requires differentiation and resources
-- Example: Better features at lower price
-
-**Niche Focus:**
-
-- Target underserved segment
-- Become specialist vs. generalist
-- Example: "Salesforce for real estate"
-
-**Disruptive Innovation:**
-
-- Target non-consumers or low end
-- Improve over time to move upmarket
-- Example: Freemium model disrupting enterprise
-
-**Platform Play:**
-
-- Build ecosystem and network effects
-- Aggregate complementary services
-- Example: Marketplace or API platform
-
-### Beachhead Market
-
-**Characteristics of Good Beachhead:**
-
-- Specific, reachable segment
-- Acute pain you solve well
-- Limited competition
-- Willing to pay
-- Can lead to expansion
-
-**Example:**
-Instead of "project management software", target "project management for construction teams"
-
-## Competitive Advantage
-
-### Sustainable Advantages
-
-**Network Effects:**
-
-- Value increases with users
-- Example: Slack, marketplaces
-
-**Switching Costs:**
-
-- High cost to change
-- Example: CRM systems with data
-
-**Economies of Scale:**
-
-- Unit costs decrease with volume
-- Example: Cloud infrastructure
-
-**Brand:**
-
-- Trust and reputation
-- Example: Security software
-
-**Proprietary Technology:**
-
-- Patents or trade secrets
-- Example: Algorithms, data
-
-**Regulatory:**
-
-- Licenses or approvals
-- Example: Fintech, healthcare
-
-### Testing Your Advantage
-
-Ask:
-
-- Can competitors copy this in < 2 years?
-- Does this matter to customers?
-- Do we execute this better than anyone?
-- Is this advantage durable?
-
-If "no" to any, it's not a sustainable advantage.
-
-## Competitive Monitoring
-
-### What to Track
-
-**Product Changes:**
-
-- New features
-- Pricing changes
-- Packaging adjustments
-
-**Market Signals:**
-
-- Funding announcements
-- Key hires (especially leadership)
-- Customer wins/losses
-- Partnerships
-
-**Performance Metrics:**
-
-- Revenue (if public or disclosed)
-- Customer count
-- Growth rate
-- Market share estimates
-
-### Monitoring Cadence
-
-**Weekly:**
-
-- Product release notes
-- News mentions
-
-**Monthly:**
-
-- Win/loss analysis review
-- Positioning map updates
-
-**Quarterly:**
-
-- Deep competitive review
-- Strategy adjustment
-
-**Annually:**
-
-- Major strategy reassessment
-- Market trends analysis
-
-
-## Quick Start
-
-To analyze competitive landscape:
-
-1. **Identify competitors** - Direct, indirect, and future threats
-2. **Apply Porter's Five Forces** - Assess industry attractiveness
-3. **Create positioning map** - Visualize competitive space
-4. **Profile top 3-5 competitors** - Deep dive on key rivals
-5. **Identify differentiation** - What makes you unique
-6. **Analyze pricing** - Where do you fit?
-7. **Assess advantages** - What's defensible?
-8. **Develop strategy** - How to win
+| Player | Route A | Route B | Route C |
+|--------|---------|---------|---------|
+| Company X | Strong — 50+ patents, shipped product | Emerging — 3 recent filings | Absent |
+| Company Y | Moderate — 15 patents, no product yet | Strong — market leader | Emerging |
+
+2. Identify white spaces — areas that simultaneously satisfy ALL three criteria:
+   - **Sparse coverage**: few or no strong players currently active
+   - **Clear technical value**: the route addresses a real technical need or
+     market demand
+   - **Explainable entry path**: a realistic way for a new entrant to build
+     capability in this space
+3. If a potential white space fails any of the three criteria, do not present
+   it as an opportunity — note it as an observation instead.
+
+### Step 5: Synthesis
+
+Synthesize all evidence into the output skeleton. Separate every claim into:
+
+- **Verified fact**: directly supported by patent, paper, or official source
+- **Evidence-backed inference**: reasonable conclusion from multiple signals
+- **Open gap**: insufficient evidence, state what is missing
+
+## Output Skeleton
+
+### 1. Lead With Conclusion
+
+1-2 sentences: overall sector competitive dynamics — concentration level,
+dominant routes, pace of change.
+
+### 2. Player Tiers
+
+Tiered list with 1-line evidence summary per player:
+
+| Tier | Player | Key Evidence |
+|------|--------|-------------|
+| Leader | Company A | 150+ patents in route X, shipped product Y |
+| Challenger | Company B | Growing paper output, niche in route Z |
+| ... | ... | ... |
+
+### 3. Route Differentiation Matrix
+
+Markdown table: players (rows) × technology routes (columns).
+Cells = strength indicator (Strong / Moderate / Emerging / Absent).
+
+### 4. Top Player Profiles
+
+2-3 paragraphs per top player covering:
+- Primary technology route and focus areas
+- Key differentiation from other players
+- Trajectory and recent moves
+
+### 5. White Spaces And Opportunities
+
+2-3 identified white spaces, each with:
+- What the gap is
+- Why it has technical value
+- How an entrant could realistically build capability there
+
+### 6. Risks And Recommendations
+
+- Sector-level risks (consolidation, regulatory shifts, technology disruption)
+- Recommended actions aligned to the user's decision context
+
+Every claim must cite its source type and identifier, e.g., `[Patent: CN1234567B]`,
+`[Paper: DOI or title]`, `[Web: source name]`.
+
+## Completion Gates
+
+All must pass before delivering the final answer:
+
+- [ ] Sector scope and geography confirmed
+- [ ] At least 3 sector-wide searches executed with results analyzed
+- [ ] Player candidate set built from evidence, not assumed from prior knowledge
+- [ ] If sector or player patent scopes are broad, representative sampling was
+      executed or explicitly skipped with reason
+- [ ] If sampling was used, sector sample supported route discovery rather than
+      directly deciding final player tiers
+- [ ] If player sampling was used, each player was sampled independently
+- [ ] Top players deep-dived individually (not merged across players)
+- [ ] Route differentiation matrix present with evidence backing per cell
+- [ ] White spaces satisfy all 3 criteria (sparse + valuable + entry path)
+- [ ] Every major claim has a traceable source citation
+- [ ] Verified fact / evidence-backed inference / open gap clearly separated
+- [ ] Output follows the 6-part skeleton
+- [ ] No tier assigned without patent, paper, or product evidence basis
+- [ ] Tool tier and coverage limitations explicitly stated in the output
+- [ ] If evidence is insufficient for a complete landscape, deliver "candidate
+      tiers + evidence gaps + next evidence-gathering directions" instead of
+      forcing completeness
+
+## Guardrails
+
+- Do not merge multiple companies into a single analytical conclusion.
+- Do not assign tiers based on brand recognition alone — require patent, paper,
+  or product evidence.
+- Do not invent white-space opportunities without evidence of sparse coverage.
+- For non-evidence dimensions (TCO, regulation, teardown, collaboration networks),
+  write "evidence pending" rather than fabricating a judgment.
+- Do not mix commercial players with academic institutions or upstream IP sources
+  in one comparison matrix unless the split is explicitly noted.
+- Keep charts or visual aids to 1-2 maximum; retain only those that directly
+  support the analytical conclusion.
+- Default TopN should be 5-10 companies; do not inflate the player set beyond
+  what the evidence supports.
+- Do not use representative sampling for FTO, infringement, or exhaustive
+  legal-risk workflows.
+- Do not collapse all players into one shared sampled set; sampling,
+  interpretation, and synthesis must remain per-player once top players are selected.
+- Do not let sector-level sampled patents dominate the narrative of a specific
+  player unless that player-level evidence has been separately checked.
+- Do not force a strong completeness claim when the tool stack is degraded —
+  prefer explicit uncertainty over false confidence.
+- Record why a player was included, excluded, or downgraded.
+
+## Optional Host-Specific Automation
+
+Some hosts may provide extra helpers for representative sampling, quantitative
+aggregation, or patent-card normalization. These helpers are optional and are
+not part of the core open-source contract.
+
+If you use host-specific automation:
+
+- record the helper and its role in `method_decisions.md`
+- keep the final evidence compatible with `query_log.csv`, `source_index.csv`,
+  and `claim_ledger.csv`
+- keep sector-level and player-level helper outputs clearly separated
+
+## Load These Files Only As Needed
+
+- [references/method-benchmark.md](references/method-benchmark.md)
+- [references/domain-playbooks.md](references/domain-playbooks.md)
+- [references/workflow.md](references/workflow.md)
+- [references/source-routing.md](references/source-routing.md)
+- [references/deliverables.md](references/deliverables.md)
+- [references/evidence-schema.md](references/evidence-schema.md)
+- [references/quality-gates.md](references/quality-gates.md)
+- [templates/request-template.md](templates/request-template.md)
+- [templates/workplan-template.md](templates/workplan-template.md)
+- [templates/report-outline.md](templates/report-outline.md)

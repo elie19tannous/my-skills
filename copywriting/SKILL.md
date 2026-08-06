@@ -1,305 +1,198 @@
 ---
-name: "copywriting"
-description: "When the user wants to write, rewrite, or improve marketing copy for any page — including homepage, landing pages, pricing pages, feature pages, about pages, or product pages. Also use when the user says \"write copy for,\" \"improve this copy,\" \"rewrite this page,\" \"marketing copy,\" \"headline help,\" or \"CTA copy.\" For email copy, see email-sequence. For popup copy, see popup-cro."
-license: MIT
-metadata:
-  version: 1.0.0
-  author: Alireza Rezvani
-  category: marketing
-  updated: 2026-03-06
+name: copywriting
+description: |
+  헤드라인·CTA·슬로건·광고 카피를 후보 여러 개로 뽑아 드립니다. 광고 캠페인 전략과 영상 스토리보드까지 확장할 수 있습니다.
+  다음과 같은 요청 시 사용하세요:
+  - "신제품 출시 헤드라인 5가지 만들어줘"
+  - "앱 다운로드 유도 CTA 문구 써줘"
+  - "카카오 광고 캠페인 카피 만들어줘"
+  - "스타트업 브랜드 슬로건 후보 10가지 만들어줘"
+  - "30초 영상 광고 스토리보드 기획해줘"
+  - "광고 카피 써줘"
+  AIDA·PAS·FAB 같은 검증된 틀로 작성하고, 공정거래법·표시광고법 금지 표현을 피합니다. 완성 후 moai-core:ai-slop-reviewer로 AI 티를 정리하면 좋습니다.
+  [책임 경계] vs moai-commerce:commerce-channel-message: 이 스킬=범용 카피(블로그·일반 광고·슬로건), 저 스킬=이커머스 운영 카피(광고·톡톡·푸시·이메일·카트 이탈) 전용.
+user-invocable: true
+version: 2.27.0
 ---
 
-# Copywriting
+# 카피라이팅 (Copywriting)
 
-You are an expert conversion copywriter. Your goal is to write marketing copy that is clear, compelling, and drives action.
+## 개요
 
-## Before Writing
+마케팅 카피, 헤드라인, CTA를 전문적으로 작성합니다. 광고 캠페인 전략, 비주얼 스토리텔링, AI 카피 안티패턴 회피, 공정거래법/표시광고법 준수까지 종합적인 카피라이팅 서비스를 제공합니다.
 
-**Check for product marketing context first:**
-If `.claude/product-marketing-context.md` exists, read it before asking questions. Use that context and only ask for information not already covered or specific to this task.
+## 트리거 키워드
 
-Gather this context (ask if not provided):
+카피, 카피라이팅, 헤드라인, CTA, 광고 문구, 설득 카피, 마케팅 문구, 광고 캠페인, 슬로건
 
-### 1. Page Purpose
-- What type of page? (homepage, landing page, pricing, feature, about)
-- What is the ONE primary action you want visitors to take?
+## 실전 카피 패턴 (한국 시장)
 
-### 2. Audience
-- Who is the ideal customer?
-- What problem are they trying to solve?
-- What objections or hesitations do they have?
-- What language do they use to describe their problem?
+### 1. 저관여 vs 고관여 언어 분기
 
-### 3. Product/Offer
-- What are you selling or offering?
-- What makes it different from alternatives?
-- What's the key transformation or outcome?
-- Any proof points (numbers, testimonials, case studies)?
+| 저관여 (1만원 이하·즉시 결정) | 고관여 (10만원+·고민 시간 김) |
+|---|---|
+| 초등 5학년 가독성 | 신뢰 정보 풍부 (인증·수상·연구) |
+| 한 문장 25자 이내 | 타사 비교 OK |
+| 우리말 우세 | 상세 옵션·시나리오 |
+| 1EA 가격 명시 | "1주일 후·1개월 후" 변화 |
 
-### 4. Context
-- Where is traffic coming from? (ads, organic, email)
-- What do visitors already know before arriving?
+### 2. 가격 표시 13전략
 
----
+1. 가격 인상 예고 — "내일부터 ~ 인상"
+2. 가격 쪼개기 — "하루 980원"
+3. 앵커링 — ~~정가~~ → 할인가
+4. 단수 가격 — 9,900원
+5. 빨간색 표시 (할인가만)
+6. 비교 가격 — "커피 2잔 가격"
+7. 수량 한정 — "남은 12개"
+8. 시간 한정 — "오늘 자정까지"
+9. 묶음 할인 (1+1, 2+1)
+10. 정기구독 할인
+11. 무료배송 임계 — "3만 원+"
+12. 사은품 증정
+13. 첫 구매 할인 (회원가입 쿠폰)
 
-## Copywriting Principles
+### 3. 카피 8유형 (즉시 활용)
 
-### Clarity Over Cleverness
-If you have to choose between clear and creative, choose clear.
+| 유형 | 예시 |
+|---|---|
+| 즉시 효과 호소 | "오늘 시작, 내일 변화" |
+| 공감·페인 | "이런 거 있죠?" |
+| 숫자 임팩트 | "3초 흡수, 24시간 보습" |
+| 비교 우위 | "왜 다들 이걸 쓰는지" |
+| 권위·전문가 | "10년 차가 추천" |
+| 자연·성분 | "5가지 자연 추출, 합성 0%" |
+| 라이프스타일 | "출근 5분 전" |
+| 시즌·이벤트 | "봄꽃 피기 전" |
 
-### Benefits Over Features
-Features: What it does. Benefits: What that means for the customer.
+### 4. 3초 SNS 카피라이팅 7가지 법칙
 
-### Specificity Over Vagueness
-- Vague: "Save time on your workflow"
-- Specific: "Cut your weekly reporting from 4 hours to 15 minutes"
-
-### Customer Language Over Company Language
-Use words your customers use. Mirror voice-of-customer from reviews, interviews, support tickets.
-
-### One Idea Per Section
-Each section should advance one argument. Build a logical flow down the page.
-
----
-
-## Writing Style Rules
-
-### Core Principles
-
-1. **Simple over complex** — "Use" not "utilize," "help" not "facilitate"
-2. **Specific over vague** — Avoid "streamline," "optimize," "innovative"
-3. **Active over passive** — "We generate reports" not "Reports are generated"
-4. **Confident over qualified** — Remove "almost," "very," "really"
-5. **Show over tell** — Describe the outcome instead of using adverbs
-6. **Honest over sensational** — Never fabricate statistics or testimonials
-
-### Quick Quality Check
-
-- Jargon that could confuse outsiders?
-- Sentences trying to do too much?
-- Passive voice constructions?
-- Exclamation points? (remove them)
-- Marketing buzzwords without substance?
-
-For thorough line-by-line review, use the **copy-editing** skill after your draft.
-
----
-
-## Best Practices
-
-### Be Direct
-Get to the point. Don't bury the value in qualifications.
-
-❌ Slack lets you share files instantly, from documents to images, directly in your conversations
-
-✅ Need to share a screenshot? Send as many documents, images, and audio files as your heart desires.
-
-### Use Rhetorical Questions
-Questions engage readers and make them think about their own situation.
-- "Hate returning stuff to Amazon?"
-- "Tired of chasing approvals?"
-
-### Use Analogies When Helpful
-Analogies make abstract concepts concrete and memorable.
-
-### Pepper in Humor (When Appropriate)
-Puns and wit make copy memorable—but only if it fits the brand and doesn't undermine clarity.
-
----
-
-## Page Structure Framework
-
-### Above the Fold
-
-**Headline**
-- Your single most important message
-- Communicate core value proposition
-- Specific > generic
-
-**Example formulas:**
-- "{Achieve outcome} without {pain point}"
-- "The {category} for {audience}"
-- "Never {unpleasant event} again"
-- "{Question highlighting main pain point}"
-
-**Score every headline candidate** with the bundled scorer before picking one:
-
-```bash
-python3 scripts/headline_scorer.py "Ship dashboards in minutes, not sprints"
-python3 scripts/headline_scorer.py --file headlines.txt --json   # batch-score a list
+```
+[1] 시선 멈추는 첫 문장 (질문·통계·역설)
+[2] 한 메시지 1슬라이드 원칙
+[3] 본인 사례·정량 데이터
+[4] 짧은 문장 + 줄바꿈 풍부
+[5] 이모지 1~2개 (방향성 강조용)
+[6] 마지막 CTA 1개만 (선택지 X)
+[7] 해시태그 5~10개 (니치 + 인기 조합)
 ```
 
-It rates 0-100 across 6 dimensions (length, specificity, power words, clarity, emotional pull, format). Write 5-10 candidates, score them all, present the top 2-3 with their scores and dimension breakdowns — never present a sub-60 headline as the primary recommendation.
+### 5. 콘텐츠 재미 (구조적 접근 + 카피)
 
-**For comprehensive headline formulas**: See [references/copy-frameworks.md](references/copy-frameworks.md)
+```
+긴장 → 완화 → 임팩트
+  ↓       ↓       ↓
+"왜?"  →  설명  →  "와!"
+```
 
-**For natural transition phrases**: See [references/natural-transitions.md](references/natural-transitions.md)
+유머/위트는 종이 한 장 차이. 안전한 위트:
+- 자기 비하 (브랜드 자조)
+- 시대 트렌드 패러디 (저작권 주의)
+- 의외성 (예상 깨기)
+- 디테일 관찰 (공감)
 
-**Subheadline**
-- Expands on headline
-- Adds specificity
-- 1-2 sentences max
+## 워크플로우
 
-**Primary CTA**
-- Action-oriented button text
-- Communicate what they get: "Start Free Trial" > "Sign Up"
+### 1단계: 카피 목적 파악
+- 카피 유형: 헤드라인 / CTA / 광고 캠페인 / 슬로건 / 스토리보드
+- 제품·서비스 핵심 가치 1가지
+- 타겟 독자 (연령, 관심사, 고통점)
+- 채널 (인스타 광고 / 검색 광고 / 배너 / 영상 자막 등)
 
-### Core Sections
+### 2단계: 카피 프레임워크 선택
 
-| Section | Purpose |
-|---------|---------|
-| Social Proof | Build credibility (logos, stats, testimonials) |
-| Problem/Pain | Show you understand their situation |
-| Solution/Benefits | Connect to outcomes (3-5 key benefits) |
-| How It Works | Reduce perceived complexity (3-4 steps) |
-| Objection Handling | FAQ, comparisons, guarantees |
-| Final CTA | Recap value, repeat CTA, risk reversal |
+**AIDA (Attention → Interest → Desire → Action):**
+```
+예: "3초 만에 피부 맑아지는 방법" → "10,000명이 선택한 이유" →
+    "지금 바로 경험하세요" → "오늘만 50% 할인"
+```
 
-**For detailed section types and page templates**: See [references/copy-frameworks.md](references/copy-frameworks.md)
+**PAS (Problem → Agitate → Solution):**
+```
+예: "야근해도 일이 쌓인다면?" → "당신만 뒤처지는 느낌, 맞죠?" →
+    "XX 앱으로 3배 빠르게"
+```
 
----
+**FAB (Feature → Advantage → Benefit):**
+```
+예: "AI 자동 정렬 기능" → "수동 작업 80% 감소" →
+    "퇴근을 2시간 앞당기세요"
+```
 
-## CTA Copy Guidelines
+### 3단계: 헤드라인 작성 (5가지 이상 후보)
 
-**Weak CTAs (avoid):**
-- Submit, Sign Up, Learn More, Click Here, Get Started
+**유형별 헤드라인 공식:**
+- 숫자형: "3가지로 완성하는 ~"
+- 질문형: "아직도 ~를 모르시나요?"
+- 비밀형: "전문가가 숨겨온 ~ 비법"
+- 혜택형: "~ 없이도 ~ 할 수 있는 방법"
+- 공감형: "~ 때문에 힘드셨다면"
 
-**Strong CTAs (use):**
-- Start Free Trial
-- Get [Specific Thing]
-- See [Product] in Action
-- Create Your First [Thing]
-- Download the Guide
+### 4단계: CTA 최적화
 
-**Formula:** [Action Verb] + [What They Get] + [Qualifier if needed]
+**강력한 CTA 공식: [동사] + [구체적 혜택] + [긴박감]**
+```
+예:
+- "지금 무료로 시작하기 (오늘만)"
+- "3초 만에 견적 받기"
+- "먼저 써본 1,000명의 후기 보기"
+```
 
-Examples:
-- "Start My Free Trial"
-- "Get the Complete Checklist"
-- "See Pricing for My Team"
+**피해야 할 CTA:** "클릭하기", "더 보기", "확인하기" (너무 모호)
 
----
+### 5단계: 광고 캠페인 전략 (요청 시)
+- 캠페인 목표: 인지 / 고려 / 전환 중 1가지 집중
+- 메시지 계층: 핵심 메시지 1개 + 보조 메시지 2-3개
+- 크리에이티브 방향: 감성형 / 정보형 / 유머형 / 사회 증명형
 
-## Page-Specific Guidance
+### 6단계: 비주얼 스토리텔링 (요청 시)
+- 스토리보드: 장면 구성, 내레이션, 자막 타이밍
+- 인포그래픽 콘셉트: 데이터 시각화 방향, 색상 코딩
+- 감성 내러티브: 브랜드 스토리, 고객 여정 스토리
 
-### Homepage
-- Serve multiple audiences without being generic
-- Lead with broadest value proposition
-- Provide clear paths for different visitor intents
+## 사용 예시
 
-### Landing Page
-- Single message, single CTA
-- Match headline to ad/traffic source
-- Complete argument on one page
+- "신제품 출시 헤드라인 5가지 만들어줘"
+- "앱 다운로드 유도 CTA 문구 써줘"
+- "카카오 광고 캠페인 카피 만들어줘"
+- "스타트업 브랜드 슬로건 후보 10가지 만들어줘"
+- "30초 영상 광고 스토리보드 기획해줘"
 
-### Pricing Page
-- Help visitors choose the right plan
-- Address "which is right for me?" anxiety
-- Make recommended plan obvious
+## 출력 형식
 
-### Feature Page
-- Connect feature → benefit → outcome
-- Show use cases and examples
-- Clear path to try or buy
+- 헤드라인 후보 (5-10가지)
+- CTA 문구 (3-5가지)
+- 카피 프레임워크별 예시
+- 광고 캠페인 구성 (요청 시)
+- 비주얼 스토리보드 (요청 시)
 
-### About Page
-- Tell the story of why you exist
-- Connect mission to customer benefit
-- Still include a CTA
+## 주의사항
 
----
+⚠️ **AI 생성 콘텐츠 주의**: AI가 생성한 카피는 사실 확인 후 사용하세요. 특정 수치("국내 1위", "97% 만족") 등 실증적 주장은 반드시 근거 데이터를 확인하세요.
 
-## Voice and Tone
+**AI 카피 안티패턴 (금지):**
+| 안티패턴 | 대체 |
+|---------|------|
+| "혁신적인 솔루션" | 구체적 메커니즘 ("자동 분류로 수동 작업 80% 감소") |
+| "최첨단 기술" | 기술명 + 효과 ("GPT-4o 기반 실시간 번역") |
+| "업계 최고" | 비교 근거 ("G2 리뷰 카테고리 1위") |
+| "빠르다" (숫자 없이) | 정량화 ("기존 대비 3배") |
+| "모든 사용자가 만족" | 실제 수치 ("4.8/5.0 평균, 2,340 리뷰") |
 
-Before writing, establish:
+**공정거래법/표시광고법 금지 표현:**
+- **허위 표시**: 실제와 다른 성능/효과 주장 (과태료 최대 5천만원)
+- **과장 광고**: 객관적 근거 없는 "최고", "최대", "유일" 사용
+- **비교 광고**: 경쟁사를 직접 지목하여 비하 (부정경쟁방지법 위반)
+- **기만 광고**: 중요 정보 은폐 (부작용, 제한 조건 미표시)
+- **추천 보증**: 가짜 후기, 대가성 추천 미고지
 
-**Formality level:**
-- Casual/conversational
-- Professional but friendly
-- Formal/enterprise
+**광고 심의 문제**: 의료·건강·금융 분야 광고 카피는 법적 심의 기준이 있습니다. 제출 전 관련 법령(표시광고법, 의료법 등)을 확인하세요.
 
-**Brand personality:**
-- Playful or serious?
-- Bold or understated?
-- Technical or accessible?
+**A/B 테스트 필요**: AI가 생성한 카피 후보 중 최적안은 실제 광고 테스트로만 확인 가능합니다. 최소 2-3가지 후보를 동시 테스트하세요.
 
-Maintain consistency, but adjust intensity:
-- Headlines can be bolder
-- Body copy should be clearer
-- CTAs should be action-oriented
+## 관련 스킬
 
----
-
-## Output Format
-
-When writing copy, provide:
-
-### Page Copy
-Organized by section:
-- Headline, Subheadline, CTA
-- Section headers and body copy
-- Secondary CTAs
-
-### Annotations
-For key elements, explain:
-- Why you made this choice
-- What principle it applies
-
-### Alternatives
-For headlines and CTAs, provide 2-3 options:
-- Option A: [copy] — [rationale]
-- Option B: [copy] — [rationale]
-
-### Meta Content (if relevant)
-- Page title (for SEO)
-- Meta description
-
----
-
-## Proactive Triggers
-
-Surface these issues WITHOUT being asked when you notice them in context:
-
-- **Copy opens with "We" or the company name** → Flag it immediately; reframe to lead with the customer's outcome or problem.
-- **Value proposition is vague** (e.g., "the best platform for teams") → Push for specificity: who, what outcome, how long.
-- **Features are listed without benefits** → Add "which means..." bridges before delivering the draft.
-- **No social proof is provided** → Flag this as a conversion risk and ask for testimonials, numbers, or case study references.
-- **CTA uses weak verbs** (Submit, Learn More, Sign Up) → Propose action-outcome alternatives before finalising.
-
----
-
-## Output Artifacts
-
-| When you ask for... | You get... |
-|---------------------|------------|
-| Homepage copy | Full page copy organized by section: headline, subheadline, CTA, social proof, benefits, how it works, objection handling, final CTA |
-| Landing page | Single-focus copy with headline, body, and one CTA — annotated with conversion rationale |
-| Headline options | 5 headline variants using different formulas (outcome, pain, question, bold claim, category) |
-| CTA copy | 3-5 CTA options with formula and rationale for each |
-| Page copy review | Section-by-section feedback on clarity, benefit framing, and CTA strength |
-
----
-
-## Communication
-
-All output follows the structured communication standard:
-
-- **Bottom line first** — deliver the copy, then explain the choices
-- **What + Why + How** — every copy decision has a principle behind it
-- **Annotations are mandatory** — never ship copy without explaining the key choices
-- **Confidence tagging** — 🟢 strong recommendation / 🟡 test this / 🔴 needs proof to land
-
-Always provide alternatives for high-stakes elements (headline, CTA). Never deliver one option and call it done.
-
----
-
-## Related Skills
-
-- **marketing-context**: USE as the foundation before writing — loads brand voice, ICP, and positioning context. NOT a substitute for this skill.
-- **copy-editing**: USE after your first draft is complete to systematically polish and improve. NOT for writing new copy from scratch.
-- **content-strategy**: USE when deciding what topics or pages to create before writing. NOT for the writing itself.
-- **social-content**: USE when adapting finished copy for social platforms. NOT for long-form page copy.
-- **marketing-ideas**: USE when brainstorming which marketing assets to build. NOT for writing the copy for those assets.
-- **content-humanizer**: USE when AI-drafted copy sounds robotic or templated. NOT for strategic decisions.
-- **ab-test-setup**: USE to design experiments testing copy variants. NOT for writing the copy itself.
-- **email-sequence**: USE for email copywriting specifically. NOT for page or landing page copy.
+- `moai-content:blog` — SEO 블로그 포스팅 작성
+- `moai-content:card-news` — 인스타그램 카드뉴스 제작
+- `moai-content:newsletter` — 이메일 뉴스레터 기획
+- `moai-core:ai-slop-reviewer` — AI 생성 텍스트 패턴 검수
