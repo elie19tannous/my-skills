@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "israeli-debt-collection-hotzaa-lapoal",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "Claims are sourced to the Execution Law 5727-1967, the Insolvency and Economic Rehabilitation Law 2018, and public rights portals cited in SKILL.md. No live legal review was performed; this file documents the source references bundled with the skill and the local script self-check.",
+  "claims": [
+    {
+      "claim_id": "shtar-direct-enforcement",
+      "claim": "A promissory note, check, or bill (shtar) and a fixed-sum claim (tviah al sechum katzuv) can be enforced directly at the Execution Office without a prior lawsuit.",
+      "source_url": "https://www.nevo.co.il",
+      "raw_snippet": "חוק ההוצאה לפועל, התשכ\"ז-1967: שטר וסכום קצוב ניתנים לאכיפה ישירה בלשכת ההוצאה לפועל ללא הליך משפטי קודם.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 1", "SKILL.md Gotchas", "SKILL_HE.md שלב 1"]
+    },
+    {
+      "claim_id": "opposition-window-30days",
+      "claim": "The debtor's opposition window for a shtar or fixed-sum claim is commonly ~30 days from service; missing it generally forfeits the right to contest the debt on the merits.",
+      "source_url": "https://www.kolzchut.org.il/he/הוצאה_לפועל",
+      "raw_snippet": "התנגדות לביצוע שטר או תביעה על סכום קצוב מוגשת בדרך כלל בתוך כ-30 יום מההמצאה; פספוס המועד שולל את הזכות להתגונן לגופו של עניין.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL.md Gotchas", "SKILL.md Example 4", "SKILL_HE.md שלב 4"]
+    },
+    {
+      "claim_id": "protected-income-floor",
+      "claim": "Wages and benefits enjoy a protected minimum that cannot be garnished; basic household necessities are exempt from seizure. The floor is updated periodically.",
+      "source_url": "https://www.gov.il/he/departments/eca",
+      "raw_snippet": "שכר וגמלאות נהנים מסף מוגן שאינו ניתן לעיקול; מיטלטלין חיוניים לבית פטורים מעיקול. הסף מתעדכן מעת לעת.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL.md Example 2", "SKILL.md Gotchas", "SKILL_HE.md שלב 3"]
+    },
+    {
+      "claim_id": "limited-means-tradeoff",
+      "claim": "Being declared a limited-means debtor (mugbal emtza'im) lowers monthly payments but triggers restrictions such as an exit ban and file consolidation.",
+      "source_url": "https://www.kolzchut.org.il/he/הוצאה_לפועל",
+      "raw_snippet": "הכרזה כחייב מוגבל באמצעים מפחיתה תשלום חודשי אך מטילה הגבלות כגון עיכוב יציאה מהארץ ואיחוד תיקים.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL.md Step 5", "SKILL.md Gotchas", "SKILL_HE.md שלב 5"]
+    },
+    {
+      "claim_id": "insolvency-2018-replaces-bankruptcy",
+      "claim": "The Insolvency and Economic Rehabilitation Law (2018) replaced the former individual bankruptcy (pshitat regel) regime.",
+      "source_url": "https://www.gov.il/he/departments/topics/insolvency",
+      "raw_snippet": "חוק חדלות פירעון ושיקום כלכלי, 2018, החליף את משטר פשיטת הרגל הישן ליחידים.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 6", "SKILL.md Gotchas", "SKILL_HE.md שלב 6"]
+    },
+    {
+      "claim_id": "tax-debts-separate-track",
+      "claim": "Tax debts (Income Tax, VAT, National Insurance) are collected through their own statutory mechanisms, not the general Execution Office track.",
+      "source_url": "https://www.gov.il/he/departments/eca",
+      "raw_snippet": "חובות מס (מס הכנסה, מע\"מ, ביטוח לאומי) נגבים באמצעות מנגנוני גבייה סטטוטוריים נפרדים.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Gotchas", "SKILL_HE.md נקודות תורפה"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled debt-balance.py is Python stdlib only (no network, no third-party deps), models simple annual interest + a flat CPI-linkage rate as an illustrative estimate, and runs successfully with example inputs.",
+      "source_url": "local:scripts/debt-balance.py",
+      "raw_snippet": "`python scripts/debt-balance.py --principal 12000 --start 2024-01-01 --end 2026-01-01 --interest 5 --linkage 2` prints a computed estimated_balance. Verified 2026-07-09 on python3.11.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/debt-balance.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}

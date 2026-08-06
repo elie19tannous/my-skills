@@ -1,0 +1,26 @@
+{
+  "skill": "israeli-debt-collection-hotzaa-lapoal",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (orchestrator, direct)",
+      "summary": "Finalized an unplanned-but-approved skill authored by a previous worker. SKILL.md, references (creditor-playbook, debtor-defense-guide), and the offline debt-balance.py script already existed and were verified working. This cycle added SKILL_HE.md, metadata.json, evidence.json, and this optimization log to bring the package to the standard Lawcal legal-tech skill format. Ran the script with example inputs (principal 12000, 2yr span, 5% interest, 2% linkage) -- exit 0, correct arithmetic. No claims fabricated; fees/floors/rates that change periodically are flagged as verify-current rather than asserted as fixed.",
+      "changes": [
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew mirror of the framework, procedure steps, gotchas, and reference links."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 7 claims sourced to the Execution Law 5727-1967, the Insolvency and Economic Rehabilitation Law 2018, and gov.il/kolzchut rights portals."},
+        {"type": "test", "id": "script-run", "detail": "Verified scripts/debt-balance.py runs correctly with example inputs and produces the expected illustrative balance; --help documents the ponytail limitation (simple interest/flat linkage, not exact statutory compounding)."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-fees-and-floors",
+          "reason": "Opening fees, the protected-income floor, and interest/linkage rates change periodically. Per anti-fabrication, these are presented as verify-current prompts in SKILL.md/SKILL_HE.md rather than asserted as final numbers.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

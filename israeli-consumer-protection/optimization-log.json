@@ -1,0 +1,26 @@
+{
+  "skill": "israeli-consumer-protection",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Finalized an unplanned-but-approved skill authored by a previous worker. The SKILL.md, references (cancellation-decision-guide, complaint-template) and the offline cancellation-fee.py script already existed; this cycle added the Hebrew-facing SKILL_HE.md, metadata.json, evidence.json, and this optimization log to match the standard Lawcal legal-tech skill package. Ran the calculator smoke tests (fee cap, defective=0, refund deadline). No claims were fabricated; fee caps and exclusion lists that change are flagged verify-current in the body.",
+      "changes": [
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the English instructions, examples, gotchas, reference links and troubleshooting."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 10 claims sourced to the Consumer Protection Law 5741-1981, the 2010 cancellation regulations, the Consumer Protection Authority pages, Kol Zchut, and the local calculator check."},
+        {"type": "test", "id": "script-smoke", "detail": "Verified scripts/cancellation-fee.py: price 3000 -> fee 100 (5%=150 capped); price 1000 -> fee 50; --defective -> fee 0; refund deadline = notice + 14 days. stdlib only."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-exclusion-list-and-caps",
+          "reason": "The bitul-iska exclusion list and the NIS 100 fee cap are amended periodically. Per anti-fabrication, the skill presents the current list and cap with an explicit verify-current instruction rather than asserting them as permanently fixed.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

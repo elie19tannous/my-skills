@@ -1,6 +1,8 @@
 ---
 name: interaction-design
 description: Design and implement microinteractions, motion design, transitions, and user feedback patterns. Use when adding polish to UI interactions, implementing loading states, or creating delightful user experiences.
+version: "1.0.0"
+updated: "2026-03-17"
 ---
 
 # Interaction Design
@@ -318,3 +320,10 @@ function AnimatedComponent() {
 - **Blocking Interactions**: Never prevent user input during animations
 - **Memory Leaks**: Clean up animation listeners on unmount
 - **Flash of Content**: Use `will-change` sparingly for optimization
+
+## Resources
+
+- [Framer Motion Documentation](https://www.framer.com/motion/)
+- [CSS Animation Guide](https://web.dev/animations-guide/)
+- [Material Design Motion](https://m3.material.io/styles/motion/overview)
+- [GSAP Animation Library](https://greensock.com/gsap/)

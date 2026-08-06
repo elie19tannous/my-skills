@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "israeli-litigation-deadlines",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "Claims are sourced to Israeli primary legislation and public rights portals cited in SKILL.md. Numbers that shift between procedural reforms are flagged as verify-current in the skill body rather than asserted as fixed. No live legal review was performed; this file documents the source references bundled with the skill and the local script self-check.",
+  "claims": [
+    {
+      "claim_id": "general-limitation-7y",
+      "claim": "The general civil limitation period for a non-land claim is 7 years under the Limitation Law, 5718-1958.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p212m1_001.htm",
+      "raw_snippet": "חוק ההתיישנות, התשי\"ח-1958: תקופת ההתיישנות בתביעה שאינה במקרקעין היא 7 שנים. (General non-land civil claim = 7 years.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL_HE.md שלב 2", "references/limitation-periods.md", "SKILL.md Examples", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "land-limitation-15-25y",
+      "claim": "Claims in unregistered land carry a 15-year limitation period; claims in registered land carry 25 years, under the Limitation Law, 5718-1958.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p212m1_001.htm",
+      "raw_snippet": "מקרקעין לא מוסדרים - 15 שנה; מקרקעין מוסדרים - 25 שנה. (Unregistered land 15 years, registered land 25 years.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL_HE.md שלב 2", "references/limitation-periods.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "accrual-and-tolling",
+      "claim": "The limitation clock generally starts when the cause of action arose, but the discovery rule, minority, legal incapacity, fraud/concealment, and a written acknowledgment of the debt can delay the start, suspend, or restart it.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p212m1_001.htm",
+      "raw_snippet": "מרוץ ההתיישנות מתחיל ביום שבו נולדה עילת התביעה; כלל הגילוי, קטינות, חוסר כשירות, תרמית/הונאה והודאה בקיום זכות משהים, עוצרים או מחדשים את המרוץ. (Discovery rule, minority, incapacity, fraud, acknowledgment affect the clock.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL_HE.md שלב 2", "references/limitation-periods.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "defense-window-verify",
+      "claim": "The statement of defense (ktav hagana) is commonly due within 60 days of service under the Civil Procedure Regulations, 5779-2018, but tracks differ and a judge can vary it; the skill flags it as verify-current rather than fixed.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/501_632.htm",
+      "raw_snippet": "תקנות סדר הדין האזרחי, התשע\"ט-2018: כתב הגנה מוגש בדרך כלל תוך 60 יום מהמצאת כתב התביעה; מסלולים מסוימים שונים ובית המשפט רשאי לשנות. (Defense commonly 60 days from service; verify per track.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL_HE.md שלב 3", "SKILL.md Examples"]
+    },
+    {
+      "claim_id": "appeal-as-of-right-45-days",
+      "claim": "An appeal as of right to a higher court is commonly 45 days from the judgment; a leave-to-appeal (interlocutory) window is shorter, commonly ~30 days. Verified per court/track and affected by court recess.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/501_632.htm",
+      "raw_snippet": "ערעור בזכות מוגש בדרך כלל תוך 45 יום מפסק הדין; בקשת רשות ערעור על החלטת ביניים קצרה יותר, כ-30 יום. (Appeal as of right ~45 days; leave to appeal ~30 days.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL_HE.md שלב 3", "SKILL.md Examples"]
+    },
+    {
+      "claim_id": "small-claims-appeal-30-days",
+      "claim": "Small claims appeal is by leave, 30 days for proceedings opened on/after 11 Apr 2025 (15 days for proceedings opened before that date).",
+      "source_url": "https://www.kolzchut.org.il/he/%D7%94%D7%92%D7%A9%D7%AA_%D7%AA%D7%91%D7%99%D7%A2%D7%94_%D7%A7%D7%98%D7%A0%D7%94",
+      "raw_snippet": "בקשת רשות ערעור בתביעות קטנות: 30 ימים להליכים שנפתחו מ-11.04.2025; 15 ימים להליכים קודמים. (Small claims appeal 30 days from 11 Apr 2025, else 15 days.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL_HE.md שלב 3"]
+    },
+    {
+      "claim_id": "counting-and-pagra",
+      "claim": "Counting excludes the trigger day; a deadline landing on Shabbat/festival/court-closed day rolls to the next working day; the court recess (pagrot) can suspend or extend certain deadlines; many windows run from service, not filing.",
+      "source_url": "https://www.gov.il/en/departments/courts",
+      "raw_snippet": "יום האירוע אינו נספר; מועד שחל בשבת/חג/יום סגירת בית המשפט נדחה ליום העבודה הבא; פגרות בתי המשפט משהות או מאריכות מועדים מסוימים; חלונות רבים נמנים מיום ההמצאה ולא מההגשה. (Trigger day excluded; roll off rest days; pagra suspends; service triggers.)",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "references/counting-rules.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled deadline_calculator.py is Python stdlib only (no network, no third-party deps) and ships an embedded self-check runnable via --selftest, which passes.",
+      "source_url": "local:scripts/deadline_calculator.py",
+      "raw_snippet": "`python scripts/deadline_calculator.py --selftest` prints 'selftest OK'. Verified 2026-07-09 on python3.11. Jurisdiction-aware date math with Israeli mode (Fri-Sat weekend) and generic mode.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/deadline_calculator.py", "SKILL.md Bundled Resources", "SKILL.md Step 6"]
+    }
+  ]
+}

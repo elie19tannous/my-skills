@@ -1,0 +1,26 @@
+{
+  "skill": "israeli-litigation-deadlines",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Finalized an unplanned-but-approved skill authored by a previous worker. The SKILL.md, references (limitation-periods, counting-rules) and the offline deadline_calculator.py script already existed; this cycle added the Hebrew-facing SKILL_HE.md, metadata.json, evidence.json, and this optimization log to match the standard Lawcal legal-tech skill package. Ran the script self-check (--selftest: OK). No claims were fabricated; procedural windows that move between reforms are flagged as verify-current in the body rather than asserted as fixed.",
+      "changes": [
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the English instructions, examples, gotchas, and reference links."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 8 claims sourced to the Limitation Law 5718-1958, Civil Procedure Regulations 5779-2018, the Judicial Authority recess pages, and the local script self-check."},
+        {"type": "test", "id": "script-selftest", "detail": "Verified scripts/deadline_calculator.py --selftest passes on python3.11 (stdlib only, no network)."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-exact-procedural-windows",
+          "reason": "Exact defense/appeal/motion windows shift between Civil Procedure reforms and differ by track, and a judge can vary them by order. Per anti-fabrication, these are presented as verify-current prompts in SKILL.md/SKILL_HE.md rather than asserted as final numbers.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

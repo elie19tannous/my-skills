@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "israeli-consumer-protection",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "Claims are sourced to Israeli primary legislation and public rights/authority portals cited in SKILL.md. Fee caps and exclusion lists that are amended periodically are flagged as verify-current in the skill body. No live legal review was performed; this file documents the bundled source references and the local script computation check.",
+  "claims": [
+    {
+      "claim_id": "core-statute-1981",
+      "claim": "Israeli consumer rights are anchored in the Consumer Protection Law, 5741-1981 (cancellation rights, disclosure duties, ban on deception), with the Cancellation of Transaction Regulations, 5771-2010 providing the general bitul-iska return right.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p214m1_001.htm",
+      "raw_snippet": "חוק הגנת הצרכן, התשמ\"א-1981; תקנות הגנת הצרכן (ביטול עסקה), התשע\"א-2010. Core statute + 2010 cancellation regulations.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 1", "SKILL_HE.md שלב 1", "SKILL.md Reference Links"]
+    },
+    {
+      "claim_id": "distance-14-day-window",
+      "claim": "For a distance transaction, cancellation runs from the transaction date until 14 days after receiving the goods; for services, until 14 days after the contract or written disclosure, whichever is later (section 14ג of the Consumer Protection Law).",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p214m1_001.htm",
+      "raw_snippet": "עסקת מכר מרחוק: ביטול מיום העסקה ועד 14 ימים מקבלת הטובין; בשירות עד 14 ימים מהחוזה או ממסמך הגילוי, לפי המאוחר. סעיף 14ג לחוק הגנת הצרכן.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL_HE.md שלב 2", "SKILL.md Examples"]
+    },
+    {
+      "claim_id": "extended-4-month-window",
+      "claim": "For a consumer who is a person with disability, a senior citizen (65+), or a new immigrant, the cancellation window is 4 months, provided the transaction included a conversation (including electronic).",
+      "source_url": "https://www.gov.il/he/departments/consumer_protection_authority",
+      "raw_snippet": "לאדם עם מוגבלות, אזרח ותיק (65+) או עולה חדש חלון ביטול של 4 חודשים, ובלבד שהעסקה כללה שיחה (לרבות אלקטרונית).",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL_HE.md שלב 2", "SKILL.md Examples", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "cancellation-fee-cap",
+      "claim": "The lawful cancellation fee for a change-of-mind cancellation is the LOWER of 5% of the transaction price or NIS 100; for a defective or misdescribed item there is no cancellation fee and the seller bears return costs.",
+      "source_url": "https://www.gov.il/he/departments/consumer_protection_authority",
+      "raw_snippet": "דמי ביטול בביטול עקב שינוי דעת: הנמוך מבין 5% ממחיר העסקה או 100 ש\"ח. במקרה של פגם/אי-התאמה אין דמי ביטול והמוכר נושא בעלויות ההחזרה. Verified via bundled calculator: price 3000 -> 100 (5%=150, capped 100); price 1000 -> 50 (5%=50); defective -> 0.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL.md Step 3", "SKILL_HE.md שלב 2", "SKILL_HE.md שלב 3", "scripts/cancellation-fee.py", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "refund-within-14-days",
+      "claim": "The seller must refund within 14 days of the cancellation notice, using the original payment method; the timeline runs from the notice, not from when the seller chooses to act.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p214m1_001.htm",
+      "raw_snippet": "המוכר יחזיר את התמורה תוך 14 ימים ממועד הודעת הביטול, באמצעות אמצעי התשלום המקורי. Refund deadline = notice + 14 days (confirmed by scripts/cancellation-fee.py).",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL.md Step 3", "SKILL_HE.md שלב 2", "SKILL_HE.md שלב 3", "scripts/cancellation-fee.py", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "general-bitul-iska-2010",
+      "claim": "The Cancellation of Transaction Regulations, 5771-2010 give a broad 14-day right to cancel many in-store goods/services, subject to the goods being unused and to a defined list of exclusions (perishables, custom-made, opened copyable media, intimate items, certain services) that is amended periodically.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p214m1_001.htm",
+      "raw_snippet": "תקנות ביטול עסקה 2010: זכות ביטול רחבה תוך 14 ימים, בכפוף לכך שהטובין לא נעשה בהם שימוש ולרשימת החרגות (מוצרים מתכלים, טובין שיוצרו במיוחד, מדיה שניתן להעתיק לאחר פתיחה, מוצרי היגיינה, שירותים מסוימים).",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL_HE.md שלב 3", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "warranty-vs-conformity",
+      "claim": "A voluntary/regulated warranty (achrayut) is distinct from statutory conformity under the Sale Law, 1968; electrical-goods regulations set minimum warranty periods (commonly at least 1 year for many appliances) and require local service.",
+      "source_url": "https://www.kolzchut.org.il/he/%D7%96%D7%9B%D7%95%D7%99%D7%95%D7%AA_%D7%A6%D7%A8%D7%9B%D7%A0%D7%99%D7%9D",
+      "raw_snippet": "אחריות (חוזית/רגולטורית) שונה מהתאמה סטטוטורית לפי חוק המכר 1968; תקנות אחריות מוצרי חשמל קובעות תקופת אחריות מינימלית (לרוב לפחות שנה למכשירים רבים) ושירות מקומי.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "SKILL.md Examples", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "deception-and-price-display",
+      "claim": "Deception on a material matter (section 2) and exploitation of a consumer's distress (section 3) are prohibited; the displayed/checkout price binds the seller.",
+      "source_url": "https://www.nevo.co.il/law_html/law01/p214m1_001.htm",
+      "raw_snippet": "הטעיה בעניין מהותי (סעיף 2) וניצול מצוקה (סעיף 3) אסורים; המחיר המוצג/בקופה מחייב את המוכר.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 5", "SKILL_HE.md שלב 5", "SKILL.md Examples", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "complaint-channels",
+      "claim": "Enforcement escalation runs written demand to seller -> Consumer Protection and Fair Trade Authority / Consumer Council -> small claims court, with class action available for systemic overcharging.",
+      "source_url": "https://www.gov.il/he/departments/consumer_protection_authority",
+      "raw_snippet": "מסלול הסלמה: דרישה בכתב למוכר -> הרשות להגנת הצרכן ולסחר הוגן / המועצה לצרכנות -> תביעות קטנות; תובענה ייצוגית לגביית יתר שיטתית.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 6", "SKILL_HE.md שלב 6", "references/complaint-template.md", "SKILL.md Reference Links"]
+    },
+    {
+      "claim_id": "local-script-check",
+      "claim": "The bundled cancellation-fee.py is Python stdlib only (no network, no third-party deps) and correctly computes the lower-of-5%-or-NIS100 cap, the 0 fee for defective items, and the notice+14-day refund deadline.",
+      "source_url": "local:scripts/cancellation-fee.py",
+      "raw_snippet": "Verified 2026-07-09 on python3.11: --price 3000 -> fee 100, refund 2900; --price 3000 --defective -> fee 0, refund 3000; --price 1000 -> fee 50; refund deadline = notice-date + 14 days.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/cancellation-fee.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}
