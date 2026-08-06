@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Appendix A Daily Breakdown</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="appendix-a-daily-breakdown">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Appendix A — Daily Breakdown</h1>
+        <p>Detailed day-by-day summary of all key report indicators. Continue on additional pages if required.</p>
+      </div>
+      <div class="page-badge">Appendix A</div>
+    </div>
+
+    <section class="report-section allow-break" data-section="daily-breakdown-table">
+      <h2 class="section-title">Daily breakdown table</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="daily-breakdown-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Facility</th><th class="num">Consultations</th><th class="num">Under 5</th><th class="num">65+</th><th class="num">Trauma</th><th class="num">Infectious disease</th><th class="num">Procedures</th><th class="num">Referrals</th><th class="num">Admissions</th><th class="num">Deaths</th><th class="num">Protection</th><th class="num">Relation direct</th><th class="num">Relation indirect</th><th class="num">Relation not related</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#daily_breakdown_rows}}
+            <tr><td>{{date}}</td><td>{{facility}}</td><td class="num">{{consultations}}</td><td class="num">{{under5}}</td><td class="num">{{age65plus}}</td><td class="num">{{trauma}}</td><td class="num">{{infectious}}</td><td class="num">{{procedures}}</td><td class="num">{{referrals}}</td><td class="num">{{admissions}}</td><td class="num">{{deaths}}</td><td class="num">{{protection}}</td><td class="num">{{direct}}</td><td class="num">{{indirect}}</td><td class="num">{{not_related}}</td></tr>
+            {{/daily_breakdown_rows}}
+            {{^daily_breakdown_rows}}
+            <tr class="placeholder-row"><td colspan="15">No data available for the selected reporting period.</td></tr>
+            {{/daily_breakdown_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="daily-notes">
+      <h2 class="section-title">Daily notes</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Date</th><th>Note type</th><th>Note</th></tr></thead>
+          <tbody>
+            {{#daily_note_rows}}
+            <tr><td>{{date}}</td><td>{{note_type}}</td><td>{{note_text}}</td></tr>
+            {{/daily_note_rows}}
+            {{^daily_note_rows}}
+            <tr class="placeholder-row"><td colspan="3">No notes available for the selected reporting period.</td></tr>
+            {{/daily_note_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

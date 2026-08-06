@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 6 Procedures and Outcomes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-6-procedures-and-outcomes">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Procedures and Outcomes</h1>
+        <p>All MDS procedures and outcomes recorded during the reporting period.</p>
+      </div>
+      <div class="page-badge">Page 6</div>
+    </div>
+
+    <section class="report-section" data-section="procedure-summary">
+      <h2 class="section-title">Procedure summary</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="procedure-table">
+          <thead><tr><th class="num">MDS No.</th><th>Procedure</th><th class="num">&lt;5</th><th class="num">&gt;=5</th><th class="num">Total</th><th class="num">Percentage</th></tr></thead>
+          <tbody>
+            <tr><td class="num">30</td><td>Major procedure excluding MDS31</td><td class="num">{{mds30_under5}}</td><td class="num">{{mds30_5plus}}</td><td class="num">{{mds30_total}}</td><td class="num">{{mds30_percentage}}</td></tr>
+            <tr><td class="num">31</td><td>Limb amputation excluding digits</td><td class="num">{{mds31_under5}}</td><td class="num">{{mds31_5plus}}</td><td class="num">{{mds31_total}}</td><td class="num">{{mds31_percentage}}</td></tr>
+            <tr><td class="num">32</td><td>Minor surgical procedure</td><td class="num">{{mds32_under5}}</td><td class="num">{{mds32_5plus}}</td><td class="num">{{mds32_total}}</td><td class="num">{{mds32_percentage}}</td></tr>
+            <tr><td class="num">33</td><td>Normal Vaginal Delivery</td><td class="num">{{mds33_under5}}</td><td class="num">{{mds33_5plus}}</td><td class="num">{{mds33_total}}</td><td class="num">{{mds33_percentage}}</td></tr>
+            <tr><td class="num">34</td><td>Caesarean section</td><td class="num">{{mds34_under5}}</td><td class="num">{{mds34_5plus}}</td><td class="num">{{mds34_total}}</td><td class="num">{{mds34_percentage}}</td></tr>
+            <tr><td class="num">35</td><td>Obstetrics others</td><td class="num">{{mds35_under5}}</td><td class="num">{{mds35_5plus}}</td><td class="num">{{mds35_total}}</td><td class="num">{{mds35_percentage}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="outcome-summary">
+      <h2 class="section-title">Outcome summary</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="outcome-table">
+          <thead><tr><th class="num">MDS No.</th><th>Outcome</th><th class="num">Count</th><th class="num">Percentage</th></tr></thead>
+          <tbody>
+            <tr><td class="num">36</td><td>Discharge without medical follow-up</td><td class="num">{{mds36_total}}</td><td class="num">{{mds36_percentage}}</td></tr>
+            <tr><td class="num">37</td><td>Discharge with medical follow-up</td><td class="num">{{mds37_total}}</td><td class="num">{{mds37_percentage}}</td></tr>
+            <tr><td class="num">38</td><td>Discharge against medical advice</td><td class="num">{{mds38_total}}</td><td class="num">{{mds38_percentage}}</td></tr>
+            <tr><td class="num">39</td><td>Referral</td><td class="num">{{mds39_total}}</td><td class="num">{{mds39_percentage}}</td></tr>
+            <tr><td class="num">40</td><td>Admission</td><td class="num">{{mds40_total}}</td><td class="num">{{mds40_percentage}}</td></tr>
+            <tr><td class="num">41</td><td>Dead on arrival</td><td class="num">{{mds41_total}}</td><td class="num">{{mds41_percentage}}</td></tr>
+            <tr><td class="num">42</td><td>Death within facility</td><td class="num">{{mds42_total}}</td><td class="num">{{mds42_percentage}}</td></tr>
+            <tr><td class="num">43</td><td>Requiring long-term rehabilitation</td><td class="num">{{mds43_total}}</td><td class="num">{{mds43_percentage}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="derived-operational-indicators">
+      <h2 class="section-title">Derived operational indicators</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Indicator</th><th>Formula</th><th class="num">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Procedure rate</td><td>(MDS30 + MDS31 + MDS32 + MDS33 + MDS34 + MDS35) / total consultations</td><td class="num">{{procedure_rate}}</td></tr>
+            <tr><td>Referral rate</td><td>MDS39 / total consultations</td><td class="num">{{referral_rate}}</td></tr>
+            <tr><td>Admission rate</td><td>MDS40 / total consultations</td><td class="num">{{admission_rate}}</td></tr>
+            <tr><td>Death count</td><td>MDS41 + MDS42</td><td class="num">{{death_total}}</td></tr>
+            <tr><td>Follow-up count</td><td>MDS37 + MDS43</td><td class="num">{{followup_total}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="outcome-notes">
+      <h2 class="section-title">Outcome notes</h2>
+      <div class="note-box">{{outcome_notes}}</div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

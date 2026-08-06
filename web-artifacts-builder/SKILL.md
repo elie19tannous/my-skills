@@ -1,12 +1,10 @@
 ---
 name: web-artifacts-builder
-description: "To build powerful frontend claude.ai artifacts, follow these steps:"
-risk: unknown
-source: community
-date_added: "2026-02-27"
+description: Use when creating elaborate, multi-component claude.ai HTML artifacts with React, Tailwind CSS, shadcn/ui, state management, routing, or complex frontend structure; not for simple single-file HTML/JSX artifacts.
+license: Complete terms in LICENSE.txt
 ---
 
-# Web Artifacts Builder
+# Web Artifacts Builder Skill
 
 To build powerful frontend claude.ai artifacts, follow these steps:
 1. Initialize the frontend repo using `scripts/init-artifact.sh`
@@ -35,8 +33,7 @@ This creates a fully configured project with:
 - ✅ React + TypeScript (via Vite)
 - ✅ Tailwind CSS 3.4.1 with shadcn/ui theming system
 - ✅ Path aliases (`@/`) configured
-- ✅ 40+ shadcn/ui components pre-installed
-- ✅ All Radix UI dependencies included
+- ✅ Starter structure for shadcn/ui-style components
 - ✅ Parcel configured for bundling (via .parcelrc)
 - ✅ Node 18+ compatibility (auto-detects and pins Vite version)
 
@@ -74,11 +71,3 @@ To test/visualize the artifact, use available tools (including other Skills or b
 ## Reference
 
 - **shadcn/ui components**: https://ui.shadcn.com/docs/components
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

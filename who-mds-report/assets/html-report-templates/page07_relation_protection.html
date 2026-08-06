@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 7 Relation and Protection</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-7-relation-to-event-and-protection">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Relation to Event and Protection</h1>
+        <p>Aggregated relation-to-event statistics and protection indicators. Sensitive details are excluded from the main report.</p>
+      </div>
+      <div class="page-badge">Page 7</div>
+    </div>
+
+    <section class="report-section" data-section="relation-to-event">
+      <h2 class="section-title">Relation to event</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="relation-table">
+          <thead><tr><th class="num">MDS No.</th><th>Relation category</th><th class="num">Count</th><th class="num">Percentage of consultations</th></tr></thead>
+          <tbody>
+            <tr><td class="num">44</td><td>Directly related to event</td><td class="num">{{mds44_total}}</td><td class="num">{{mds44_percentage}}</td></tr>
+            <tr><td class="num">45</td><td>Indirectly related to event</td><td class="num">{{mds45_total}}</td><td class="num">{{mds45_percentage}}</td></tr>
+            <tr><td class="num">46</td><td>Not related to event</td><td class="num">{{mds46_total}}</td><td class="num">{{mds46_percentage}}</td></tr>
+            <tr><td>Missing / unclear</td><td>No valid relation selected</td><td class="num">{{missing_relation_total}}</td><td class="num">{{missing_relation_percentage}}</td></tr>
+            <tr><td>Multiple selected</td><td>More than one relation selected</td><td class="num">{{multiple_relation_total}}</td><td class="num">{{multiple_relation_percentage}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="protection-indicators">
+      <h2 class="section-title">Protection indicators</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="protection-table">
+          <thead><tr><th class="num">MDS No.</th><th>Protection indicator</th><th class="num">Count</th><th>Reporting note</th></tr></thead>
+          <tbody>
+            <tr><td class="num">47</td><td>Vulnerable child</td><td class="num">{{mds47_total}}</td><td>Confidential pathway if count &gt; 0</td></tr>
+            <tr><td class="num">48</td><td>Vulnerable adult</td><td class="num">{{mds48_total}}</td><td>Confidential pathway if count &gt; 0</td></tr>
+            <tr><td class="num">49</td><td>Sexual Gender Based Violence</td><td class="num">{{mds49_total}}</td><td>Confidential pathway if count &gt; 0</td></tr>
+            <tr><td class="num">50</td><td>Violence non-SGBV</td><td class="num">{{mds50_total}}</td><td>Confidential pathway if count &gt; 0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="confidentiality-reporting-note">
+      <h2 class="section-title">Confidentiality and reporting note</h2>
+      <div class="restricted-box">
+        Protection-related details must not be included in the main report. Only aggregated counts are shown. Detailed line-list information, if generated, must be handled as a restricted appendix and shared only through the locally agreed confidential reporting pathway.
+      </div>
+    </section>
+
+    <section class="report-section" data-section="restricted-appendix-trigger-summary">
+      <h2 class="section-title">Restricted appendix trigger summary</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Trigger group</th><th>Items included</th><th class="num">Trigger count</th></tr></thead>
+          <tbody>
+            <tr><td>Protection</td><td>MDS47–MDS50</td><td class="num">{{protection_trigger_total}}</td></tr>
+            <tr><td>Deaths</td><td>MDS42</td><td class="num">{{mds42_total}}</td></tr>
+            <tr><td>Severe Acute Malnutrition</td><td>MDS28</td><td class="num">{{mds28_total}}</td></tr>
+            <tr><td>Limb amputation</td><td>MDS31</td><td class="num">{{mds31_total}}</td></tr>
+            <tr><td>Long-term rehabilitation</td><td>MDS43</td><td class="num">{{mds43_total}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

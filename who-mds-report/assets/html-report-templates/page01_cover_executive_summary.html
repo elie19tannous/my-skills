@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 1 Cover and Executive Summary</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page page-cover" data-page="page-1-cover-executive-summary">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Cover and Executive Summary</h1>
+        <p>One-page overview of reporting period, team, location, activity volume, main findings and critical indicators.</p>
+      </div>
+      <div class="page-badge">Page 1</div>
+    </div>
+
+    <section class="report-section" data-section="report-metadata">
+      <h2 class="section-title">Report metadata</h2>
+      <div class="table-wrap">
+        <table class="metadata-table narrow" data-component="metadata-table">
+          <tbody>
+            <tr><td>Reporting period</td><td>{{start_date}} – {{end_date}}</td></tr>
+            <tr><td>Number of calendar days</td><td>{{calendar_days}}</td></tr>
+            <tr><td>Number of active reporting days</td><td>{{active_reporting_days}}</td></tr>
+            <tr><td>Organization</td><td>{{organization_name}}</td></tr>
+            <tr><td>Team name</td><td>{{team_name}}</td></tr>
+            <tr><td>EMT type</td><td>{{emt_type}}</td></tr>
+            <tr><td>Facility</td><td>{{facility_name}}</td></tr>
+            <tr><td>Location</td><td>{{admin1}}, {{admin2}}, {{admin3}}</td></tr>
+            <tr><td>Source files</td><td>{{source_file_count}}</td></tr>
+            <tr><td>Generated on</td><td>{{generated_at}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="key-indicators">
+      <h2 class="section-title">Key indicators</h2>
+      <div class="kpi-grid" aria-label="headline key indicators">
+        <div class="kpi-card"><div class="kpi-label">Total consultations</div><div class="kpi-value">{{total_consultations}}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Daily average</div><div class="kpi-value">{{daily_average_consultations}}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Peak day</div><div class="kpi-value">{{peak_day_consultations}}</div><div class="small">{{peak_day}}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Protection cases</div><div class="kpi-value">{{protection_trigger_total}}</div></div>
+      </div>
+      <div class="table-wrap">
+        <table class="narrow" data-component="indicator-table">
+          <thead><tr><th>Indicator</th><th class="num">Value</th><th>Source / calculation</th></tr></thead>
+          <tbody>
+            <tr><td>Total consultations</td><td class="num">{{total_consultations}}</td><td>Count records or sum daily new consultations</td></tr>
+            <tr><td>Daily average consultations</td><td class="num">{{daily_average_consultations}}</td><td>Total consultations / active reporting days</td></tr>
+            <tr><td>Peak day</td><td class="num">{{peak_day}}</td><td>Date with highest consultation count</td></tr>
+            <tr><td>Peak day consultations</td><td class="num">{{peak_day_consultations}}</td><td>Count on peak day</td></tr>
+            <tr><td>Admissions</td><td class="num">{{mds40_total}}</td><td>Sum MDS40</td></tr>
+            <tr><td>Referrals</td><td class="num">{{mds39_total}}</td><td>Sum MDS39</td></tr>
+            <tr><td>Deaths total</td><td class="num">{{death_total}}</td><td>Sum MDS41 and MDS42</td></tr>
+            <tr><td>Protection-related cases</td><td class="num">{{protection_trigger_total}}</td><td>Sum MDS47–MDS50</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="main-findings">
+      <h2 class="section-title">Main findings</h2>
+      <div class="note-box" data-component="summary-bullets">
+        <ul class="findings-list">
+          {{#main_findings}}
+          <li>{{text}}</li>
+          {{/main_findings}}
+          {{^main_findings}}
+          <li>No data available for the selected reporting period.</li>
+          {{/main_findings}}
+        </ul>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="critical-flags">
+      <h2 class="section-title">Critical flags</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Flag</th><th class="num">Count</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Death within facility, MDS42</td><td class="num">{{mds42_total}}</td><td>Review line list if count &gt; 0</td></tr>
+            <tr><td>Dead on arrival, MDS41</td><td class="num">{{mds41_total}}</td><td>Review if count &gt; 0</td></tr>
+            <tr><td>Severe Acute Malnutrition, MDS28</td><td class="num">{{mds28_total}}</td><td>Review line list if count &gt; 0</td></tr>
+            <tr><td>Limb amputation excluding digits, MDS31</td><td class="num">{{mds31_total}}</td><td>Review line list if count &gt; 0</td></tr>
+            <tr><td>Long-term rehabilitation, MDS43</td><td class="num">{{mds43_total}}</td><td>Review line list if count &gt; 0</td></tr>
+            <tr><td>Vulnerable child, MDS47</td><td class="num">{{mds47_total}}</td><td>Confidential reporting pathway</td></tr>
+            <tr><td>Vulnerable adult, MDS48</td><td class="num">{{mds48_total}}</td><td>Confidential reporting pathway</td></tr>
+            <tr><td>SGBV, MDS49</td><td class="num">{{mds49_total}}</td><td>Confidential reporting pathway</td></tr>
+            <tr><td>Violence non-SGBV, MDS50</td><td class="num">{{mds50_total}}</td><td>Confidential reporting pathway</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="data-availability-note">
+      <h2 class="section-title">Data availability note</h2>
+      <div class="warning-box">{{data_availability_note}}</div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

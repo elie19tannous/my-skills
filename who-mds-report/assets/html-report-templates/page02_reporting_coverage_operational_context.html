@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 2 Reporting Coverage</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-2-reporting-coverage-operational-context">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Reporting Coverage and Operational Context</h1>
+        <p>Coverage, locations, facilities and source files included in the selected reporting period.</p>
+      </div>
+      <div class="page-badge">Page 2</div>
+    </div>
+
+    <section class="report-section" data-section="reporting-coverage-summary">
+      <h2 class="section-title">Reporting coverage summary</h2>
+      <div class="table-wrap">
+        <table class="metadata-table narrow">
+          <tbody>
+            <tr><td>Requested period</td><td>{{start_date}} – {{end_date}}</td></tr>
+            <tr><td>Calendar days in period</td><td>{{calendar_days}}</td></tr>
+            <tr><td>Active reporting days</td><td>{{active_reporting_days}}</td></tr>
+            <tr><td>Missing days</td><td>{{missing_days_count}}</td></tr>
+            <tr><td>Facilities included</td><td>{{facility_count}}</td></tr>
+            <tr><td>Records included</td><td>{{included_record_count}}</td></tr>
+            <tr><td>Records excluded</td><td>{{excluded_record_count}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="daily-coverage-table">
+      <h2 class="section-title">Daily coverage table</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="coverage-table">
+          <thead><tr><th>Date</th><th>Status</th><th>Facility / facilities</th><th>Working hours</th><th class="num">Consultations</th><th>Source file</th></tr></thead>
+          <tbody>
+            {{#daily_coverage_rows}}
+            <tr><td class="nowrap">{{date}}</td><td><span class="status-pill">{{status}}</span></td><td>{{facility_name}}</td><td>{{working_hours}}</td><td class="num">{{consultation_count}}</td><td>{{source_file_name}}</td></tr>
+            {{/daily_coverage_rows}}
+            {{^daily_coverage_rows}}
+            <tr class="placeholder-row"><td colspan="6">No data available for the selected reporting period.</td></tr>
+            {{/daily_coverage_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="facility-location-table">
+      <h2 class="section-title">Facility and location table</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="facility-location-table">
+          <thead><tr><th>Facility</th><th>Admin 1</th><th>Admin 2</th><th>Admin 3</th><th>Geotag</th><th>First reported date</th><th>Last reported date</th><th class="num">Records</th></tr></thead>
+          <tbody>
+            {{#facility_location_rows}}
+            <tr><td>{{facility_name}}</td><td>{{admin1}}</td><td>{{admin2}}</td><td>{{admin3}}</td><td>{{lat_long}}</td><td>{{first_date}}</td><td>{{last_date}}</td><td class="num">{{record_count}}</td></tr>
+            {{/facility_location_rows}}
+            {{^facility_location_rows}}
+            <tr class="placeholder-row"><td colspan="8">No data available for the selected reporting period.</td></tr>
+            {{/facility_location_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="source-data-table">
+      <h2 class="section-title">Source data table</h2>
+      <div class="table-wrap">
+        <table class="dense">
+          <thead><tr><th>Source file</th><th class="num">Records loaded</th><th class="num">Records included</th><th>Date range detected</th><th>Tool version</th><th>Form version</th></tr></thead>
+          <tbody>
+            {{#source_data_rows}}
+            <tr><td>{{source_file_name}}</td><td class="num">{{loaded_count}}</td><td class="num">{{included_count}}</td><td>{{detected_start}} – {{detected_end}}</td><td>{{tool_version}}</td><td>{{form_version}}</td></tr>
+            {{/source_data_rows}}
+            {{^source_data_rows}}
+            <tr class="placeholder-row"><td colspan="6">No data available for the selected reporting period.</td></tr>
+            {{/source_data_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="missing-excluded-data">
+      <h2 class="section-title">Missing or excluded data</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Issue</th><th>Details</th><th>Impact</th></tr></thead>
+          <tbody>
+            {{#missing_excluded_rows}}
+            <tr><td>{{issue}}</td><td>{{details}}</td><td>{{impact}}</td></tr>
+            {{/missing_excluded_rows}}
+            {{^missing_excluded_rows}}
+            <tr class="placeholder-row"><td colspan="3">No data availability issues detected for the selected reporting period.</td></tr>
+            {{/missing_excluded_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

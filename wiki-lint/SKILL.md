@@ -1,84 +1,73 @@
 ---
 name: wiki-lint
-description: Run a health check on the LLM Wiki vault — mechanical checks (orphans, broken links, stale pages, missing frontmatter, log gap, duplicates) plus semantic checks (contradictions, cross-reference gaps, concepts missing their own page). Outputs a markdown report with suggested actions. Usage /wiki-lint [--stale-days N] [--log-gap-days N]
+description: "Run a deterministic, read-only health check on an Obsidian wiki. Use for lint, vault health check, audit wiki health, find orphans, find dead links, frontmatter audit, provenance audit, or wiki audit. Reports graph, link, frontmatter, provenance-ledger, empty-section, and stale-index findings; it does not reason broadly or repair files."
 ---
-<!-- canonical copy: engineering/llm-wiki/commands/wiki-lint.md — keep in sync (root copy uses repo-root-relative script paths) -->
 
-# /wiki-lint
+# Lint the wiki
 
-Health-check the wiki. Surfaces orphan pages, broken wikilinks, stale claims, missing frontmatter, contradictions, and structural drift. **Reports, doesn't silently fix** — you decide what to change.
+Use the portable lint engine as the source of truth. Lint observes vault state;
+it does not create reports, dashboards, canvases, stubs, or fixes.
 
-Run this weekly, after batch ingests, and always before sharing the wiki.
+Resolve the installed product root from this skill's own location, not from the
+vault or current working directory:
 
-## Usage
-
-```
-/wiki-lint
-/wiki-lint --stale-days 60
-/wiki-lint --log-gap-days 7
-```
-
-## What happens
-
-### Pass 1 — Mechanical (scripts)
-
-- `engineering/llm-wiki/skills/llm-wiki/scripts/lint_wiki.py` — orphans, broken links, stale pages, missing frontmatter, duplicate titles, log gap
-- `engineering/llm-wiki/skills/llm-wiki/scripts/graph_analyzer.py` — hubs, sinks, connected components, graph stats
-
-### Pass 2 — Semantic (LLM reads and thinks)
-
-- Contradictions between recently-updated pages
-- Stale claims superseded by newer sources
-- Concepts mentioned in plain text across 3+ pages without their own page
-- Cross-reference gaps (entities mentioned but not wikilinked)
-- Index drift (index.md out of sync with wiki/)
-
-### Pass 3 — Report
-
-A markdown report grouped by severity:
-
-```markdown
-# Wiki lint — <date>
-
-**Total pages:** N  **Components:** N  **Last log:** <date>
-
-## Found
-- ⚠️ <N> contradictions (list)
-- <N> orphans
-- <N> broken links
-- <N> stale pages
-- ...
-
-## Suggested actions
-1. Investigate contradiction between [[sources/a]] and [[sources/b]]
-2. Create concept page for "<name>"
-3. Fix broken link in [[concepts/x]]
-4. Re-ingest [[sources/c]] — stale + contradicted
-5. ...
+```bash
+PRODUCT_ROOT=/absolute/path/to/installed/claude-obsidian
+CORE="$PRODUCT_ROOT/scripts/claude-obsidian.py"
+test -f "$CORE"
 ```
 
-Then appends a `lint` entry to `log.md`.
+## Run
 
-## Sub-agent
+Resolve the user vault, then run one of:
 
-Dispatches the `wiki-linter` sub-agent. See `agents/wiki-linter.md`.
+```bash
+python3 "$CORE" lint --vault "$VAULT"
+python3 "$CORE" lint --vault "$VAULT" --format markdown
+```
 
-## Scripts
+Use `--strict` only when a nonzero exit for findings is useful in automation.
+The command remains read-only either way.
 
-- `engineering/llm-wiki/skills/llm-wiki/scripts/lint_wiki.py`
-- `engineering/llm-wiki/skills/llm-wiki/scripts/graph_analyzer.py`
-- `engineering/llm-wiki/skills/llm-wiki/scripts/append_log.py`
+The deterministic parser understands Obsidian wikilinks and embeds, Markdown
+links, aliases, heading and block fragments, escaped aliases, and code fences.
+It reports such categories as dead or ambiguous links, orphan pages, required
+frontmatter gaps (including `title`), empty sections, stale index entries, and
+source/claim ledger contract violations. Report only the
+checks and counts present in its output; do not claim that it performed
+semantic, stylistic, or prose-level contradiction analysis when it did
+not.
 
-## Frequency
+## Explain findings
 
-| Trigger | Pass |
-|---|---|
-| Weekly | Mechanical only — fast |
-| After batch ingest | Full (mechanical + semantic) |
-| Monthly | Full + structural review |
-| Before sharing | Full + extra review |
+1. Preserve the engine's paths, line numbers, targets, categories, and counts.
+2. Group findings by likely impact: broken navigation, ambiguous resolution,
+   metadata quality, then maintainability.
+3. Explain that an orphan may be intentional and an ambiguous basename needs a
+   path-qualified link; do not infer intent from the finding alone.
+4. Treat allowlisted findings as policy, not as proof that the target exists.
+5. Separate deterministic facts from suggested remediation.
 
-## Skill Reference
+Do not write the Markdown rendering into the vault. Return it in chat or stdout.
 
-→ `engineering/llm-wiki/skills/llm-wiki/SKILL.md`
-→ `engineering/llm-wiki/skills/llm-wiki/references/lint-workflow.md`
+## Repair is a separate operation
+
+Never auto-fix a lint result. After the user chooses specific findings to
+repair:
+
+1. Re-read each target and record its expected SHA-256.
+2. Draft only the selected changes; do not delete or merge pages without
+   explicit consent.
+3. Build one repair bundle with a new operation ID.
+4. Inspect the bundle and show exact changed paths.
+5. Apply only after that separate review.
+6. Re-run lint read-only and compare the relevant findings.
+
+Follow the [operation transaction contract](../wiki/references/operation-transactions.md).
+Lint itself never applies that transaction and never commits Git.
+
+## Checkpoint
+
+Observe the deterministic report, think about root causes rather than finding
+count, verify proposed repairs against current hashes, and grow by improving the
+workflow that produced repeated findings.

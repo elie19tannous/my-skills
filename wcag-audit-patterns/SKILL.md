@@ -1,13 +1,16 @@
 ---
 name: wcag-audit-patterns
-description: Conduct WCAG 2.2 accessibility audits with automated testing, manual verification, and remediation guidance. Use when auditing websites for accessibility, fixing WCAG violations, or implementing accessible design patterns.
+description: "Comprehensive guide to auditing web content against WCAG 2.2 guidelines with actionable remediation strategies."
+risk: safe
+source: community
+date_added: "2026-02-27"
 ---
 
 # WCAG Audit Patterns
 
 Comprehensive guide to auditing web content against WCAG 2.2 guidelines with actionable remediation strategies.
 
-## When to Use This Skill
+## Use this skill when
 
 - Conducting accessibility audits
 - Fixing WCAG violations
@@ -16,65 +19,31 @@ Comprehensive guide to auditing web content against WCAG 2.2 guidelines with act
 - Meeting ADA/Section 508 requirements
 - Achieving VPAT compliance
 
-## Core Concepts
+## Do not use this skill when
 
-### 1. WCAG Conformance Levels
+- You need legal advice or formal certification
+- You only want a quick automated scan without manual verification
+- You cannot access the UI or source for remediation work
 
-| Level   | Description            | Required For      |
-| ------- | ---------------------- | ----------------- |
-| **A**   | Minimum accessibility  | Legal baseline    |
-| **AA**  | Standard conformance   | Most regulations  |
-| **AAA** | Enhanced accessibility | Specialized needs |
+## Instructions
 
-### 2. POUR Principles
+1. Run automated scans (axe, Lighthouse, WAVE) to collect initial findings.
+2. Perform manual checks (keyboard navigation, focus order, screen reader flows).
+3. Map each issue to a WCAG criterion, severity, and remediation guidance.
+4. Re-test after fixes and document residual risk and compliance status.
 
-```
-Perceivable:  Can users perceive the content?
-Operable:     Can users operate the interface?
-Understandable: Can users understand the content?
-Robust:       Does it work with assistive tech?
-```
+Refer to `resources/implementation-playbook.md` for detailed patterns, checklists, and templates.
 
-### 3. Common Violations by Impact
+## Safety
 
-```
-Critical (Blockers):
-├── Missing alt text for functional images
-├── No keyboard access to interactive elements
-├── Missing form labels
-└── Auto-playing media without controls
+- Avoid claiming legal compliance without expert review.
+- Keep evidence of test steps and results for audit trails.
 
-Serious:
-├── Insufficient color contrast
-├── Missing skip links
-├── Inaccessible custom widgets
-└── Missing page titles
+## Resources
 
-Moderate:
-├── Missing language attribute
-├── Unclear link text
-├── Missing landmarks
-└── Improper heading hierarchy
-```
+- `resources/implementation-playbook.md` for detailed patterns, checklists, and templates.
 
-## Detailed patterns and worked examples
-
-Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
-
-## Best Practices
-
-### Do's
-
-- **Start early** - Accessibility from design phase
-- **Test with real users** - Disabled users provide best feedback
-- **Automate what you can** - 30-50% issues detectable
-- **Use semantic HTML** - Reduces ARIA needs
-- **Document patterns** - Build accessible component library
-
-### Don'ts
-
-- **Don't rely only on automated testing** - Manual testing required
-- **Don't use ARIA as first solution** - Native HTML first
-- **Don't hide focus outlines** - Keyboard users need them
-- **Don't disable zoom** - Users need to resize
-- **Don't use color alone** - Multiple indicators needed
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,34 +1,38 @@
 ---
 name: writing-great-skills
-description: Reference for writing and editing skills well — the vocabulary and principles that make a skill predictable.
+description: >-
+  Reference for writing and editing agent skills well — the vocabulary and
+  principles that make a skill predictable. Consult when authoring, reviewing,
+  or pruning a SKILL.md.
 disable-model-invocation: true
-category: "skill-authoring"
-risk: "safe"
-source: "community"
-source_repo: "mattpocock/skills"
-source_type: "community"
-date_added: "2026-06-19"
-author: "Matt Pocock"
-license: "MIT"
-license_source: "https://github.com/mattpocock/skills/blob/main/LICENSE"
-tags:
-  - skill-authoring
-  - workflow
-  - coding-agents
-tools:
-  - claude-code
-  - codex-cli
-  - cursor
+allowed-tools:
+  - Read
+  - Grep
+  - Glob
+  - Edit
+  - Write
 ---
+
+# Writing Great Skills
+
+A skill exists to wrangle determinism out of a stochastic system. **Predictability** — the agent taking the same _process_ every run, not producing the same output — is the root virtue; every lever below serves it.
+
+**Bold terms** are defined in [`GLOSSARY.md`]({baseDir}/references/GLOSSARY.md); look them up there for the full meaning.
 
 ## When to Use
 
-Use when this workflow matches the user request: Reference for writing and editing skills well — the vocabulary and principles that make a skill predictable.
+- Writing a new skill and deciding how to structure, word, and scope it
+- Reviewing or editing an existing skill that fires unreliably, runs
+  inconsistently, or has grown bloated
+- Diagnosing a skill failure mode: the agent rushes steps, ignores reference
+  material, or triggers the wrong skill
 
+## When NOT to Use
 
-_Source: [mattpocock/skills](https://github.com/mattpocock/skills) (MIT)._A skill exists to wrangle determinism out of a stochastic system. **Predictability** — the agent taking the same _process_ every run, not producing the same output — is the root virtue; every lever below serves it.
-
-**Bold terms** are defined in [`GLOSSARY.md`](GLOSSARY.md); look them up there for the full meaning.
+- General prompt engineering for one-off prompts — this reference is about
+  reusable skills, where predictability across runs is the goal
+- Questions about skill/plugin packaging mechanics (directory layout,
+  manifest fields); consult the platform's plugin documentation instead
 
 ## Invocation
 
@@ -102,10 +106,4 @@ Use these to diagnose issues the user may be having with the skill.
 - **Sediment** — stale layers that settle because adding feels safe and removing feels risky. The default fate of any skill without a pruning discipline.
 - **Sprawl** — a skill simply too long, even when every line is live and unique. Hurts readability and maintainability and wastes tokens. The cure is the ladder: disclose **reference** behind pointers, and split by **branch** or sequence so each path carries only what it needs.
 - **No-op** — a line the model already obeys by default, so you pay load to say nothing. The test: does it change behaviour versus the default? A weak leading word (_be thorough_ when the agent is already thorough-ish) is a no-op; the fix is a stronger word (_relentless_), not a different technique.
-
-
-## Limitations
-
-- Requires the upstream tool, account, API key, or local setup when the workflow names one.
-- Does not authorize destructive, production, paid, or external-message actions without explicit user approval.
-- Validate generated artifacts or recommendations against the user's real sources before treating them as final.
+- **Negation** — steering by prohibition backfires: _don't think of an elephant_ names the elephant and makes it more available, not less. Prompt the **positive** — state the target behaviour so the banned one is never spoken; keep a prohibition only as a hard guardrail you can't phrase positively, and even then pair it with what to do instead.

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 3 Demographic Statistics</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-3-demographic-statistics">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Demographic Statistics</h1>
+        <p>Distribution of consultations by age and sex using WHO MDS demographic categories.</p>
+      </div>
+      <div class="page-badge">Page 3</div>
+    </div>
+
+    <section class="report-section" data-section="demographic-summary">
+      <h2 class="section-title">Demographic summary</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="indicator-table">
+          <thead><tr><th>Indicator</th><th class="num">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Total consultations with valid age and sex</td><td class="num">{{valid_age_sex_count}}</td></tr>
+            <tr><td>Missing age</td><td class="num">{{missing_age_count}}</td></tr>
+            <tr><td>Missing sex</td><td class="num">{{missing_sex_count}}</td></tr>
+            <tr><td>Under 5 consultations</td><td class="num">{{under5_count}}</td></tr>
+            <tr><td>Under 5 percentage</td><td class="num">{{under5_percentage}}</td></tr>
+            <tr><td>Age 65+ consultations</td><td class="num">{{age65plus_count}}</td></tr>
+            <tr><td>Pregnant patients</td><td class="num">{{pregnant_count}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="age-sex-matrix">
+      <h2 class="section-title">Age and sex matrix</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="age-sex-matrix">
+          <thead><tr><th>Sex / age category</th><th class="num">&lt;1</th><th class="num">1–4</th><th class="num">5–17</th><th class="num">18–64</th><th class="num">65+</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            <tr><td>Male</td><td class="num">{{male_under1}}</td><td class="num">{{male_1_4}}</td><td class="num">{{male_5_17}}</td><td class="num">{{male_18_64}}</td><td class="num">{{male_65plus}}</td><td class="num">{{male_total}}</td></tr>
+            <tr><td>Female non-pregnant</td><td class="num">{{female_non_preg_under1}}</td><td class="num">{{female_non_preg_1_4}}</td><td class="num">{{female_non_preg_5_17}}</td><td class="num">{{female_non_preg_18_64}}</td><td class="num">{{female_non_preg_65plus}}</td><td class="num">{{female_non_preg_total}}</td></tr>
+            <tr><td>Female pregnant</td><td class="center">N/A</td><td class="center">N/A</td><td class="num">{{female_preg_5_17}}</td><td class="num">{{female_preg_18_64}}</td><td class="num">{{female_preg_65plus}}</td><td class="num">{{female_preg_total}}</td></tr>
+            <tr><td><strong>Total</strong></td><td class="num"><strong>{{under1_total}}</strong></td><td class="num"><strong>{{age_1_4_total}}</strong></td><td class="num"><strong>{{age_5_17_total}}</strong></td><td class="num"><strong>{{age_18_64_total}}</strong></td><td class="num"><strong>{{age_65plus_total}}</strong></td><td class="num"><strong>{{demographic_total}}</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <section class="report-section" data-section="age-group-totals">
+        <h2 class="section-title">Age group totals</h2>
+        <div class="table-wrap">
+          <table class="narrow">
+            <thead><tr><th>Age group</th><th class="num">Count</th><th class="num">Percentage</th></tr></thead>
+            <tbody>
+              <tr><td>&lt;1</td><td class="num">{{under1_total}}</td><td class="num">{{under1_percentage}}</td></tr>
+              <tr><td>1–4</td><td class="num">{{age_1_4_total}}</td><td class="num">{{age_1_4_percentage}}</td></tr>
+              <tr><td>5–17</td><td class="num">{{age_5_17_total}}</td><td class="num">{{age_5_17_percentage}}</td></tr>
+              <tr><td>18–64</td><td class="num">{{age_18_64_total}}</td><td class="num">{{age_18_64_percentage}}</td></tr>
+              <tr><td>65+</td><td class="num">{{age_65plus_total}}</td><td class="num">{{age_65plus_percentage}}</td></tr>
+              <tr><td>Missing / unknown</td><td class="num">{{age_unknown_total}}</td><td class="num">{{age_unknown_percentage}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="report-section" data-section="sex-category-totals">
+        <h2 class="section-title">Sex category totals</h2>
+        <div class="table-wrap">
+          <table class="narrow">
+            <thead><tr><th>Sex category</th><th class="num">Count</th><th class="num">Percentage</th></tr></thead>
+            <tbody>
+              <tr><td>Male</td><td class="num">{{male_total}}</td><td class="num">{{male_percentage}}</td></tr>
+              <tr><td>Female non-pregnant</td><td class="num">{{female_non_preg_total}}</td><td class="num">{{female_non_preg_percentage}}</td></tr>
+              <tr><td>Female pregnant</td><td class="num">{{female_preg_total}}</td><td class="num">{{female_preg_percentage}}</td></tr>
+              <tr><td>Missing / unknown</td><td class="num">{{sex_unknown_total}}</td><td class="num">{{sex_unknown_percentage}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <section class="report-section" data-section="demographic-data-quality">
+      <h2 class="section-title">Demographic data quality</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Check</th><th class="num">Count</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Missing age</td><td class="num">{{missing_age_count}}</td><td>Records without usable age</td></tr>
+            <tr><td>Missing sex</td><td class="num">{{missing_sex_count}}</td><td>Records without usable sex category</td></tr>
+            <tr><td>Invalid age group</td><td class="num">{{invalid_age_group_count}}</td><td>Records outside expected categories</td></tr>
+            <tr><td>Conflicting age fields</td><td class="num">{{conflicting_age_count}}</td><td>Records where MDSa, Age, and M/Y do not align</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

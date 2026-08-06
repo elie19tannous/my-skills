@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 5 Health Events Trends</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-5-health-events-trends">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Health Events Trends</h1>
+        <p>Daily consultation volume and health event trends across the selected reporting period.</p>
+      </div>
+      <div class="page-badge">Page 5</div>
+    </div>
+
+    <section class="report-section" data-section="daily-consultation-trend">
+      <h2 class="section-title">Daily consultation trend</h2>
+      <div class="chart-placeholder" data-component="trend-chart-placeholder">
+        Chart placeholder: date on X-axis, consultation count on Y-axis<br />{{daily_consultation_chart_svg_or_canvas}}
+      </div>
+      <div class="chart-caption">Fallback data table should be rendered when chart generation is unavailable.</div>
+      <div class="table-wrap" style="margin-top: 3mm;">
+        <table class="narrow" data-component="trend-data-table">
+          <thead><tr><th>Date</th><th class="num">Consultations</th></tr></thead>
+          <tbody>
+            {{#daily_consultation_rows}}
+            <tr><td>{{date}}</td><td class="num">{{consultation_count}}</td></tr>
+            {{/daily_consultation_rows}}
+            {{^daily_consultation_rows}}
+            <tr class="placeholder-row"><td colspan="2">No data available for the selected reporting period.</td></tr>
+            {{/daily_consultation_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="daily-health-event-group-trend">
+      <h2 class="section-title">Daily health event group trend</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Date</th><th class="num">Trauma</th><th class="num">Infectious disease</th><th class="num">Additional diseases</th><th class="num">Emergencies</th><th class="num">Other key diseases</th></tr></thead>
+          <tbody>
+            {{#daily_group_trend_rows}}
+            <tr><td>{{date}}</td><td class="num">{{trauma_count}}</td><td class="num">{{infectious_count}}</td><td class="num">{{additional_count}}</td><td class="num">{{emergency_count}}</td><td class="num">{{other_key_diseases_count}}</td></tr>
+            {{/daily_group_trend_rows}}
+            {{^daily_group_trend_rows}}
+            <tr class="placeholder-row"><td colspan="6">No data available for the selected reporting period.</td></tr>
+            {{/daily_group_trend_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="top-individual-event-trends">
+      <h2 class="section-title">Top individual event trends</h2>
+      <div class="table-wrap">
+        <table class="narrow">
+          <thead><tr><th>Date</th><th class="num">{{top_event_1}}</th><th class="num">{{top_event_2}}</th><th class="num">{{top_event_3}}</th><th class="num">{{top_event_4}}</th><th class="num">{{top_event_5}}</th></tr></thead>
+          <tbody>
+            {{#top_event_trend_rows}}
+            <tr><td>{{date}}</td><td class="num">{{top_event_1_count}}</td><td class="num">{{top_event_2_count}}</td><td class="num">{{top_event_3_count}}</td><td class="num">{{top_event_4_count}}</td><td class="num">{{top_event_5_count}}</td></tr>
+            {{/top_event_trend_rows}}
+            {{^top_event_trend_rows}}
+            <tr class="placeholder-row"><td colspan="6">No data available for the selected reporting period.</td></tr>
+            {{/top_event_trend_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="trend-interpretation-notes">
+      <h2 class="section-title">Trend interpretation notes</h2>
+      <div class="note-box" data-component="summary-bullets">
+        <ul class="findings-list">
+          {{#trend_interpretation_notes}}
+          <li>{{text}}</li>
+          {{/trend_interpretation_notes}}
+          {{^trend_interpretation_notes}}
+          <li>No clear trend detected in the selected period.</li>
+          {{/trend_interpretation_notes}}
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

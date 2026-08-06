@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Appendix C Restricted Line-List Trigger Summary</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page restricted-page" data-page="appendix-c-restricted-line-list-trigger-summary">
+  <div class="watermark">RESTRICTED</div>
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Appendix C — Restricted Line-List Trigger Summary</h1>
+        <p>Restricted follow-up template. Use internal identifiers only unless a locally approved pathway requires more detail.</p>
+      </div>
+      <div class="page-badge">Restricted</div>
+    </div>
+
+    <section class="report-section" data-section="restricted-trigger-summary">
+      <h2 class="section-title">Restricted trigger summary</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="restricted-trigger-table">
+          <thead><tr><th class="num">MDS No.</th><th>Trigger item</th><th class="num">Count</th></tr></thead>
+          <tbody>
+            <tr><td class="num">28</td><td>Severe Acute Malnutrition</td><td class="num">{{mds28_total}}</td></tr>
+            <tr><td class="num">31</td><td>Limb amputation excluding digits</td><td class="num">{{mds31_total}}</td></tr>
+            <tr><td class="num">42</td><td>Death within facility</td><td class="num">{{mds42_total}}</td></tr>
+            <tr><td class="num">43</td><td>Requiring long-term rehabilitation</td><td class="num">{{mds43_total}}</td></tr>
+            <tr><td class="num">47</td><td>Vulnerable child</td><td class="num">{{mds47_total}}</td></tr>
+            <tr><td class="num">48</td><td>Vulnerable adult</td><td class="num">{{mds48_total}}</td></tr>
+            <tr><td class="num">49</td><td>Sexual Gender Based Violence</td><td class="num">{{mds49_total}}</td></tr>
+            <tr><td class="num">50</td><td>Violence non-SGBV</td><td class="num">{{mds50_total}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="restricted-record-list">
+      <h2 class="section-title">Restricted record list</h2>
+      <div class="table-wrap">
+        <table class="dense">
+          <thead><tr><th>Record ID</th><th>Date</th><th>Facility</th><th class="num">MDS No.</th><th>Trigger item</th><th>Age group</th><th>Sex category</th><th>Action taken</th><th>Follow-up status</th></tr></thead>
+          <tbody>
+            {{#restricted_record_rows}}
+            <tr><td>{{record_id}}</td><td>{{date}}</td><td>{{facility}}</td><td class="num">{{mds_no}}</td><td>{{trigger_item}}</td><td>{{age_group}}</td><td>{{sex_category}}</td><td>{{action_taken}}</td><td>{{followup_status}}</td></tr>
+            {{/restricted_record_rows}}
+            {{^restricted_record_rows}}
+            <tr class="placeholder-row"><td colspan="9">No restricted line-list triggers detected for the selected reporting period.</td></tr>
+            {{/restricted_record_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="handling-notes">
+      <h2 class="section-title">Handling notes</h2>
+      <div class="restricted-box">
+        This appendix contains restricted information. It should be shared only with authorized recipients through the locally agreed confidential reporting pathway. Do not include patient-identifiable details unless explicitly required and authorized.
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

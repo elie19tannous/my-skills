@@ -1,28 +1,16 @@
 ---
 name: wiki-changelog
-description: Analyzes git commit history and generates structured changelogs categorized by change type. Use when the user asks about recent changes, wants a changelog, or needs to understand what changed in the repository.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
+description: "Generate structured changelogs from git history. Use when user asks \"what changed recently\", \"generate a changelog\", \"summarize commits\" or user wants to understand recent development activity."
+risk: safe
+source: community
+date_added: "2026-02-27"
 ---
 
 # Wiki Changelog
 
 Generate structured changelogs from git history.
 
-## Source Repository Resolution (MUST DO FIRST)
-
-Before generating any changelog, you MUST determine the source repository context:
-
-1. **Check for git remote**: Run `git remote get-url origin` to detect if a remote exists
-2. **Ask the user**: _"Is this a local-only repository, or do you have a source repository URL (e.g., GitHub, Azure DevOps)?"_
-   - Remote URL provided → store as `REPO_URL`, use **linked citations** for commit hashes and file references
-   - Local-only → use plain commit hashes and file references
-3. **Do NOT proceed** until source repo context is resolved
-
-## When to Activate
-
+## When to Use
 - User asks "what changed recently", "generate a changelog", "summarize commits"
 - User wants to understand recent development activity
 
@@ -39,4 +27,6 @@ Before generating any changelog, you MUST determine the source repository contex
 - Merge related commits into coherent descriptions
 - Use project terminology from README
 - Highlight breaking changes prominently with migration notes
-- When `REPO_URL` is available, link commit hashes: `[abc1234](REPO_URL/commit/abc1234)` and changed files: `[file_path](REPO_URL/blob/BRANCH/file_path)`
+
+### When to Use
+This skill is applicable to execute the workflow or actions described in the overview.

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 8 Needs, Risks and Operational Constraints</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-8-needs-risks-operational-constraints">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Needs, Risks and Operational Constraints</h1>
+        <p>Immediate reports, community risks, operational constraints, detailed comments and actions required.</p>
+      </div>
+      <div class="page-badge">Page 8</div>
+    </div>
+
+    <section class="report-section" data-section="needs-risks-availability">
+      <h2 class="section-title">Needs and risks availability</h2>
+      <div class="table-wrap">
+        <table class="metadata-table narrow">
+          <tbody>
+            <tr><td>Needs and Risks data available</td><td>{{needs_risks_available}}</td></tr>
+            <tr><td>Data source</td><td>{{needs_risks_source}}</td></tr>
+            <tr><td>Dates covered</td><td>{{needs_risks_date_range}}</td></tr>
+            <tr><td>Comments available</td><td>{{comments_available}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="immediate-reports">
+      <h2 class="section-title">Immediate reports</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="needs-risks-table">
+          <thead><tr><th class="num">MDS No.</th><th>Issue</th><th>Dates reported</th><th class="num">Count</th><th>Latest comment</th></tr></thead>
+          <tbody>
+            <tr><td class="num">51</td><td>Unexpected death</td><td>{{mds51_dates}}</td><td class="num">{{mds51_total}}</td><td>{{mds51_latest_comment}}</td></tr>
+            <tr><td class="num">52</td><td>Notifiable disease</td><td>{{mds52_dates}}</td><td class="num">{{mds52_total}}</td><td>{{mds52_latest_comment}}</td></tr>
+            <tr><td class="num">53</td><td>Protection issues</td><td>{{mds53_dates}}</td><td class="num">{{mds53_total}}</td><td>{{mds53_latest_comment}}</td></tr>
+            <tr><td class="num">54</td><td>Critical incident to EMT and/or community</td><td>{{mds54_dates}}</td><td class="num">{{mds54_total}}</td><td>{{mds54_latest_comment}}</td></tr>
+            <tr><td class="num">55</td><td>Any other issue requiring immediate reporting</td><td>{{mds55_dates}}</td><td class="num">{{mds55_total}}</td><td>{{mds55_latest_comment}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="community-risks">
+      <h2 class="section-title">Community risks</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="needs-risks-table">
+          <thead><tr><th class="num">MDS No.</th><th>Risk</th><th>Dates reported</th><th class="num">Count</th><th>Latest comment</th></tr></thead>
+          <tbody>
+            <tr><td class="num">56</td><td>WASH</td><td>{{mds56_dates}}</td><td class="num">{{mds56_total}}</td><td>{{mds56_latest_comment}}</td></tr>
+            <tr><td class="num">57</td><td>Community / suspected over infectious disease</td><td>{{mds57_dates}}</td><td class="num">{{mds57_total}}</td><td>{{mds57_latest_comment}}</td></tr>
+            <tr><td class="num">58</td><td>Environmental risk / exposure</td><td>{{mds58_dates}}</td><td class="num">{{mds58_total}}</td><td>{{mds58_latest_comment}}</td></tr>
+            <tr><td class="num">59</td><td>Shelter / Non-food items</td><td>{{mds59_dates}}</td><td class="num">{{mds59_total}}</td><td>{{mds59_latest_comment}}</td></tr>
+            <tr><td class="num">60</td><td>Food insecurity</td><td>{{mds60_dates}}</td><td class="num">{{mds60_total}}</td><td>{{mds60_latest_comment}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="operational-constraints">
+      <h2 class="section-title">Operational constraints</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="needs-risks-table">
+          <thead><tr><th class="num">MDS No.</th><th>Constraint</th><th>Dates reported</th><th class="num">Count</th><th>Latest comment</th></tr></thead>
+          <tbody>
+            <tr><td class="num">61</td><td>Logistics / operational support</td><td>{{mds61_dates}}</td><td class="num">{{mds61_total}}</td><td>{{mds61_latest_comment}}</td></tr>
+            <tr><td class="num">62</td><td>Supply</td><td>{{mds62_dates}}</td><td class="num">{{mds62_total}}</td><td>{{mds62_latest_comment}}</td></tr>
+            <tr><td class="num">63</td><td>Human resources</td><td>{{mds63_dates}}</td><td class="num">{{mds63_total}}</td><td>{{mds63_latest_comment}}</td></tr>
+            <tr><td class="num">64</td><td>Finance</td><td>{{mds64_dates}}</td><td class="num">{{mds64_total}}</td><td>{{mds64_latest_comment}}</td></tr>
+            <tr><td class="num">65</td><td>Others</td><td>{{mds65_dates}}</td><td class="num">{{mds65_total}}</td><td>{{mds65_latest_comment}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="detailed-comments">
+      <h2 class="section-title">Detailed comments</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="comments-table">
+          <thead><tr><th>Date</th><th class="num">MDS No.</th><th>Category</th><th>Comment</th><th>Action / follow-up</th></tr></thead>
+          <tbody>
+            {{#detailed_comment_rows}}
+            <tr><td>{{date}}</td><td class="num">{{mds_no}}</td><td>{{category}}</td><td>{{comment}}</td><td>{{action_required}}</td></tr>
+            {{/detailed_comment_rows}}
+            {{^detailed_comment_rows}}
+            <tr class="placeholder-row"><td colspan="5">No data available for the selected reporting period.</td></tr>
+            {{/detailed_comment_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="actions-required">
+      <h2 class="section-title">Actions required</h2>
+      <div class="table-wrap">
+        <table class="dense">
+          <thead><tr><th>Priority</th><th>Action</th><th class="num">Related MDS item</th><th>Responsible actor</th><th>Status</th></tr></thead>
+          <tbody>
+            {{#action_required_rows}}
+            <tr><td>{{priority}}</td><td>{{action}}</td><td class="num">{{mds_no}}</td><td>{{responsible_actor}}</td><td>{{status}}</td></tr>
+            {{/action_required_rows}}
+            {{^action_required_rows}}
+            <tr class="placeholder-row"><td colspan="5">No actions required for the selected reporting period.</td></tr>
+            {{/action_required_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>

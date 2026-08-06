@@ -1,14 +1,16 @@
 ---
 name: workflow-patterns
 description: Use this skill when implementing tasks according to Conductor's TDD workflow, handling phase checkpoints, managing git commits for tasks, or understanding the verification protocol.
-version: 1.0.0
+risk: safe
+source: community
+date_added: '2026-02-27'
 ---
 
 # Workflow Patterns
 
 Guide for implementing tasks using Conductor's TDD workflow, managing phase checkpoints, handling git commits, and executing the verification protocol that ensures quality throughout implementation.
 
-## When to Use This Skill
+## Use this skill when
 
 - Implementing tasks from a track's plan.md
 - Following TDD red-green-refactor cycle
@@ -18,21 +20,23 @@ Guide for implementing tasks using Conductor's TDD workflow, managing phase chec
 - Handling verification protocols
 - Recording progress in plan files
 
-## Detailed patterns and worked examples
+## Do not use this skill when
 
-Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
+- The task is unrelated to workflow patterns
+- You need a different domain or tool outside this scope
 
-## Best Practices
+## Instructions
 
-1. **Never skip RED**: Always write failing tests first
-2. **Small commits**: One logical change per commit
-3. **Immediate updates**: Update plan.md right after task completion
-4. **Wait for approval**: Never skip checkpoint verification
-5. **Rich git notes**: Include context that helps future understanding
-6. **Coverage discipline**: Don't accept coverage below target
-7. **Quality gates**: Check all gates before marking complete
-8. **Sequential phases**: Complete phases in order
-9. **Document deviations**: Note any changes from original plan
-10. **Clean state**: Each commit should leave code in working state
-11. **Fast feedback**: Run relevant tests frequently during development
-12. **Clear blockers**: Address blockers promptly, don't work around them
+- Clarify goals, constraints, and required inputs.
+- Apply relevant best practices and validate outcomes.
+- Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
+
+## Resources
+
+- `resources/implementation-playbook.md` for detailed patterns and examples.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

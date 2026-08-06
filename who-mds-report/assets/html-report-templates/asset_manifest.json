@@ -1,0 +1,20 @@
+{
+  "templates": [
+    "appendix_a_daily_breakdown.html",
+    "appendix_b_full_mds_item_totals.html",
+    "appendix_c_restricted_line_list_trigger_summary.html",
+    "page01_cover_executive_summary.html",
+    "page02_reporting_coverage_operational_context.html",
+    "page03_demographic_statistics.html",
+    "page04_health_events_summary.html",
+    "page05_health_events_trends.html",
+    "page06_procedures_outcomes.html",
+    "page07_relation_protection.html",
+    "page08_needs_risks_operational_constraints.html",
+    "page09_data_quality_validation.html"
+  ],
+  "stylesheet": "styles.css",
+  "format": "A4 portrait",
+  "placeholder_syntax": "Mustache/Handlebars-style",
+  "restricted_template": "appendix_c_restricted_line_list_trigger_summary.html"
+}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHO EMT MDS Periodic Report — Page 4 Health Events Summary</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<section class="report-page " data-page="page-4-health-events-summary">
+  
+  <header class="report-header" data-component="report-header">
+    <div class="header-left">
+      <div class="report-kicker">Emergency Medical Team</div>
+      <div class="report-title">WHO EMT MDS Periodic Report</div>
+    </div>
+    <div class="header-center">
+      <div class="small">Reporting period</div>
+      <strong>{{start_date}} – {{end_date}}</strong>
+    </div>
+    <div class="header-right">
+      <div class="small">Facility / location</div>
+      <strong>{{facility_name_or_location}}</strong>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div class="page-heading">
+      <div>
+        <h1>Health Events Summary</h1>
+        <p>Period totals for all MDS health event items, grouped according to the WHO MDS structure.</p>
+      </div>
+      <div class="page-badge">Page 4</div>
+    </div>
+
+    <section class="report-section" data-section="health-event-group-totals">
+      <h2 class="section-title">Health event group totals</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="group-total-table">
+          <thead><tr><th>Health event group</th><th>MDS items</th><th class="num">Count</th><th class="num">Percentage of consultations</th></tr></thead>
+          <tbody>
+            <tr><td>Trauma</td><td>MDS4–MDS8</td><td class="num">{{trauma_total}}</td><td class="num">{{trauma_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td>MDS9–MDS18</td><td class="num">{{infectious_total}}</td><td class="num">{{infectious_percentage}}</td></tr>
+            <tr><td>Additional diseases</td><td>MDS19–MDS22</td><td class="num">{{additional_total}}</td><td class="num">{{additional_percentage}}</td></tr>
+            <tr><td>Emergencies</td><td>MDS23–MDS24</td><td class="num">{{emergency_total}}</td><td class="num">{{emergency_percentage}}</td></tr>
+            <tr><td>Other key diseases</td><td>MDS25–MDS29</td><td class="num">{{other_key_diseases_total}}</td><td class="num">{{other_key_diseases_percentage}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" data-section="top-health-events">
+      <h2 class="section-title">Top health events</h2>
+      <div class="table-wrap">
+        <table class="narrow" data-component="top-items-table">
+          <thead><tr><th class="num">Rank</th><th class="num">MDS No.</th><th>Health event</th><th class="num">Count</th><th class="num">Percentage of consultations</th></tr></thead>
+          <tbody>
+            {{#top_health_event_rows}}
+            <tr><td class="num">{{rank}}</td><td class="num">{{mds_no}}</td><td>{{mds_label}}</td><td class="num">{{count}}</td><td class="num">{{percentage}}</td></tr>
+            {{/top_health_event_rows}}
+            {{^top_health_event_rows}}
+            <tr class="placeholder-row"><td colspan="5">No data available for the selected reporting period.</td></tr>
+            {{/top_health_event_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section allow-break" data-section="full-health-event-table">
+      <h2 class="section-title">Full health event table</h2>
+      <div class="table-wrap">
+        <table class="dense" data-component="mds-health-events-table">
+          <thead><tr><th>Group</th><th class="num">MDS No.</th><th>Health event</th><th class="num">&lt;5</th><th class="num">&gt;=5</th><th class="num">Total</th><th class="num">Percentage</th></tr></thead>
+          <tbody>
+            <tr><td>Trauma</td><td class="num">4</td><td>Major head / spine injury</td><td class="num">{{mds4_under5}}</td><td class="num">{{mds4_5plus}}</td><td class="num">{{mds4_total}}</td><td class="num">{{mds4_percentage}}</td></tr>
+            <tr><td>Trauma</td><td class="num">5</td><td>Major torso injury</td><td class="num">{{mds5_under5}}</td><td class="num">{{mds5_5plus}}</td><td class="num">{{mds5_total}}</td><td class="num">{{mds5_percentage}}</td></tr>
+            <tr><td>Trauma</td><td class="num">6</td><td>Major extremity injury</td><td class="num">{{mds6_under5}}</td><td class="num">{{mds6_5plus}}</td><td class="num">{{mds6_total}}</td><td class="num">{{mds6_percentage}}</td></tr>
+            <tr><td>Trauma</td><td class="num">7</td><td>Moderate injury</td><td class="num">{{mds7_under5}}</td><td class="num">{{mds7_5plus}}</td><td class="num">{{mds7_total}}</td><td class="num">{{mds7_percentage}}</td></tr>
+            <tr><td>Trauma</td><td class="num">8</td><td>Minor injury</td><td class="num">{{mds8_under5}}</td><td class="num">{{mds8_5plus}}</td><td class="num">{{mds8_total}}</td><td class="num">{{mds8_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">9</td><td>Acute respiratory infection</td><td class="num">{{mds9_under5}}</td><td class="num">{{mds9_5plus}}</td><td class="num">{{mds9_total}}</td><td class="num">{{mds9_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">10</td><td>Acute watery diarrhea</td><td class="num">{{mds10_under5}}</td><td class="num">{{mds10_5plus}}</td><td class="num">{{mds10_total}}</td><td class="num">{{mds10_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">11</td><td>Acute bloody diarrhea</td><td class="num">{{mds11_under5}}</td><td class="num">{{mds11_5plus}}</td><td class="num">{{mds11_total}}</td><td class="num">{{mds11_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">12</td><td>Acute jaundice syndrome</td><td class="num">{{mds12_under5}}</td><td class="num">{{mds12_5plus}}</td><td class="num">{{mds12_total}}</td><td class="num">{{mds12_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">13</td><td>Suspected measles</td><td class="num">{{mds13_under5}}</td><td class="num">{{mds13_5plus}}</td><td class="num">{{mds13_total}}</td><td class="num">{{mds13_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">14</td><td>Suspected meningitis</td><td class="num">{{mds14_under5}}</td><td class="num">{{mds14_5plus}}</td><td class="num">{{mds14_total}}</td><td class="num">{{mds14_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">15</td><td>Suspected tetanus</td><td class="num">{{mds15_under5}}</td><td class="num">{{mds15_5plus}}</td><td class="num">{{mds15_total}}</td><td class="num">{{mds15_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">16</td><td>Acute flaccid paralysis</td><td class="num">{{mds16_under5}}</td><td class="num">{{mds16_5plus}}</td><td class="num">{{mds16_total}}</td><td class="num">{{mds16_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">17</td><td>Tuberculous Bronchitis, suspected/confirmed</td><td class="num">{{mds17_under5}}</td><td class="num">{{mds17_5plus}}</td><td class="num">{{mds17_total}}</td><td class="num">{{mds17_percentage}}</td></tr>
+            <tr><td>Infectious disease</td><td class="num">18</td><td>Fever of unknown origin</td><td class="num">{{mds18_under5}}</td><td class="num">{{mds18_5plus}}</td><td class="num">{{mds18_total}}</td><td class="num">{{mds18_percentage}}</td></tr>
+            <tr><td>Additional diseases</td><td class="num">19</td><td>COVID-19, suspected/confirmed</td><td class="num">{{mds19_under5}}</td><td class="num">{{mds19_5plus}}</td><td class="num">{{mds19_total}}</td><td class="num">{{mds19_percentage}}</td></tr>
+            <tr><td>Additional diseases</td><td class="num">20</td><td>Hypertension</td><td class="num">{{mds20_under5}}</td><td class="num">{{mds20_5plus}}</td><td class="num">{{mds20_total}}</td><td class="num">{{mds20_percentage}}</td></tr>
+            <tr><td>Additional diseases</td><td class="num">21</td><td>Diabetes mellitus</td><td class="num">{{mds21_under5}}</td><td class="num">{{mds21_5plus}}</td><td class="num">{{mds21_total}}</td><td class="num">{{mds21_percentage}}</td></tr>
+            <tr><td>Additional diseases</td><td class="num">22</td><td>Musculoskeletal conditions</td><td class="num">{{mds22_under5}}</td><td class="num">{{mds22_5plus}}</td><td class="num">{{mds22_total}}</td><td class="num">{{mds22_percentage}}</td></tr>
+            <tr><td>Emergencies</td><td class="num">23</td><td>Surgical emergency, non-trauma</td><td class="num">{{mds23_under5}}</td><td class="num">{{mds23_5plus}}</td><td class="num">{{mds23_total}}</td><td class="num">{{mds23_percentage}}</td></tr>
+            <tr><td>Emergencies</td><td class="num">24</td><td>Medical emergency, non-infectious</td><td class="num">{{mds24_under5}}</td><td class="num">{{mds24_5plus}}</td><td class="num">{{mds24_total}}</td><td class="num">{{mds24_percentage}}</td></tr>
+            <tr><td>Other key diseases</td><td class="num">25</td><td>Skin disease</td><td class="num">{{mds25_under5}}</td><td class="num">{{mds25_5plus}}</td><td class="num">{{mds25_total}}</td><td class="num">{{mds25_percentage}}</td></tr>
+            <tr><td>Other key diseases</td><td class="num">26</td><td>Acute mental health problem</td><td class="num">{{mds26_under5}}</td><td class="num">{{mds26_5plus}}</td><td class="num">{{mds26_total}}</td><td class="num">{{mds26_percentage}}</td></tr>
+            <tr><td>Other key diseases</td><td class="num">27</td><td>Obstetric complications</td><td class="num">{{mds27_under5}}</td><td class="num">{{mds27_5plus}}</td><td class="num">{{mds27_total}}</td><td class="num">{{mds27_percentage}}</td></tr>
+            <tr><td>Other key diseases</td><td class="num">28</td><td>Severe Acute Malnutrition</td><td class="num">{{mds28_under5}}</td><td class="num">{{mds28_5plus}}</td><td class="num">{{mds28_total}}</td><td class="num">{{mds28_percentage}}</td></tr>
+            <tr><td>Other key diseases</td><td class="num">29</td><td>Other diagnosis, not specified above</td><td class="num">{{mds29_under5}}</td><td class="num">{{mds29_5plus}}</td><td class="num">{{mds29_total}}</td><td class="num">{{mds29_percentage}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="report-footer" data-component="report-footer">
+    <div class="footer-left">{{organization_name}} / {{team_name}}</div>
+    <div class="footer-center">Generated on: {{generated_at}}</div>
+    <div class="footer-right">Page {{page_number}} of {{total_pages}}</div>
+  </footer>
+</section>
+</body>
+</html>
