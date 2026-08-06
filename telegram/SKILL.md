@@ -1,584 +1,164 @@
 ---
 name: telegram
-description: Integracao completa com Telegram Bot API. Setup com BotFather, mensagens, webhooks, inline keyboards, grupos, canais. Boilerplates Node.js e Python.
-risk: critical
-source: community
-date_added: '2026-03-06'
-author: renat
-tags:
-- messaging
-- telegram
-- bots
-- webhooks
-tools:
-- claude-code
-- antigravity
-- cursor
-- gemini-cli
-- codex-cli
+description: Full personal Telegram control over MTProto (Telethon) with the user's own account — list/search chats, read & summarize history, see unread, look up contacts & chat info, list a forum group's topics, download media, and send / reply / forward / edit / delete / react / send files / mark read / join & leave groups, including posting into a forum topic thread. Use when the user mentions Telegram, a Telegram chat/group/contact, "我的 Telegram", reading/replying/forwarding/summarizing Telegram messages, their unread Telegram, joining or leaving a Telegram group/channel, posting into a forum group's topic, or sending a file/message on Telegram.
+when_to_use: |
+  Trigger for anything on the user's personal Telegram account: list recent
+  conversations or just the unread ones, read / summarize a chat or group,
+  search one chat or across all chats, look up a contact or a chat's info,
+  download a photo/file from a message, list a forum group's topics, or take an
+  action — send, reply, forward, edit, delete, react, send a file, mark a chat
+  read, post into a forum topic, or join / leave a group or channel. This drives
+  the user's OWN account over MTProto (not a bot), so it sees everything they see.
+connections: [telegram]
+allowed_tools: [Bash]
+license: Apache-2.0
+metadata:
+  author: acedatacloud
+  version: "1.4"
 ---
 
-# Telegram Bot API - Integracao Profissional
+We drive **personal** Telegram over MTProto with [Telethon](https://docs.telethon.dev/) —
+this acts as the user's own account (a "userbot"), so unlike the Bot API it can read full
+history, list every conversation, and act on anyone the user can reach.
 
-## Overview
+Credentials are injected as env vars by the connector:
 
-Integracao completa com Telegram Bot API. Setup com BotFather, mensagens, webhooks, inline keyboards, grupos, canais. Boilerplates Node.js e Python.
+- `TELEGRAM_API_ID` — app id
+- `TELEGRAM_API_HASH` — app hash — **secret, never echo**
+- `TELEGRAM_SESSION_STRING` — Telethon `StringSession` = **full account access. Never log,
+  echo, or print it.** Treat it like the account password.
 
-## When to Use This Skill
+## CLI
 
-- When the user mentions "telegram" or related topics
-- When the user mentions "bot telegram" or related topics
-- When the user mentions "telegram bot" or related topics
-- When the user mentions "api telegram" or related topics
-- When the user mentions "chatbot telegram" or related topics
-- When the user mentions "mensagem telegram" or related topics
+The skill ships [`scripts/tg.py`](scripts/tg.py) — self-contained (the only third-party dep is
+`telethon`, preinstalled in the sandbox). Point a var at the shipped path and call it; no heredoc
+to re-create per turn, so a multi-step flow (dry-run → confirm) can't lose the helper between calls:
 
-## Do Not Use This Skill When
-
-- The task is unrelated to telegram
-- A simpler, more specific tool can handle the request
-- The user needs general-purpose assistance without domain expertise
-
-## How It Works
-
-Skill para implementar bots profissionais no Telegram usando a Bot API oficial. Suporta Node.js/TypeScript e Python.
-
-### Overview
-
-A Telegram Bot API permite criar bots que interagem com usuarios via mensagens, comandos, inline keyboards, pagamentos e muito mais. Bots sao criados pelo @BotFather e autenticados via token unico.
-
-**Base URL:** `https://api.telegram.org/bot<TOKEN>/METHOD_NAME`
-**Metodos HTTP:** GET e POST
-**Formatos de parametros:** query string, application/x-www-form-urlencoded, application/json, multipart/form-data (uploads)
-**Limite de arquivos:** 50MB download, 20MB upload (via multipart), 50MB via URL
-
-**Portas suportadas para webhooks:** 443, 80, 88, 8443
-
-**Pre-requisitos:**
-- Conta no Telegram
-- Bot criado via @BotFather (fornece o token)
-- Token no formato: `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
-
-Se o usuario nao tem um bot criado, oriente a conversar com @BotFather no Telegram e enviar `/newbot`.
-
----
-
-## Decision Tree
-
-```
-O usuario precisa criar um bot?
-├── SIM → Secao "Setup com BotFather" abaixo
-└── NAO → Qual linguagem?
-    ├── Node.js/TypeScript
-    └── Python
-    → O que quer fazer?
-       ├── Enviar mensagens → Secao "Tipos de Mensagem"
-       ├── Receber mensagens → Secao "Receber Updates"
-       ├── Teclados interativos → Secao "Keyboards"
-       ├── Gerenciar grupos/canais → references/chat-management.md
-       ├── Webhook setup → references/webhook-setup.md
-       ├── Inline mode → references/advanced-features.md
-       ├── Pagamentos → references/advanced-features.md
-       ├── Bot de atendimento com IA → Secao "Automacao com IA"
-       └── Referencia completa da API → references/api-reference.md
+```sh
+# $SKILL_DIR can point at another skill loaded this turn — anchor on our own
+# script (re-run this at the top of every fresh-shell Bash block below).
+TG="$SKILL_DIR/scripts/tg.py"; [ -f "$TG" ] || TG=$(find /tmp -maxdepth 8 -path '*/skills/*/scripts/tg.py' 2>/dev/null | head -1)
+[ -f "$TG" ] || { echo "telegram script not found (SKILL_DIR=$SKILL_DIR)" >&2; exit 1; }
+python3 "$TG" whoami
 ```
 
-Para iniciar um projeto do zero com boilerplate pronto:
-```bash
-python scripts/setup_project.py --language nodejs --path ./meu-bot-telegram
+Every state-changing command (`send`, `reply`, `send-file`, `forward`, `edit`, `delete`,
+`react`, `mark-read`, `join`, `leave`) is **gated**: without a trailing `--confirm` it only DRY-RUNS (prints what
+it would do, changes nothing). Read commands run directly. `--confirm` is honored **only as the
+last argument** so a message/caption that merely contains "--confirm" can never silently confirm.
 
-## Ou
+## Verify the connection first
 
-python scripts/setup_project.py --language python --path ./meu-bot-telegram
+```sh
+python3 "$TG" whoami
+# → {"id": 100000000, "username": "<the connected handle>", "name": "<display name>", "phone": "..."}
 ```
 
-Para testar se o token do bot funciona:
-```bash
-python scripts/test_bot.py --token "SEU_TOKEN"
+On an auth/session error the stored session is dead — tell the user to reconnect at
+https://auth.acedata.cloud/user/connections.
+
+## Read recipes
+
+| Goal | Command |
+|---|---|
+| Recent conversations | `python3 "$TG" list-chats 20` |
+| Only chats with unread (ranked) | `python3 "$TG" unread` |
+| A chat's history (oldest→newest) | `python3 "$TG" get-messages <target> 50` |
+| Search inside one chat | `python3 "$TG" search <target> "kw" 30` |
+| Search across ALL chats | `python3 "$TG" search-global "kw" 30` |
+| List contacts | `python3 "$TG" contacts` |
+| Info about a chat/user | `python3 "$TG" chat-info <target>` |
+| List a forum group's topics (threads) | `python3 "$TG" list-topics <target>` |
+| t.me link to a message | `python3 "$TG" message-link <target> <msg_id>` |
+
+`<target>` = numeric id (most reliable — from `list-chats`), `@username`, phone, or exact chat
+name. In message rows, `out:true` = sent by the user; `media:true` = has an attachment.
+
+**Summarize-unread pattern**: `unread` → pick the chats that matter → `get-messages <id> N` on
+each → summarize. Don't dump 20k messages; sample the most-unread / most-relevant.
+
+## Media
+
+```sh
+# Download an attachment from a message → returns the saved path
+python3 "$TG" download-media <target> <msg_id> ./tg_downloads
+# Send a local file OR an http(s) URL (optional caption) — GATED
+python3 "$TG" send-file <target> /path/or/https-url "caption" --confirm
 ```
 
-Para enviar uma mensagem de teste:
-```bash
-python scripts/send_message.py --token "SEU_TOKEN" --chat-id "CHAT_ID" --text "Hello!"
+An `http(s)` URL is downloaded to a real local file first (with the right
+extension from the URL / `Content-Type`) and then uploaded, so a remote image
+lands as a **photo** — not a document, and not a silent failure. This is the
+reliable way to "发图": pass the CDN URL straight to `send-file`.
+
+To hand a downloaded file back to the user as a link, upload it to the CDN (see the
+`cos-upload` skill) after `download-media`.
+
+## Write recipes — all GATED (dry-run unless trailing `--confirm`)
+
+Sending/editing/deleting acts as the **real user**. Always run the dry run first, show the user
+exactly what will happen, get an explicit "yes", then re-run with `--confirm` as the **last
+argument**. Never bulk-send.
+
+```sh
+python3 "$TG" send    <target> "text"                          # → dry_run; add --confirm to send
+python3 "$TG" send    <target> "text" --topic <top_message> --confirm  # into a forum topic thread
+python3 "$TG" reply   <target> <msg_id> "text" --confirm
+python3 "$TG" forward <from_target> <msg_id> <to_target> --confirm
+python3 "$TG" edit    <target> <msg_id> "new text" --confirm   # own messages
+python3 "$TG" delete  <target> <msg_id> --confirm              # destructive
+python3 "$TG" react   <target> <msg_id> "👍" --confirm
+python3 "$TG" mark-read <target> --confirm                     # sends read receipts
+python3 "$TG" join    <@username|t.me/link|t.me/+invite> --confirm  # join a public group/channel or a private invite
+python3 "$TG" leave   <target> --confirm                       # leave a group/channel (not private chats)
 ```
 
----
+`join` accepts a public `@username` / `t.me/<name>` (→ JoinChannelRequest) or a private
+invite link `t.me/+HASH` / `t.me/joinchat/HASH` (→ ImportChatInviteRequest). Joining someone
+else's group is a real membership change on the account — treat it like any other write:
+dry-run, confirm, then `--confirm`. Never auto-join then bulk-message; that gets accounts
+spam-limited.
 
-## Setup Com Botfather
+**Posting into a forum group.** Some supergroups are *forums*: messages live in topics
+(threads), and a plain `send` to the group root is rejected with `TOPIC_CLOSED`. Run
+`list-topics <target>` first, pick a topic with `"closed": false` (an open chat/offtopic
+thread — often titled `Беседка`/`Флуд`/`Chat`/`Offtopic`/`General`), then post with
+`send <target> "text" --topic <top_message> --confirm` (its `top_message` id is the thread
+anchor).
 
-1. Abra o Telegram e busque @BotFather
-2. Envie `/newbot`
-3. Escolha nome de exibicao (ex: "Meu Bot Incrivel")
-4. Escolha username (deve terminar com "bot", ex: `meu_incrivel_bot`)
-5. BotFather retorna o token - guarde com seguranca
-6. Comandos uteis do BotFather:
-   - `/setdescription` - descricao do bot
-   - `/setabouttext` - texto "sobre" do bot
-   - `/setuserpic` - foto de perfil
-   - `/setcommands` - lista de comandos
-   - `/mybots` - gerenciar bots existentes
-   - `/setinline` - habilitar inline mode
-   - `/setprivacy` - modo privacidade em grupos
+The dry run returns `{"dry_run": true, "command": ..., "args": [...]}` — present that to the
+user verbatim as the confirmation prompt.
 
----
+## Gotchas — surface before the user is surprised
 
-## Variaveis De Ambiente
+- **This is the user's real account.** Confirm before any write; reading exposes private chats.
+- **`FloodWaitError`**: Telegram rate-limits userbots. On a flood-wait of N seconds, tell the
+  user to retry after N — never loop/retry aggressively (escalates toward a ban).
+- **Dead session**: revoked from Telegram → Settings → Devices, or ~6-month inactivity. On
+  `AuthKeyError`/unauthorized, reconnect the connector (don't retry).
+- **Never print `TELEGRAM_SESSION_STRING` / `TELEGRAM_API_HASH`** — full-account secrets.
+- **Targets**: prefer the numeric `id` from `list-chats` (the helper recovers its access hash by
+  scanning dialogs); names need an exact match, usernames need a leading `@`.
+- **`message-link`** only works for public channels/supergroups; private 1:1 / basic groups
+  return an error (no shareable link exists).
+- **`TOPIC_CLOSED` on send** = a forum supergroup; you can't post to the root. `list-topics`,
+  pick an open (`"closed": false`) thread, and `send ... --topic <top_message>`.
+- **`ChatWriteForbiddenError` on send** = usually a channel's linked *discussion* group: you
+  must be subscribed to the parent channel (`join <parent_channel>`) before you can write in
+  its comment group, even though the group itself doesn't ban posting.
+- **`edit`/`delete`** generally only apply to the user's own messages (admins can delete others
+  in groups they manage).
 
-```env
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+
+## Record the output
+
+After you successfully publish and obtain the live result URL, call the built-in
+`publish_artifact` tool ONCE so the user can track this deliverable in **My Outputs**:
+
+```
+publish_artifact(kind="message", channel="telegram", title="<title>", url="<the REAL returned URL>", status="delivered")
 ```
 
-## Node.Js/Typescript
-
-```typescript
-// Instalar: npm install telegraf dotenv
-// Para TypeScript: npm install -D typescript
-import { Telegraf } from 'telegraf';
-import dotenv from 'dotenv';
-dotenv.config();
-
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
-
-bot.start((ctx) => {
-  ctx.reply('Ola! Eu sou seu bot. Como posso ajudar?');
-});
-
-bot.on('text', (ctx) => {
-  if (!ctx.message.text.startsWith('/')) {
-    ctx.reply(`Voce disse: ${ctx.message.text}`);
-  }
-});
-
-bot.launch();
-```
-
-## Python
-
-```python
-
-## Instalar: Pip Install Python-Telegram-Bot Python-Dotenv
-
-import os
-from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-
-load_dotenv()
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Ola! Eu sou seu bot. Como posso ajudar?')
-
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f'Voce disse: {update.message.text}')
-
-app = Application.builder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build()
-app.add_handler(CommandHandler('start', start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-app.run_polling()
-```
-
-## Sem Biblioteca (Http Puro)
-
-```python
-import requests
-
-TOKEN = "SEU_TOKEN"
-BASE = f"https://api.telegram.org/bot{TOKEN}"
-
-## Verificar Bot
-
-r = requests.get(f"{BASE}/getMe")
-print(r.json())
-
-## Enviar Mensagem
-
-r = requests.post(f"{BASE}/sendMessage", json={
-    "chat_id": "CHAT_ID",
-    "text": "Hello from pure HTTP!",
-    "parse_mode": "HTML"
-})
-print(r.json())
-```
-
----
-
-## Tipos De Mensagem
-
-O Telegram suporta diversos tipos de conteudo. Todos os metodos aceitam `chat_id`, `reply_parameters` (para responder), `reply_markup` (para keyboards), `disable_notification` e `protect_content`.
-
-## Html (Recomendado)
-
-await bot.send_message(
-    chat_id=chat_id,
-    text="<b>Negrito</b>, <i>italico</i>, <code>codigo</code>, <a href='https://example.com'>link</a>",
-    parse_mode="HTML"
-)
-
-## Markdownv2 (Escapar Caracteres Especiais: _ * [ ] ( ) ~ ` > # + - = | { } . !)
-
-await bot.send_message(
-    chat_id=chat_id,
-    text="*Negrito*, _italico_, `codigo`, [link](https://example\\.com)",
-    parse_mode="MarkdownV2"
-)
-```
-
-## Foto (Por Url, File_Id Ou Upload)
-
-await bot.send_photo(chat_id, photo="https://example.com/img.jpg", caption="Legenda aqui")
-
-## Documento
-
-await bot.send_document(chat_id, document=open("relatorio.pdf", "rb"), caption="Relatorio mensal")
-
-## Video
-
-await bot.send_video(chat_id, video="https://example.com/video.mp4", caption="Assista!")
-
-## Audio
-
-await bot.send_audio(chat_id, audio=open("musica.mp3", "rb"), title="Minha Musica")
-
-## Voz (Ogg Com Opus)
-
-await bot.send_voice(chat_id, voice=open("audio.ogg", "rb"))
-
-## Localizacao
-
-await bot.send_location(chat_id, latitude=-23.5505, longitude=-46.6333)
-
-## Contato
-
-await bot.send_contact(chat_id, phone_number="+5511999999999", first_name="Joao")
-
-## Enquete
-
-await bot.send_poll(
-    chat_id, question="Qual sua cor favorita?",
-    options=["Azul", "Verde", "Vermelho"],
-    is_anonymous=False
-)
-
-## Grupo De Midias
-
-await bot.send_media_group(chat_id, media=[
-    InputMediaPhoto("url1", caption="Foto 1"),
-    InputMediaPhoto("url2"),
-    InputMediaVideo("url3")
-])
-
-## Acao De Chat (Typing, Upload_Photo, Etc.)
-
-await bot.send_chat_action(chat_id, action="typing")
-```
-
-## Node.Js Equivalente
-
-```typescript
-// Foto
-bot.sendPhoto(chatId, 'https://example.com/img.jpg', { caption: 'Legenda' });
-
-// Documento
-bot.sendDocument(chatId, fs.createReadStream('relatorio.pdf'), { caption: 'Relatorio' });
-
-// Localizacao
-bot.sendLocation(chatId, -23.5505, -46.6333);
-
-// Enquete
-bot.sendPoll(chatId, 'Qual sua cor favorita?', ['Azul', 'Verde', 'Vermelho']);
-```
-
----
-
-## Inline Keyboard (Botoes Dentro Da Mensagem)
-
-```python
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Opcao A", callback_data="opt_a"),
-     InlineKeyboardButton("Opcao B", callback_data="opt_b")],
-    [InlineKeyboardButton("Abrir Site", url="https://example.com")],
-    [InlineKeyboardButton("Compartilhar", switch_inline_query="texto")]
-])
-
-await bot.send_message(chat_id, "Escolha uma opcao:", reply_markup=keyboard)
-
-## Handler De Callback
-
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()  # Importante: sempre responder o callback
-    await query.edit_message_text(f"Voce escolheu: {query.data}")
-
-app.add_handler(CallbackQueryHandler(button_callback))
-```
-
-## Reply Keyboard (Teclado Customizado)
-
-```python
-from telegram import ReplyKeyboardMarkup, KeyboardButton
-
-keyboard = ReplyKeyboardMarkup(
-    [[KeyboardButton("Enviar Localizacao", request_location=True)],
-     [KeyboardButton("Enviar Contato", request_contact=True)],
-     ["Opcao 1", "Opcao 2"]],
-    resize_keyboard=True,
-    one_time_keyboard=True
-)
-
-await bot.send_message(chat_id, "Escolha:", reply_markup=keyboard)
-```
-
-## Remover Teclado
-
-```python
-from telegram import ReplyKeyboardRemove
-await bot.send_message(chat_id, "Teclado removido", reply_markup=ReplyKeyboardRemove())
-```
-
----
-
-## Receber Updates
-
-Existem duas formas de receber updates: **Long Polling** e **Webhooks**.
-
-## Long Polling (Desenvolvimento)
-
-Mais simples, ideal para desenvolvimento. O bot faz requisicoes periodicas ao servidor do Telegram.
-
-```python
-
-## Python-Telegram-Bot Ja Faz Isso Automaticamente
-
-app.run_polling(allowed_updates=Update.ALL_TYPES)
-```
-
-```typescript
-// Telegraf com polling
-const bot = new Telegraf(token);
-bot.launch();
-```
-
-## Webhooks (Producao)
-
-Para producao, webhooks sao mais eficientes. O Telegram envia updates via POST para sua URL HTTPS.
-
-Leia `references/webhook-setup.md` para configuracao completa com Express, Flask, ngrok e deploy.
-
-Setup rapido:
-
-```python
-
-## Flask Webhook
-
-from flask import Flask, request
-import requests
-
-app = Flask(__name__)
-TOKEN = "SEU_TOKEN"
-BASE = f"https://api.telegram.org/bot{TOKEN}"
-
-@app.route(f"/webhook/{TOKEN}", methods=["POST"])
-def webhook():
-    update = request.get_json()
-    if "message" in update and "text" in update["message"]:
-        chat_id = update["message"]["chat"]["id"]
-        text = update["message"]["text"]
-        requests.post(f"{BASE}/sendMessage", json={
-            "chat_id": chat_id,
-            "text": f"Recebi: {text}"
-        })
-    return "OK", 200
-
-## Registrar Webhook
-
-requests.post(f"{BASE}/setWebhook", json={
-    "url": "https://seu-dominio.com/webhook/" + TOKEN,
-    "allowed_updates": ["message", "callback_query"],
-    "secret_token": "seu_secret_seguro_aqui"
-})
-```
-
----
-
-## Comandos Do Bot
-
-Registre comandos para aparecerem no menu do Telegram:
-
-```python
-from telegram import BotCommand
-
-await bot.set_my_commands([
-    BotCommand("start", "Iniciar o bot"),
-    BotCommand("help", "Ver comandos disponiveis"),
-    BotCommand("settings", "Configuracoes"),
-    BotCommand("status", "Ver status do servico"),
-])
-```
-
-Via HTTP:
-```bash
-curl -X POST "https://api.telegram.org/bot$TOKEN/setMyCommands" \
-  -H "Content-Type: application/json" \
-  -d '{"commands":[{"command":"start","description":"Iniciar o bot"},{"command":"help","description":"Ajuda"}]}'
-```
-
----
-
-## Automacao Com Ia
-
-Padrao para bot de atendimento com IA (Claude, GPT, etc.):
-
-```python
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
-import anthropic  # ou openai
-
-client = anthropic.Anthropic()
-user_conversations = {}  # chat_id -> messages history
-
-async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    user_text = update.message.text
-
-    # Indicar que esta digitando
-    await context.bot.send_chat_action(chat_id, "typing")
-
-    # Manter historico
-    if chat_id not in user_conversations:
-        user_conversations[chat_id] = []
-
-    user_conversations[chat_id].append({"role": "user", "content": user_text})
-
-    # Chamar IA
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1024,
-        system="Voce e um assistente prestativo. Responda em portugues.",
-        messages=user_conversations[chat_id]
-    )
-
-    reply = response.content[0].text
-    user_conversations[chat_id].append({"role": "assistant", "content": reply})
-
-    # Limitar historico (ultimas 20 mensagens)
-    if len(user_conversations[chat_id]) > 20:
-        user_conversations[chat_id] = user_conversations[chat_id][-20:]
-
-    await update.message.reply_text(reply)
-
-app = Application.builder().token(TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_response))
-app.run_polling()
-```
-
----
-
-## Editar Texto
-
-await bot.edit_message_text(
-    chat_id=chat_id,
-    message_id=msg.message_id,
-    text="Texto atualizado!",
-    parse_mode="HTML"
-)
-
-## Editar Markup (Botoes)
-
-await bot.edit_message_reply_markup(
-    chat_id=chat_id,
-    message_id=msg.message_id,
-    reply_markup=new_keyboard
-)
-
-## Deletar Mensagem
-
-await bot.delete_message(chat_id=chat_id, message_id=msg.message_id)
-
-## Encaminhar Mensagem
-
-await bot.forward_message(
-    chat_id=dest_chat_id,
-    from_chat_id=source_chat_id,
-    message_id=msg.message_id
-)
-```
-
----
-
-## Tratamento De Erros
-
-```python
-from telegram.error import TelegramError, BadRequest, TimedOut, NetworkError
-
-async def safe_send(bot, chat_id, text, **kwargs):
-    """Envio com retry e tratamento de erros."""
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            return await bot.send_message(chat_id, text, **kwargs)
-        except TimedOut:
-            if attempt < max_retries - 1:
-                await asyncio.sleep(2 ** attempt)
-                continue
-            raise
-        except BadRequest as e:
-            if "chat not found" in str(e).lower():
-                print(f"Chat {chat_id} nao encontrado")
-                return None
-            raise
-        except NetworkError:
-            if attempt < max_retries - 1:
-                await asyncio.sleep(2 ** attempt)
-                continue
-            raise
-```
-
----
-
-## Rate Limits
-
-- **Mensagens em chat privado:** ~30 msg/segundo
-- **Mensagens em grupo:** ~20 msg/minuto por grupo
-- **Broadcast geral:** ~30 msg/segundo no total
-- **Bulk notifications:** use `asyncio.sleep(0.05)` entre envios para evitar flood
-
-Se receber erro 429 (Too Many Requests), respeite o `retry_after` retornado.
-
----
-
-## Referencia De Arquivos
-
-| Topico | Arquivo |
-|--------|---------|
-| Setup de webhooks | `references/webhook-setup.md` |
-| Gerenciamento de chats | `references/chat-management.md` |
-| Recursos avancados | `references/advanced-features.md` |
-| Referencia completa da API | `references/api-reference.md` |
-| Boilerplate Node.js | `assets/boilerplate/nodejs/` |
-| Boilerplate Python | `assets/boilerplate/python/` |
-| Exemplos de payloads | `assets/examples/` |
-
-## Best Practices
-
-- Provide clear, specific context about your project and requirements
-- Review all suggestions before applying them to production code
-- Combine with other complementary skills for comprehensive analysis
-
-## Common Pitfalls
-
-- Using this skill for tasks outside its domain expertise
-- Applying recommendations without understanding your specific context
-- Not providing enough project context for accurate analysis
-
-## Related Skills
-
-- `instagram` - Complementary skill for enhanced analysis
-- `social-orchestrator` - Complementary skill for enhanced analysis
-- `whatsapp-cloud-api` - Complementary skill for enhanced analysis
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Use the real returned URL — never fabricate one. Call it once per published item,
+only after delivery is confirmed; skip it (or use `status="failed"`) if publishing failed.
+See `_shared/artifacts.md`.

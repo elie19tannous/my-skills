@@ -6,7 +6,7 @@ Usage:
   python scripts/ws_listener.py [OPTIONS] [output_dir]
 
 Arguments:
-  output_dir  Directory for output files (default: XDG_STATE_HOME/videodb-events or VIDEODB_EVENTS_DIR env var)
+  output_dir  Directory for output files (default: XDG_STATE_HOME/videodb or ~/.local/state/videodb)
 
 Options:
   --clear     Clear the events file before starting (use when starting a new session)
@@ -20,64 +20,81 @@ Output (first line, for parsing):
   WS_ID=<connection_id>
 
 Examples:
-  python scripts/ws_listener.py &                             # Run in background
-  python scripts/ws_listener.py --clear                       # Clear events and start fresh
-  python scripts/ws_listener.py --clear /path/mydir          # Custom dir with clear
-  kill $(cat ~/.local/state/videodb-events/videodb_ws_pid)   # Stop the listener
+  python scripts/ws_listener.py &                                 # Run in background
+  python scripts/ws_listener.py --clear                           # Clear events and start fresh
+  python scripts/ws_listener.py --clear /tmp/mydir                # Custom dir with clear
+  kill "$(cat ~/.local/state/videodb/videodb_ws_pid)"             # Stop the listener
 """
 import os
 import sys
 import json
-import stat
 import signal
 import asyncio
+import logging
+import contextlib
 from datetime import datetime, timezone
 from pathlib import Path
-
-
-def safe_user_path(path_value, base_dir="."):
-    """Resolve a CLI path under the current workspace."""
-    if base_dir != ".":
-        raise ValueError("Custom base directories are not supported for CLI paths")
-    base_path = Path.cwd().resolve()
-    resolved_path = Path(path_value).expanduser().resolve()
-    try:
-        resolved_path.relative_to(base_path)
-    except ValueError as exc:
-        raise ValueError(f"Path escapes allowed directory: {path_value}") from exc
-    return resolved_path
 
 from dotenv import load_dotenv
 load_dotenv()
 
 import videodb
+from videodb.exceptions import AuthenticationError
 
 # Retry config
 MAX_RETRIES = 10
 INITIAL_BACKOFF = 1  # seconds
 MAX_BACKOFF = 60     # seconds
-FILE_MODE = 0o600
-DIR_MODE = 0o700
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+LOGGER = logging.getLogger(__name__)
 
 # Parse arguments
-def parse_args():
+RETRYABLE_ERRORS = (ConnectionError, TimeoutError)
+
+
+def default_output_dir() -> Path:
+    """Return a private per-user state directory for listener artifacts."""
+    xdg_state_home = os.environ.get("XDG_STATE_HOME")
+    if xdg_state_home:
+        return Path(xdg_state_home) / "videodb"
+    return Path.home() / ".local" / "state" / "videodb"
+
+
+def ensure_private_dir(path: Path) -> Path:
+    """Create the listener state directory with private permissions."""
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        path.chmod(0o700)
+    except OSError:
+        pass
+    return path
+
+
+def parse_args() -> tuple[bool, Path]:
     clear = False
-    output_dir = None
+    output_dir: str | None = None
     
     args = sys.argv[1:]
     for arg in args:
         if arg == "--clear":
             clear = True
+        elif arg.startswith("-"):
+            raise SystemExit(f"Unknown flag: {arg}")
         elif not arg.startswith("-"):
             output_dir = arg
     
     if output_dir is None:
-        output_dir = os.environ.get("VIDEODB_EVENTS_DIR")
-    if output_dir is None:
-        state_root = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
-        output_dir = str(state_root / "videodb-events")
-    
-    return clear, safe_user_path(output_dir)
+        events_dir = os.environ.get("VIDEODB_EVENTS_DIR")
+        if events_dir:
+            return clear, ensure_private_dir(Path(events_dir))
+        return clear, ensure_private_dir(default_output_dir())
+
+    return clear, ensure_private_dir(Path(output_dir))
 
 CLEAR_EVENTS, OUTPUT_DIR = parse_args()
 EVENTS_FILE = OUTPUT_DIR / "videodb_events.jsonl"
@@ -90,74 +107,41 @@ _first_connection = True
 
 def log(msg: str):
     """Log with timestamp."""
-    ts = datetime.now().strftime("%H:%M:%S")
-    print(f"[{ts}] {msg}", flush=True)
-
-
-def ensure_output_dir():
-    """Create the output directory if needed and reject symlinked paths."""
-    if OUTPUT_DIR.exists():
-        if OUTPUT_DIR.is_symlink():
-            raise OSError(f"Refusing to use symlinked output directory: {OUTPUT_DIR}")
-        if not OUTPUT_DIR.is_dir():
-            raise OSError(f"Output path is not a directory: {OUTPUT_DIR}")
-        return
-
-    OUTPUT_DIR.mkdir(parents=True, mode=DIR_MODE, exist_ok=True)
-
-
-def secure_open(path: Path, *, append: bool):
-    """Open a regular file without following symlinks."""
-    ensure_output_dir()
-    flags = os.O_WRONLY | os.O_CREAT
-    flags |= os.O_APPEND if append else os.O_TRUNC
-    flags |= getattr(os, "O_NOFOLLOW", 0)
-
-    fd = os.open(safe_user_path(path), flags, FILE_MODE)
-    try:
-        file_stat = os.fstat(fd)
-        if not stat.S_ISREG(file_stat.st_mode):
-            raise OSError(f"Refusing to write non-regular file: {path}")
-        if file_stat.st_nlink != 1:
-            raise OSError(f"Refusing to write multiply linked file: {path}")
-        return fd
-    except Exception:
-        os.close(fd)
-        raise
-
-
-def secure_write_text(path: Path, content: str):
-    """Write text to a regular file with private permissions."""
-    fd = secure_open(safe_user_path(path), append=False)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(content)
-
-
-def secure_append_text(path: Path, content: str):
-    """Append text to a regular file with private permissions."""
-    fd = secure_open(safe_user_path(path), append=True)
-    with os.fdopen(fd, "a", encoding="utf-8") as handle:
-        handle.write(content)
+    LOGGER.info("%s", msg)
 
 
 def append_event(event: dict):
     """Append event to JSONL file with timestamps."""
-    event["ts"] = datetime.now(timezone.utc).isoformat()
-    event["unix_ts"] = datetime.now(timezone.utc).timestamp()
-    secure_append_text(EVENTS_FILE, json.dumps(event) + "\n")
+    now = datetime.now(timezone.utc)
+    event["ts"] = now.isoformat()
+    event["unix_ts"] = now.timestamp()
+    with EVENTS_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(event) + "\n")
 
 
 def write_pid():
     """Write PID file for easy process management."""
-    secure_write_text(PID_FILE, str(os.getpid()))
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    PID_FILE.write_text(str(os.getpid()))
 
 
 def cleanup_pid():
     """Remove PID file on exit."""
     try:
         PID_FILE.unlink(missing_ok=True)
-    except Exception:
-        pass
+    except OSError as exc:
+        LOGGER.debug("Failed to remove PID file %s: %s", PID_FILE, exc)
+
+
+def is_fatal_error(exc: Exception) -> bool:
+    """Return True when retrying would hide a permanent configuration error."""
+    if isinstance(exc, (AuthenticationError, PermissionError)):
+        return True
+    status = getattr(exc, "status_code", None)
+    if status in {401, 403}:
+        return True
+    message = str(exc).lower()
+    return "401" in message or "403" in message or "auth" in message
 
 
 async def listen_with_retry():
@@ -173,43 +157,15 @@ async def listen_with_retry():
             ws_wrapper = conn.connect_websocket()
             ws = await ws_wrapper.connect()
             ws_id = ws.connection_id
-            
-            # Ensure output directory exists
-            ensure_output_dir()
-            
-            # Clear events file only on first connection if --clear flag is set
-            if _first_connection and CLEAR_EVENTS:
-                EVENTS_FILE.unlink(missing_ok=True)
-                log("Cleared events file")
-            _first_connection = False
-            
-            # Write ws_id to file for easy retrieval
-            secure_write_text(WS_ID_FILE, ws_id)
-            
-            # Print ws_id (parseable format for LLM)
-            if retry_count == 0:
-                print(f"WS_ID={ws_id}", flush=True)
-            log(f"Connected (ws_id={ws_id})")
-            
-            # Reset retry state on successful connection
-            retry_count = 0
-            backoff = INITIAL_BACKOFF
-            
-            # Listen for messages
-            async for msg in ws.receive():
-                append_event(msg)
-                channel = msg.get("channel", msg.get("event", "unknown"))
-                text = msg.get("data", {}).get("text", "")
-                if text:
-                    print(f"[{channel}] {text[:80]}", flush=True)
-            
-            # If we exit the loop normally, connection was closed
-            log("Connection closed by server")
-            
         except asyncio.CancelledError:
             log("Shutdown requested")
             raise
         except Exception as e:
+            if is_fatal_error(e):
+                log(f"Fatal configuration error: {e}")
+                raise
+            if not isinstance(e, RETRYABLE_ERRORS):
+                raise
             retry_count += 1
             log(f"Connection error: {e}")
             
@@ -220,6 +176,57 @@ async def listen_with_retry():
             log(f"Reconnecting in {backoff}s (attempt {retry_count}/{MAX_RETRIES})...")
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, MAX_BACKOFF)
+            continue
+
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+        if _first_connection and CLEAR_EVENTS:
+            EVENTS_FILE.unlink(missing_ok=True)
+            log("Cleared events file")
+        _first_connection = False
+
+        WS_ID_FILE.write_text(ws_id)
+
+        if retry_count == 0:
+            print(f"WS_ID={ws_id}", flush=True)
+        log(f"Connected (ws_id={ws_id})")
+
+        retry_count = 0
+        backoff = INITIAL_BACKOFF
+
+        receiver = ws.receive().__aiter__()
+        while True:
+            try:
+                msg = await anext(receiver)
+            except StopAsyncIteration:
+                log("Connection closed by server")
+                break
+            except asyncio.CancelledError:
+                log("Shutdown requested")
+                raise
+            except Exception as e:
+                if is_fatal_error(e):
+                    log(f"Fatal configuration error: {e}")
+                    raise
+                if not isinstance(e, RETRYABLE_ERRORS):
+                    raise
+                retry_count += 1
+                log(f"Connection error: {e}")
+
+                if retry_count >= MAX_RETRIES:
+                    log(f"Max retries ({MAX_RETRIES}) exceeded, exiting")
+                    return
+
+                log(f"Reconnecting in {backoff}s (attempt {retry_count}/{MAX_RETRIES})...")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, MAX_BACKOFF)
+                break
+
+            append_event(msg)
+            channel = msg.get("channel", msg.get("event", "unknown"))
+            text = msg.get("data", {}).get("text", "")
+            if text:
+                print(f"[{channel}] {text[:80]}", flush=True)
 
 
 async def main_async():
@@ -233,16 +240,20 @@ async def main_async():
     
     # Register signal handlers
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, handle_signal)
+        with contextlib.suppress(NotImplementedError):
+            loop.add_signal_handler(sig, handle_signal)
     
     # Run listener with cancellation support
     listen_task = asyncio.create_task(listen_with_retry())
     shutdown_task = asyncio.create_task(shutdown_event.wait())
     
-    done, pending = await asyncio.wait(
+    _done, pending = await asyncio.wait(
         [listen_task, shutdown_task],
         return_when=asyncio.FIRST_COMPLETED,
     )
+
+    if listen_task.done():
+        await listen_task
     
     # Cancel remaining tasks
     for task in pending:
@@ -251,6 +262,10 @@ async def main_async():
             await task
         except asyncio.CancelledError:
             pass
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        with contextlib.suppress(NotImplementedError):
+            loop.remove_signal_handler(sig)
     
     log("Shutdown complete")
 

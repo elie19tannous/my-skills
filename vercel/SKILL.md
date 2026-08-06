@@ -1,204 +1,77 @@
 ---
 name: vercel
-description: Deploy and configure applications on Vercel. Use when deploying Next.js apps, configuring serverless functions, setting up edge functions, or managing Vercel projects. Triggers on Vercel, deploy, serverless, edge function, Next.js deployment.
+description: Inspect Vercel projects, deployments, build logs and domains via the Vercel REST API. Use when the user mentions Vercel, a deployment that failed / is building, build or runtime logs, a preview URL, project domains, or wants to check / redeploy a Vercel project.
+when_to_use: |
+  Trigger when the user wants to list Vercel projects, list recent
+  deployments, read a deployment's build logs to diagnose a failure,
+  check domains, or trigger a redeploy. The connector stores a Vercel
+  access token with the granted scope; treat env-var values as secret
+  (never echo them) and confirm before any redeploy / mutation.
+connections: [vercel]
+allowed_tools: [Bash]
+license: Apache-2.0
+metadata:
+  author: acedatacloud
+  version: "1.0"
 ---
 
-# Vercel Deployment
+Call the **Vercel REST API** with `curl + jq`. The user's token is in
+`$VERCEL_ACCESS_TOKEN`; every call needs `Authorization: Bearer
+$VERCEL_ACCESS_TOKEN`. Base URL: `https://api.vercel.com`. If the resource is
+team-scoped, append `?teamId=$VERCEL_TEAM_ID` (set only when the user connected a
+team token).
 
-Deploy and scale applications on Vercel's edge network.
+Errors come back as `{"error":{"code","message"}}` — show `message` verbatim.
+`403 forbidden` usually means the token can't see that team/project →
+re-connect with the right scope.
 
-## Quick Start
-
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Production deploy
-vercel --prod
-```
-
-## vercel.json Configuration
-
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "regions": ["iad1", "sfo1"],
-  "functions": {
-    "api/**/*.ts": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/:path*", "destination": "/" }
-  ],
-  "headers": [
-    {
-      "source": "/api/:path*",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
-      ]
-    }
-  ],
-  "env": {
-    "DATABASE_URL": "@database-url"
-  }
-}
-```
-
-## Serverless Functions
-
-```typescript
-// api/hello.ts
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const { name = 'World' } = req.query;
-  res.status(200).json({ message: `Hello ${name}!` });
-}
-```
-
-## Edge Functions
-
-```typescript
-// api/edge.ts
-export const config = {
-  runtime: 'edge',
-};
-
-export default function handler(request: Request) {
-  return new Response(JSON.stringify({ message: 'Hello from Edge!' }), {
-    headers: { 'content-type': 'application/json' },
-  });
-}
-```
-
-## Next.js App Router
-
-```typescript
-// app/api/route.ts
-import { NextResponse } from 'next/server';
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const name = searchParams.get('name') ?? 'World';
-  
-  return NextResponse.json({ message: `Hello ${name}!` });
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  return NextResponse.json({ received: body });
-}
-```
-
-## ISR (Incremental Static Regeneration)
-
-```typescript
-// app/posts/[id]/page.tsx
-export const revalidate = 60; // Revalidate every 60 seconds
-
-export async function generateStaticParams() {
-  const posts = await getPosts();
-  return posts.map((post) => ({ id: post.id }));
-}
-
-export default async function Post({ params }: { params: { id: string } }) {
-  const post = await getPost(params.id);
-  return <article>{post.content}</article>;
-}
-```
-
-## Vercel KV (Redis)
-
-```typescript
-import { kv } from '@vercel/kv';
-
-// Set
-await kv.set('user:123', { name: 'Alice', visits: 0 });
-
-// Get
-const user = await kv.get('user:123');
-
-// Increment
-await kv.incr('user:123:visits');
-
-// Hash operations
-await kv.hset('session:abc', { userId: '123', expires: Date.now() + 3600000 });
-const session = await kv.hgetall('session:abc');
-```
-
-## Vercel Postgres
-
-```typescript
-import { sql } from '@vercel/postgres';
-
-// Query
-const { rows } = await sql`SELECT * FROM users WHERE id = ${userId}`;
-
-// Insert
-await sql`INSERT INTO users (name, email) VALUES (${name}, ${email})`;
-
-// Transaction
-await sql.query('BEGIN');
-try {
-  await sql`UPDATE accounts SET balance = balance - ${amount} WHERE id = ${from}`;
-  await sql`UPDATE accounts SET balance = balance + ${amount} WHERE id = ${to}`;
-  await sql.query('COMMIT');
-} catch (e) {
-  await sql.query('ROLLBACK');
-  throw e;
-}
-```
-
-## Environment Variables
+Helper for the optional team param:
 
 ```bash
-# Add secret
-vercel env add DATABASE_URL production
-
-# Pull env vars locally
-vercel env pull .env.local
-
-# List env vars
-vercel env ls
+TEAM=""; [ -n "$VERCEL_TEAM_ID" ] && TEAM="?teamId=$VERCEL_TEAM_ID"
+AUTH="Authorization: Bearer $VERCEL_ACCESS_TOKEN"
 ```
 
-## Cron Jobs
+## Projects & deployments
 
-```json
-// vercel.json
-{
-  "crons": [
-    {
-      "path": "/api/daily-job",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
+```bash
+# Projects
+curl -sS -H "$AUTH" "https://api.vercel.com/v9/projects$TEAM" \
+  | jq '.projects[] | {name, framework, latestProduction: .latestDeployments[0].url}'
+
+# Recent deployments (optionally filter by ?projectId=… or &state=ERROR)
+curl -sS -H "$AUTH" "https://api.vercel.com/v6/deployments${TEAM:-?}&limit=20" \
+  | jq '.deployments[] | {uid, name, url, state, readyState, created}'
 ```
 
-```typescript
-// api/daily-job.ts
-export default function handler(req, res) {
-  // Verify it's from Vercel Cron
-  if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).end();
-  }
-  
-  // Run job
-  await runDailyJob();
-  res.status(200).end();
-}
+## Diagnose a failed build
+
+```bash
+# Deployment detail
+curl -sS -H "$AUTH" "https://api.vercel.com/v13/deployments/DEPLOYMENT_ID${TEAM:+&teamId=$VERCEL_TEAM_ID}" \
+  | jq '{name, url, state: .readyState, error: .errorMessage}'
+
+# Build / runtime events (the actual logs)
+curl -sS -H "$AUTH" "https://api.vercel.com/v3/deployments/DEPLOYMENT_ID/events${TEAM:+?teamId=$VERCEL_TEAM_ID}" \
+  | jq -r '.[] | select(.type=="stdout" or .type=="stderr") | .payload.text'
 ```
 
-## Resources
+## Domains & redeploy
 
-- **Vercel Docs**: https://vercel.com/docs
-- **Next.js on Vercel**: https://vercel.com/docs/frameworks/nextjs
+```bash
+# Project domains
+curl -sS -H "$AUTH" "https://api.vercel.com/v9/projects/PROJECT_ID/domains${TEAM:+?teamId=$VERCEL_TEAM_ID}" \
+  | jq '.domains[] | {name, verified}'
+```
+
+To **redeploy**, POST to `https://api.vercel.com/v13/deployments` with a
+`deploymentId` (or git source) body — **confirm with the user first**, it ships
+to production.
+
+## Gotchas
+
+- **Never print env-var values.** Listing project env vars returns metadata;
+  the `/v1/.../env/{id}` decrypt route returns secrets — don't call it unless the
+  user explicitly asks, and even then summarize, don't echo.
+- Deployment `state`/`readyState`: `QUEUED → BUILDING → READY | ERROR | CANCELED`.
+- `created`/`ready` are epoch ms — divide by 1000 for human time.

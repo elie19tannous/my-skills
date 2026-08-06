@@ -1,6 +1,9 @@
 ---
 name: vercel-deploy
-description: Deploy applications and websites to Vercel. Use when the user requests deployment actions like "deploy my app", "deploy and give me the link", "push this live", or "create a preview deployment".
+description: Deploy applications and websites to Vercel. Use when the user requests deployment actions like "deploy my app", "deploy and give me the link", "push this live", or "create a preview deployment". Do NOT use for deploying to Netlify, Cloudflare, or Render (use their respective skills).
+metadata:
+  author: github.com/openai/skills
+  version: '1.0.0'
 ---
 
 # Vercel Deploy
@@ -9,42 +12,34 @@ Deploy any project to Vercel instantly. **Always deploy as preview** (not produc
 
 ## Prerequisites
 
-- Check whether the Vercel CLI is installed **without** escalated permissions (for example, `command -v vercel`).
-- Only escalate the actual deploy command if sandboxing blocks the deployment network calls (`sandbox_permissions=require_escalated`).
+- When sandboxing blocks the deployment network calls, rerun with `sandbox_permissions=require_escalated`.
 - The deployment might take a few minutes. Use appropriate timeout values.
 
 ## Quick Start
 
-1. Check whether the Vercel CLI is installed (no escalation for this check):
+**Just run this (with a 10 minute timeout):**
 
-```bash
-command -v vercel
-```
-
-2. If `vercel` is installed, run this (with a 10 minute timeout):
 ```bash
 vercel deploy [path] -y
 ```
 
 **Important:** Use a 10 minute (600000ms) timeout for the deploy command since builds can take a while.
 
-3. If `vercel` is not installed, or if the CLI fails with "No existing credentials found", use the fallback method below.
+If that fails with "No existing credentials found", use the fallback method below.
 
 ## Fallback (No Auth)
 
 If CLI fails with auth error, use the deploy script:
 
 ```bash
-skill_dir="<path-to-skill>"
-
 # Deploy current directory
-bash "$skill_dir/scripts/deploy.sh"
+bash scripts/deploy.sh
 
 # Deploy specific project
-bash "$skill_dir/scripts/deploy.sh" /path/to/project
+bash scripts/deploy.sh /path/to/project
 
 # Deploy existing tarball
-bash "$skill_dir/scripts/deploy.sh" /path/to/project.tgz
+bash scripts/deploy.sh /path/to/project.tgz
 ```
 
 The script handles framework detection, packaging, and deployment. It waits for the build to complete and returns JSON with `previewUrl` and `claimUrl`.
@@ -54,6 +49,7 @@ The script handles framework detection, packaging, and deployment. It waits for 
 ## Production Deploys
 
 Only if user explicitly asks:
+
 ```bash
 vercel deploy [path] --prod -y
 ```
@@ -68,7 +64,7 @@ Show the user the deployment URL. For fallback deployments, also show the claim 
 
 ### Escalated Network Access
 
-If deployment fails due to network issues (timeouts, DNS errors, connection resets), rerun the actual deploy command with escalated permissions (use `sandbox_permissions=require_escalated`). Do not escalate the `command -v vercel` installation check. The deploy requires escalated network access when sandbox networking blocks outbound requests.
+If deployment fails due to network issues (timeouts, DNS errors, connection resets), rerun the deploy with escalated permissions (use `sandbox_permissions=require_escalated`). The deploy requires escalated network access when sandbox networking blocks outbound requests.
 
 Example guidance to the user:
 

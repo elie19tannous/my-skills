@@ -1,0 +1,27 @@
+{
+  "skill": "vendor-due-diligence",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (orchestrator, direct)",
+      "summary": "Finished an unfinished skill package -- a parallel worker had authored a complete, high-quality SKILL.md (8 instruction steps, 3 worked examples, gotchas, reference links, troubleshooting) but timed out before adding the supporting files. This cycle added SKILL_HE.md, two reference docs (diligence-checklist.md, red-flag-clauses.md), the stdlib-only diligence_scanner.py script, and metadata/evidence/optimization-log JSON. Fixed a regex bug found during self-test: the data_breach_indemnity pattern used a {0,60} character window that failed on the multi-line selftest fixture because raw text wasn't whitespace-normalized before matching; fixed by normalizing all whitespace to single spaces before scanning (also more robust against real-world contract line wrapping).",
+      "changes": [
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew mirror of the 8-step framework, gotchas, and reference links."},
+        {"type": "package", "id": "references", "detail": "Added references/diligence-checklist.md (scored checklist across 5 areas + risk tiering) and references/red-flag-clauses.md (12-row red-flag catalogue with fix/ask)."},
+        {"type": "script", "id": "diligence-scanner", "detail": "Added scripts/diligence_scanner.py: regex-based coverage scan across 10 clause types (breach notification, DPA/sub-processors, liability cap, breach carve-out, SLA/credits, chronic-failure termination, data return/deletion, auto-renewal, IP indemnity, data-breach indemnity) plus a keyword-based risk-tier hint."},
+        {"type": "bugfix", "id": "regex-whitespace", "detail": "Selftest initially failed on data_breach_indemnity due to a {0,60}/{0,100} char-window regex not matching across a wrapped multi-line fixture. Root cause: no whitespace normalization before matching. Fixed by re.sub(whitespace->single-space) at the top of scan(), which also makes the scanner robust to real contract line-wrap/PDF-extraction artifacts."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (bilingual tags/display, supported agents) and evidence.json (5 claims sourced to NIST SP 800-161, GDPR Art. 28, CSA STAR, plus the local script self-check)."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-adequacy-vs-presence",
+          "reason": "The scanner reports clause presence/absence by regex pattern only; it cannot judge whether a present clause is adequate (e.g. a cap that exists but is set too low). This is documented as a Gotcha and in the script's module docstring rather than solved, since adequacy judgment requires reading the actual clause text, not pattern matching.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

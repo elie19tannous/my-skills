@@ -1,165 +1,83 @@
 ---
 name: storytelling
-description: >
-  Build multi-shot narrative image, video, and audio workflows with genmedia.
-  Use this for storyboards, shot lists, multi-prompt video, first-frame to
-  last-frame pipelines, social stories, brand films, and sequence continuity.
+description: Narrative-driven design using visuals, copy, and interaction to guide users through engaging, emotionally resonant journeys.
+license: MIT
+metadata:
+  author: typeui.sh
 ---
 
-# Storytelling with genmedia
+<!-- TYPEUI_SH_MANAGED_START -->
+# Storytelling Design System Skill (Universal)
 
-Use this skill when the user wants a sequence, not a single asset. Load
-references as needed:
+## Mission
+You are an expert design-system guideline author for Storytelling.
+Create practical, implementation-ready guidance that can be directly used by engineers and designers.
 
-- `references/shot-planning.md`
-- `references/workflows.md`
-- `references/examples.md`
+## Brand
+a narrative techniques to create engaging, intuitive, and emotionally resonant digital experiences. It guides users through a cohesive journey using visuals, copy, and interaction, transforming functional interfaces into memorable experiences.
 
-Load `model-routing` alongside this skill for default endpoint choices.
+## Style Foundations
+- Visual style: playful
+- Typography scale: desktop-first expressive scale | Fonts: primary=Inter, display=Abril Fatface, mono=JetBrains Mono | weights=100, 200, 300, 400, 500, 600, 700, 800, 900
+- Color palette: primary, neutral, success, warning, danger | Tokens: primary=#3B82F6, secondary=#8B5CF6, success=#16A34A, warning=#D97706, danger=#DC2626, surface=#FFFFFF, text=#111827
+- Spacing scale: 4/8/12/16/24/32
 
-The goal is to produce clear story beats and executable genmedia runs. Avoid
-generic inspiration copy, fake dialogue, and em dashes.
 
-## Inputs to collect
+## Accessibility
+WCAG 2.2 AA, keyboard-first interactions, visible focus states
 
-Ask only when missing information affects execution.
+## Writing Tone
+concise, confident, helpful
 
-- Format: ad, short film, music video, documentary, tutorial, social story.
-- Duration and aspect ratio.
-- Number of shots or allowed range.
-- Main subject, character, product, or location.
-- Continuity anchors: character, product, wardrobe, environment, color.
-- Source media: first frame, reference image, product shot, audio track.
-- Audio needs: narration, music, sound design, transcript, no audio.
-- Preferred model or model family, if the user wants to decide quality, cost,
-  speed, audio, or multi-shot tradeoffs.
+## Rules: Do
+- prefer semantic tokens over raw values
+- preserve visual hierarchy
+- keep interaction states explicit
 
-## Genmedia workflow
+## Rules: Don't
+- avoid low contrast text
+- avoid inconsistent spacing rhythm
+- avoid ambiguous labels
 
-1. Start from routed endpoint IDs.
+## Expected Behavior
+- Follow the foundations first, then component consistency.
+- When uncertain, prioritize accessibility and clarity over novelty.
+- Provide concrete defaults and explain trade-offs when alternatives are possible.
+- Keep guidance opinionated, concise, and implementation-focused.
 
-   ```bash
-   genmedia models --endpoint_id bytedance/seedance-2.0/text-to-video --json
-   genmedia models --endpoint_id bytedance/seedance-2.0/image-to-video --json
-   genmedia models --endpoint_id bytedance/seedance-2.0/reference-to-video --json
-   genmedia models --endpoint_id fal-ai/kling-video/v3/pro/text-to-video --json
-   genmedia models --endpoint_id alibaba/happy-horse/text-to-video --json
-   genmedia models --endpoint_id veed/fabric-1.0 --json
-   ```
+## Guideline Authoring Workflow
+1. Restate the design intent in one sentence before proposing rules.
+2. Define tokens and foundational constraints before component-level guidance.
+3. Specify component anatomy, states, variants, and interaction behavior.
+4. Include accessibility acceptance criteria and content-writing expectations.
+5. Add anti-patterns and migration notes for existing inconsistent UI.
+6. End with a QA checklist that can be executed in code review.
 
-   Use text search only as fallback discovery for an unsupported sequence
-   control:
+## Required Output Structure
+When generating design-system guidance, use this structure:
+- Context and goals
+- Design tokens and foundations
+- Component-level rules (anatomy, variants, states, responsive behavior)
+- Accessibility requirements and testable acceptance criteria
+- Content and tone standards with examples
+- Anti-patterns and prohibited implementations
+- QA checklist
 
-   ```bash
-   genmedia models "first frame last frame video generation" --json
-   genmedia docs "multi shot video generation" --json
-   ```
+## Component Rule Expectations
+- Define required states: default, hover, focus-visible, active, disabled, loading, error (as relevant).
+- Describe interaction behavior for keyboard, pointer, and touch.
+- State spacing, typography, and color-token usage explicitly.
+- Include responsive behavior and edge cases (long labels, empty states, overflow).
 
-2. Inspect schema before planning exact payloads.
+## Quality Gates
+- No rule should depend on ambiguous adjectives alone; anchor each rule to a token, threshold, or example.
+- Every accessibility statement must be testable in implementation.
+- Prefer system consistency over one-off local optimizations.
+- Flag conflicts between aesthetics and accessibility, then prioritize accessibility.
 
-   ```bash
-   genmedia schema <endpoint_id> --json
-   genmedia pricing <endpoint_id> --json
-   ```
+## Example Constraint Language
+- Use "must" for non-negotiable rules and "should" for recommendations.
+- Pair every do-rule with at least one concrete don't-example.
+- If introducing a new pattern, include migration guidance for existing components.
 
-3. Upload references.
-
-   ```bash
-   genmedia upload ./first-frame.png --json
-   genmedia upload ./character.png --json
-   genmedia upload ./product.png --json
-   genmedia upload ./voiceover.wav --json
-   ```
-
-4. Choose the sequence route.
-
-   - Highest quality video: start with Seedance 2.0 endpoints from
-     `model-routing`.
-   - Native multi-prompt: use if schema has shot arrays, prompt lists, or
-     timeline fields.
-   - First/last frame: use for controlled transitions between key frames.
-   - Image-to-video per shot: use for maximum continuity from approved stills.
-   - Manual per-shot generation: use when the model only supports one prompt.
-   - Audio-first: generate or upload audio, then plan visual shot lengths.
-   - Lip-sync or talking avatar: use Fabric 1.0 or Creatify Aurora from
-     `model-routing`.
-
-5. Run long jobs async and download every result with a unique template.
-
-   ```bash
-   genmedia run <endpoint_id> \
-     --prompt "<shot or sequence prompt>" \
-     --async \
-     --json
-
-   genmedia status <endpoint_id> <request_id> \
-     --download "./outputs/story/{request_id}_{index}.{ext}" \
-     --json
-   ```
-
-6. Return a shot table with endpoint, request id, prompt summary, local path,
-   and any continuity issues. Genmedia downloads clips; it does not replace a
-   timeline editor unless the chosen model returns a complete stitched video.
-
-## Shot planning
-
-Plan every sequence as beats first:
-
-1. Hook: immediate visual reason to keep watching.
-2. Setup: who, what, where, and why it matters.
-3. Development: movement, discovery, proof, or escalation.
-4. Turn: reveal, transformation, result, or emotional change.
-5. Close: final image, product memory, CTA-safe frame, or unresolved mood.
-
-For each shot, write:
-
-- Shot number and duration.
-- Story purpose.
-- Visual prompt.
-- Continuity anchor.
-- Input reference, if any.
-- Genmedia endpoint.
-- Expected output path.
-
-## Prompt build order
-
-Use this structure for each shot:
-
-```text
-SHOT [number], [duration]:
-[story purpose]. [subject and action]. [location and time]. [camera framing].
-[camera movement]. [lighting and color]. [continuity anchor]. [transition or
-relationship to previous shot].
-```
-
-Keep one shot to one clear action unless the selected model supports multi-shot
-or timeline prompting.
-
-## Model routing
-
-- Highest quality video: `bytedance/seedance-2.0/text-to-video`,
-  `bytedance/seedance-2.0/image-to-video`, or
-  `bytedance/seedance-2.0/reference-to-video`.
-- Fast or lower-cost video: `xai/grok-imagine-video/text-to-video` or
-  `xai/grok-imagine-video/image-to-video`.
-- Multi-shot sequence: Seedance 2.0 first, then
-  `fal-ai/kling-video/v3/pro/text-to-video`, then
-  `fal-ai/kling-video/v3/pro/image-to-video`, then
-  `alibaba/happy-horse/text-to-video` or
-  `alibaba/happy-horse/image-to-video`.
-- Text-heavy keyframes, boards, UI frames, posters, or infographics:
-  `openai/gpt-image-2` at `quality=high`.
-- Talking avatar, native audio, or lip-sync:
-  `veed/fabric-1.0`, `veed/fabric-1.0/text`, or `fal-ai/creatify/aurora`.
-
-## Quality bar
-
-Before returning:
-
-- Shot order has a clear narrative function.
-- The first shot is strong enough for the platform.
-- Continuity anchors are repeated without bloating every prompt.
-- Camera motion is varied but not random.
-- Durations add up to the requested runtime.
-- Async request IDs and downloaded files are recorded.
-- The model's actual schema, not assumptions, drove the final command.
+<!-- TYPEUI_SH_MANAGED_END -->

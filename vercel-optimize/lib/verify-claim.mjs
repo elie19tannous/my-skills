@@ -7,7 +7,6 @@ import { promisify } from 'node:util';
 import { isKnownUrl, sanitizeCitations } from './citations.mjs';
 import { findRecContradictions } from './project-facts.mjs';
 import { canonicalizeRoute } from './route-normalize.mjs';
-import { escapeRegex } from './util.mjs';
 
 const execFileP = promisify(execFile);
 const cacheInvalidationFileCache = new Map();
@@ -1204,8 +1203,14 @@ function escapeRegExp(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Supports `/pattern/flags` literal-regex form OR plain escaped string. Caller flags merge with embedded flags via Set dedup.
 function compilePattern(pattern, flags) {
-  return new RegExp(escapeRegex(String(pattern ?? '')), flags);
+  const m = pattern.match(/^\/(.+)\/([gimsu]*)$/);
+  if (m) {
+    const mergedFlags = [...new Set(((m[2] || '') + (flags || '')).split(''))].join('');
+    return new RegExp(m[1], mergedFlags);
+  }
+  return new RegExp(pattern.replace(/[.+^${}()|[\]\\?*]/g, '\\$&'), flags);
 }
 
 async function readClaimFile(claim) {

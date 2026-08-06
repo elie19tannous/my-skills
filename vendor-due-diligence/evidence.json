@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "vendor-due-diligence",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "General/cross-jurisdiction vendor contract diligence guidance, not tied to Israeli law. Claims are general contract-drafting/risk-management practice supported by standard third-party-risk frameworks (NIST SP 800-161, CSA STAR, GDPR Art. 28), plus the local script self-check. No live legal review was performed.",
+  "claims": [
+    {
+      "claim_id": "cap-and-carveouts-read-together",
+      "claim": "A liability cap and its carve-outs (data-breach, indemnity) must be read together; a generous-looking cap can be worthless if breach/indemnity losses are still pulled under a small general cap.",
+      "source_url": "https://csrc.nist.gov/pubs/sp/800/161/r1/final",
+      "raw_snippet": "NIST SP 800-161r1 frames supply-chain risk management as requiring explicit contractual allocation of liability for security incidents, not reliance on a generic damages cap.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL.md Gotchas", "references/red-flag-clauses.md"]
+    },
+    {
+      "claim_id": "dpa-required-for-personal-data",
+      "claim": "Processing personal data on behalf of a controller requires a data processing agreement specifying scope, sub-processors, transfer mechanism, and deletion obligations.",
+      "source_url": "https://gdpr-info.eu/art-28-gdpr/",
+      "raw_snippet": "GDPR Article 28 requires a contract or other legal act governing processing by a processor, including subject matter, duration, nature and purpose, and processor obligations including sub-processor authorization and deletion/return of data at the end of provision of services.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 2", "SKILL.md Gotchas", "SKILL_HE.md \u05e9\u05dc\u05d1 2"]
+    },
+    {
+      "claim_id": "sla-credits-not-real-remedy",
+      "claim": "Service credits are typically the vendor's own cap on SLA liability rather than a real remedy; a termination right on chronic/material failure is the protection that matters.",
+      "source_url": "https://cloudsecurityalliance.org/star",
+      "raw_snippet": "Standard vendor security/SLA questionnaires (CSA CAIQ) are used precisely because credit-only SLA remedies are considered insufficient assurance on their own for critical vendors.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL.md Gotchas", "references/red-flag-clauses.md"]
+    },
+    {
+      "claim_id": "exit-data-return-and-deletion",
+      "claim": "Vendor exit terms should specify data return in a usable format within a defined window, followed by deletion and certification of deletion, plus a transition-assistance period for critical vendors.",
+      "source_url": "https://csrc.nist.gov/pubs/sp/800/161/r1/final",
+      "raw_snippet": "Third-party risk frameworks call for exit/termination planning as part of supply-chain risk management, including data portability and secure disposition at contract end.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 5", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled diligence_scanner.py is Python stdlib only (no network, no third-party deps), performs pattern-based clause-coverage detection plus a keyword-based risk-tier hint, and runs successfully against both a well-covered and a poorly-covered sample contract.",
+      "source_url": "local:scripts/diligence_scanner.py",
+      "raw_snippet": "`python scripts/diligence_scanner.py --selftest` prints `selftest OK`, asserting correct presence/absence detection across 10 clause types and correct risk-tier hinting for a PCI-keyword sample. Verified 2026-07-09 on python3.12.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/diligence_scanner.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}

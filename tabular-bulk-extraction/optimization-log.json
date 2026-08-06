@@ -1,0 +1,29 @@
+{
+  "skill": "tabular-bulk-extraction",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Authored the tabular-bulk-extraction skill to the standard Lawcal legal-tech package, merging the 'Tabular Review' and 'Bulk Document Extraction' concepts into one skill: SKILL.md (English), SKILL_HE.md (Hebrew mirror), two references (extraction-workflow, schema-and-types), an offline stdlib-only extraction helper, metadata.json, evidence.json, and this log. The skill's central discipline is anti-fabrication: an unreadable cell is a flagged blank rather than a guessed number, every row carries provenance, and ambiguous values (dates, separators, signs, split cells) are surfaced for review instead of silently coerced. Ran the script self-check (--selftest: OK).",
+      "changes": [
+        {"type": "package", "id": "skill-md", "detail": "Authored SKILL.md: schema-first definition, per-document extraction, normalization/typing (money/date/enum/quantity), cross-document consolidation + dedup, output + extraction report, anti-fabrication discipline, examples (bulk invoices, exhibit index, fee schedules), gotchas, reference links, troubleshooting."},
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the instructions, examples, gotchas, reference links, and troubleshooting."},
+        {"type": "package", "id": "references", "detail": "Added references/extraction-workflow.md (end-to-end pass) and references/schema-and-types.md (row grain, fixed column order, per-type normalization targets/traps, split-cell detection, provenance)."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category legal-tech, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 5 claims sourced to the method references, ISO 8601 / ISO 4217 / RFC 4180 standards, and the local script self-check."},
+        {"type": "package", "id": "script", "detail": "Added scripts/table_extract.py (stdlib only): delimiter sniffing, CSV/TSV/pipe + simple JSON parsing, majority-vote column typing, US/EU money + disambiguable-date normalization, per-column blank counts, anomaly flagging, CSV/JSON emit."},
+        {"type": "test", "id": "script-selftest", "detail": "Verified scripts/table_extract.py --selftest passes on python3.11 (stdlib only, no network); confirmed US/EU separator handling, parenthesized-negative handling, ambiguous-date flagging, and blank-preservation."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-total-reconciliation",
+          "reason": "Reconciling extracted totals against computed ones, converting currencies, and OCR of scanned/image documents require source access, exchange rates, or an OCR engine beyond a static stdlib helper. The script deliberately stops at first-pass parsing/typing/flagging and defers reconciliation, conversion, and OCR to the human/agent with the sources, per the anti-fabrication rule.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

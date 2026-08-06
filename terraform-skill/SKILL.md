@@ -1,519 +1,242 @@
 ---
 name: terraform-skill
-description: "Terraform infrastructure as code best practices"
-risk: safe
-source: "https://github.com/antonbabenko/terraform-skill"
-date_added: "2026-02-27"
+description: >
+  Operational traps for Terraform provisioners, multi-environment isolation, and
+  zero-to-deployment reliability. Use when writing null_resource / remote-exec /
+  local-exec / file provisioners, setting up fresh instances with cloud-init, or any
+  IaC code that SSHs into remote hosts; when creating multi-environment Terraform
+  setups (DNS record duplication, snapshot cross-contamination); or when debugging
+  containers that are Restarting/unhealthy after terraform apply. Also when the user
+  mentions terraform plan/apply errors, provisioner failures, infrastructure drift,
+  TLS certificate errors, Cloudflare credential format, or Caddy/gateway / Caddyfile /
+  compose configuration.
 ---
-# Terraform Skill for Claude
 
-Comprehensive Terraform and OpenTofu guidance covering testing, modules, CI/CD, and production patterns. Based on terraform-best-practices.com and enterprise experience.
+# Terraform Operational Traps
 
-## When to Use This Skill
+Failure patterns from real deployments. Every item caused an incident. Organized as: **exact error → root cause → copy-paste fix**.
 
-**Activate this skill when:**
-- Creating new Terraform or OpenTofu configurations or modules
-- Setting up testing infrastructure for IaC code
-- Deciding between testing approaches (validate, plan, frameworks)
-- Structuring multi-environment deployments
-- Implementing CI/CD for infrastructure-as-code
-- Reviewing or refactoring existing Terraform/OpenTofu projects
-- Choosing between module patterns or state management approaches
+## Provisioner traps (symptom → fix)
 
-**Don't use this skill for:**
-- Basic Terraform/OpenTofu syntax questions (Claude knows this)
-- Provider-specific API reference (link to docs instead)
-- Cloud platform questions unrelated to Terraform/OpenTofu
+### `docker: not found` in remote-exec
 
-## Core Principles
-
-### 1. Code Structure Philosophy
-
-**Module Hierarchy:**
-
-| Type | When to Use | Scope |
-|------|-------------|-------|
-| **Resource Module** | Single logical group of connected resources | VPC + subnets, Security group + rules |
-| **Infrastructure Module** | Collection of resource modules for a purpose | Multiple resource modules in one region/account |
-| **Composition** | Complete infrastructure | Spans multiple regions/accounts |
-
-**Hierarchy:** Resource → Resource Module → Infrastructure Module → Composition
-
-**Directory Structure:**
-```
-environments/        # Environment-specific configurations
-├── prod/
-├── staging/
-└── dev/
-
-modules/            # Reusable modules
-├── networking/
-├── compute/
-└── data/
-
-examples/           # Module usage examples (also serve as tests)
-├── complete/
-└── minimal/
-```
-
-**Key principle from terraform-best-practices.com:**
-- Separate **environments** (prod, staging) from **modules** (reusable components)
-- Use **examples/** as both documentation and integration test fixtures
-- Keep modules small and focused (single responsibility)
-
-**For detailed module architecture, see:** Code Patterns: Module Types & Hierarchy
-
-### 2. Naming Conventions
-
-**Resources:**
-```hcl
-# Good: Descriptive, contextual
-resource "aws_instance" "web_server" { }
-resource "aws_s3_bucket" "application_logs" { }
-
-# Good: "this" for singleton resources (only one of that type)
-resource "aws_vpc" "this" { }
-resource "aws_security_group" "this" { }
-
-# Avoid: Generic names for non-singletons
-resource "aws_instance" "main" { }
-resource "aws_s3_bucket" "bucket" { }
-```
-
-**Singleton Resources:**
-
-Use `"this"` when your module creates only one resource of that type:
-
-✅ DO:
-```hcl
-resource "aws_vpc" "this" {}           # Module creates one VPC
-resource "aws_security_group" "this" {}  # Module creates one SG
-```
-
-❌ DON'T use "this" for multiple resources:
-```hcl
-resource "aws_subnet" "this" {}  # If creating multiple subnets
-```
-
-Use descriptive names when creating multiple resources of the same type.
-
-**Variables:**
-```hcl
-# Prefix with context when needed
-var.vpc_cidr_block          # Not just "cidr"
-var.database_instance_class # Not just "instance_class"
-```
-
-**Files:**
-- `main.tf` - Primary resources
-- `variables.tf` - Input variables
-- `outputs.tf` - Output values
-- `versions.tf` - Provider versions
-- `data.tf` - Data sources (optional)
-
-## Testing Strategy Framework
-
-### Decision Matrix: Which Testing Approach?
-
-| Your Situation | Recommended Approach | Tools | Cost |
-|----------------|---------------------|-------|------|
-| **Quick syntax check** | Static analysis | `terraform validate`, `fmt` | Free |
-| **Pre-commit validation** | Static + lint | `validate`, `tflint`, `trivy`, `checkov` | Free |
-| **Terraform 1.6+, simple logic** | Native test framework | Built-in `terraform test` | Free-Low |
-| **Pre-1.6, or Go expertise** | Integration testing | Terratest | Low-Med |
-| **Security/compliance focus** | Policy as code | OPA, Sentinel | Free |
-| **Cost-sensitive workflow** | Mock providers (1.7+) | Native tests + mocking | Free |
-| **Multi-cloud, complex** | Full integration | Terratest + real infra | Med-High |
-
-### Testing Pyramid for Infrastructure
-
-```
-        /\
-       /  \          End-to-End Tests (Expensive)
-      /____\         - Full environment deployment
-     /      \        - Production-like setup
-    /________\
-   /          \      Integration Tests (Moderate)
-  /____________\     - Module testing in isolation
- /              \    - Real resources in test account
-/________________\   Static Analysis (Cheap)
-                     - validate, fmt, lint
-                     - Security scanning
-```
-
-### Native Test Best Practices (1.6+)
-
-**Before generating test code:**
-
-1. **Validate schemas with Terraform MCP:**
-   ```
-   Search provider docs → Get resource schema → Identify block types
-   ```
-
-2. **Choose correct command mode:**
-   - `command = plan` - Fast, for input validation
-   - `command = apply` - Required for computed values and set-type blocks
-
-3. **Handle set-type blocks correctly:**
-   - Cannot index with `[0]`
-   - Use `for` expressions to iterate
-   - Or use `command = apply` to materialize
-
-**Common patterns:**
-- S3 encryption rules: **set** (use for expressions)
-- Lifecycle transitions: **set** (use for expressions)
-- IAM policy statements: **set** (use for expressions)
-
-**For detailed testing guides, see:**
-- **Testing Frameworks Guide** - Deep dive into static analysis, native tests, and Terratest
-- **Quick Reference** - Decision flowchart and command cheat sheet
-
-## Code Structure Standards
-
-### Resource Block Ordering
-
-**Strict ordering for consistency:**
-1. `count` or `for_each` FIRST (blank line after)
-2. Other arguments
-3. `tags` as last real argument
-4. `depends_on` after tags (if needed)
-5. `lifecycle` at the very end (if needed)
+cloud-init still installing Docker when provisioner SSHs in.
 
 ```hcl
-# ✅ GOOD - Correct ordering
-resource "aws_nat_gateway" "this" {
-  count = var.create_nat_gateway ? 1 : 0
-
-  allocation_id = aws_eip.this[0].id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name = "${var.name}-nat"
-  }
-
-  depends_on = [aws_internet_gateway.this]
-
-  lifecycle {
-    create_before_destroy = true
-  }
+provisioner "remote-exec" {
+  inline = [
+    "cloud-init status --wait || true",
+    "which docker || { echo 'FATAL: Docker not ready'; exit 1; }",
+  ]
 }
 ```
 
-### Variable Block Ordering
+### `rsync: connection unexpectedly closed` in local-exec
 
-1. `description` (ALWAYS required)
-2. `type`
-3. `default`
-4. `validation`
-5. `nullable` (when setting to false)
+Terraform holds its SSH connection open; local-exec rsync opens a second one that gets rejected. Never use local-exec for file transfer to remote. Use tarball + file provisioner:
 
 ```hcl
-variable "environment" {
-  description = "Environment name for resource tagging"
-  type        = string
-  default     = "dev"
-
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be one of: dev, staging, prod."
-  }
-
-  nullable = false
+provisioner "local-exec" {
+  command = "tar czf /tmp/src.tar.gz --exclude=node_modules --exclude=.git -C ${path.module}/../../.. myproject"
+}
+provisioner "file" {
+  source      = "/tmp/src.tar.gz"
+  destination = "/tmp/src.tar.gz"
+}
+provisioner "remote-exec" {
+  inline = ["tar xzf /tmp/src.tar.gz -C /data/ && rm -f /tmp/src.tar.gz"]
 }
 ```
 
-**For complete structure guidelines, see:** Code Patterns: Block Ordering & Structure
+macOS BSD tar: `--exclude` must come BEFORE the source argument.
 
-## Count vs For_Each: When to Use Each
+### `cloud-init status` shows "running" forever
 
-### Quick Decision Guide
+`apt-get -y` does not suppress debconf dialogs. Packages like `iptables-persistent` block on TTY prompts.
 
-| Scenario | Use | Why |
-|----------|-----|-----|
-| Boolean condition (create or don't) | `count = condition ? 1 : 0` | Simple on/off toggle |
-| Simple numeric replication | `count = 3` | Fixed number of identical resources |
-| Items may be reordered/removed | `for_each = toset(list)` | Stable resource addresses |
-| Reference by key | `for_each = map` | Named access to resources |
-| Multiple named resources | `for_each` | Better maintainability |
+```yaml
+- |
+    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+    DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent
+```
 
-### Common Patterns
+Known offenders: `iptables-persistent`, `postfix`, `mysql-server`, `wireshark-common`.
 
-**Boolean conditions:**
+### `EACCES: permission denied` in container logs, container Restarting
+
+Host volume dirs are root-owned; container runs as non-root (uid 1001). Fix before `docker compose up`:
+
+```bash
+mkdir -p /data/myapp/data /data/myapp/logs
+chown -R 1001:1001 /data/myapp/data /data/myapp/logs
+```
+
+Find UID: grep `adduser.*-u` or `USER` in Dockerfile.
+
+### Provisioner fails but no diagnostic output
+
+`set -e` exits on first error, hiding subsequent `docker logs` output. Use `set -u` without `-e`, put one verification gate at the end:
+
 ```hcl
-# ✅ GOOD - Boolean condition
-resource "aws_nat_gateway" "this" {
-  count = var.create_nat_gateway ? 1 : 0
-  # ...
+provisioner "remote-exec" {
+  inline = [
+    "set -u",
+    "docker compose up -d",
+    "sleep 15",
+    "docker logs myapp --tail 20 2>&1 || true",
+    "docker ps --format 'table {{.Names}}\\t{{.Status}}' || true",
+    "docker ps --filter name=myapp --format '{{.Status}}' | grep -q healthy || exit 1",
+  ]
 }
 ```
 
-**Stable addressing with for_each:**
-```hcl
-# ✅ GOOD - Removing "us-east-1b" only affects that subnet
-resource "aws_subnet" "private" {
-  for_each = toset(var.availability_zones)
+### Container `Restarting` — database tables missing
 
-  availability_zone = each.key
-  # ...
-}
+DB migrations not in provisioner. PostgreSQL `docker-entrypoint-initdb.d` only runs on empty data dir. Explicitly create DB + run migrations:
 
-# ❌ BAD - Removing middle AZ recreates all subsequent subnets
-resource "aws_subnet" "private" {
-  count = length(var.availability_zones)
+```bash
+# After postgres healthy:
+docker exec pg psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='mydb'" | grep -q 1 \
+  || docker exec pg psql -U postgres -c "CREATE DATABASE mydb;"
 
-  availability_zone = var.availability_zones[count.index]
-  # ...
-}
+# Idempotent migrations:
+for f in migrations/*.sql; do
+  VER=$(basename $f)
+  APPLIED=$($PSQL -tAc "SELECT 1 FROM schema_migrations WHERE version='$VER'" | tr -d ' ')
+  [ "$APPLIED" = "1" ] && continue
+  { echo 'BEGIN;'; cat $f; echo 'COMMIT;'; } | $PSQL
+  $PSQL -tAc "INSERT INTO schema_migrations(version) VALUES ('$VER') ON CONFLICT DO NOTHING"
+done
 ```
 
-**For migration guides and detailed examples, see:** Code Patterns: Count vs For_Each
+### `docker compose build` ignores env var override
 
-## Locals for Dependency Management
+Compose reads build args from `.env` file, not shell env. `VAR=x docker compose build` does NOT work.
 
-**Use locals to ensure correct resource deletion order:**
+```bash
+# WRONG
+DOCKER_WITH_PROXY_MODE=disabled docker compose build
+
+# RIGHT
+grep -q DOCKER_WITH_PROXY_MODE .env || echo 'DOCKER_WITH_PROXY_MODE=disabled' >> .env
+docker compose build
+```
+
+### TLS handshake fails: `Invalid format for Authorization header`
+
+Caddy DNS-01 ACME needs a Cloudflare **API Token** (`cfut_` prefix, 40+ chars, Bearer auth). A **Global API Key** (37 hex chars, X-Auth-Key auth) causes `HTTP 400 Code:6003`. Production may appear to work because it has cached certificates; fresh environments fail on first cert request.
+
+```bash
+# Verify token format before deploy:
+TOKEN=$(grep CLOUDFLARE_API_TOKEN .env | cut -d= -f2)
+echo "$TOKEN" | grep -q "^cfut_" || echo "FATAL: needs API Token, not Global Key"
+```
+
+Create scoped token via API:
+```bash
+curl -s "https://api.cloudflare.com/client/v4/user/tokens" -X POST \
+  -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_GLOBAL_KEY" \
+  -d '{"name":"caddy-dns-acme","policies":[{"effect":"allow",
+    "resources":{"com.cloudflare.api.account.zone.<ZONE_ID>":"*"},
+    "permission_groups":[
+      {"id":"4755a26eedb94da69e1066d98aa820be","name":"DNS Write"},
+      {"id":"c8fed203ed3043cba015a93ad1616f1f","name":"Zone Read"}]}]}'
+```
+
+### TLS fails on staging but works on production — hardcoded domains
+
+Caddyfile or compose has literal domain names. Staging Caddy loads production config, tries to get certs for domains it doesn't own → ACME fails.
+
+**Caddyfile**: Use `{$VAR}` — Caddy evaluates env vars at startup.
+```caddy
+# WRONG
+example.com { tls { dns cloudflare {env.CLOUDFLARE_API_TOKEN} } }
+
+# RIGHT
+{$LOBEHUB_DOMAIN} { tls { dns cloudflare {env.CLOUDFLARE_API_TOKEN} } }
+```
+
+**Compose**: Use `${VAR:?required}` — fail-fast if unset.
+```yaml
+# WRONG
+- APP_URL=https://example.com
+
+# RIGHT
+- APP_URL=${APP_URL:?APP_URL is required}
+```
+
+Pass the env var to the gateway container so Caddy can read it:
+```yaml
+environment:
+  - LOBEHUB_DOMAIN=${LOBEHUB_DOMAIN:?LOBEHUB_DOMAIN is required}
+  - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:?required for DNS-01 TLS}
+```
+
+### OAuth login fails: `Social sign in failed`
+
+Casdoor `init_data.json` contains hardcoded redirect URIs. `--createDatabase=true` only applies init_data on first-ever DB creation — not on restarts. Fix via SQL in provisioner:
+
+```bash
+# Replace production domain with staging in existing Casdoor DB
+$PSQL -c "UPDATE application SET redirect_uris = REPLACE(redirect_uris,
+  'example.com', 'staging.example.com')
+  WHERE name='lobechat'
+  AND redirect_uris LIKE '%example.com%'
+  AND redirect_uris NOT LIKE '%staging.example.com%';"
+```
+
+Also check `AUTH_CASDOOR_ISSUER` — it must match the Casdoor subdomain (`auth.staging.example.com`), not the app root domain.
+
+## Multi-environment isolation
+
+Before creating a second environment, grep `.tf` files for hardcoded names. See [references/multi-env-isolation.md](references/multi-env-isolation.md) for the complete matrix.
+
+**Will fail on apply** (globally unique):
+
+| Resource | Scope | Fix |
+|---|---|---|
+| SSH key pair | Region | `"${env}-deploy"` |
+| SLS log project | Account | `"${env}-logs"` |
+| CloudMonitor contact | Account | `"${env}-ops"` |
+
+**DNS duplication trap**: Two environments creating A records for the same name in the same Cloudflare zone → two independent record IDs → DNS round-robin → ~50% traffic to wrong instance. Fix: use subdomain isolation (`staging.example.com`) or separate zones. Remember to create DNS records for ALL subdomains Caddy serves (e.g., `auth.staging`, `minio.staging`).
+
+**Snapshot cross-contamination**: Unfiltered `data "alicloud_ecs_snapshots"` returns ALL account snapshots. New env inherits old 100GB snapshot, fails creating 40GB disk. Gate with variable:
 
 ```hcl
-# Problem: Subnets might be deleted after CIDR blocks, causing errors
-# Solution: Use try() in locals to hint deletion order
-
 locals {
-  # References secondary CIDR first, falling back to VPC
-  # Forces Terraform to delete subnets before CIDR association
-  vpc_id = try(
-    aws_vpc_ipv4_cidr_block_association.this[0].vpc_id,
-    aws_vpc.this.id,
-    ""
-  )
-}
-
-resource "aws_vpc" "this" {
-  cidr_block = "10.0.0.0/16"
-}
-
-resource "aws_vpc_ipv4_cidr_block_association" "this" {
-  count = var.add_secondary_cidr ? 1 : 0
-
-  vpc_id     = aws_vpc.this.id
-  cidr_block = "10.1.0.0/16"
-}
-
-resource "aws_subnet" "public" {
-  vpc_id     = local.vpc_id  # Uses local, not direct reference
-  cidr_block = "10.1.0.0/24"
+  latest_snapshot_id = var.enable_snapshot_recovery && length(local.available_snapshots) > 0
+    ? local.available_snapshots[0].snapshot_id : null
 }
 ```
 
-**Why this matters:**
-- Prevents deletion errors when destroying infrastructure
-- Ensures correct dependency order without explicit `depends_on`
-- Particularly useful for VPC configurations with secondary CIDR blocks
+Do NOT add `count` to the data source — changes its state address, causes drift.
 
-**For detailed examples, see:** Code Patterns: Locals for Dependency Management
+## Pre-deploy validation
 
-## Module Development
+Run a validation script **before** `terraform apply` to catch configuration errors locally. This eliminates the deploy→discover→fix→redeploy cycle.
 
-### Standard Module Structure
+Key checks (see [references/pre-deploy-validation.md](references/pre-deploy-validation.md)):
+1. `terraform validate` — syntax
+2. No hardcoded domains in Caddyfiles or compose files
+3. Required env vars present (`LOBEHUB_DOMAIN`, `CLAUDE4DEV_DOMAIN`, `CLOUDFLARE_API_TOKEN`, `APP_URL`, etc.)
+4. Cloudflare API Token format (not Global API Key)
+5. DNS records exist for all Caddy-served domains
+6. Casdoor issuer URL matches `auth.*` subdomain
+7. SSH private key exists
 
-```
-my-module/
-├── README.md           # Usage documentation
-├── main.tf             # Primary resources
-├── variables.tf        # Input variables with descriptions
-├── outputs.tf          # Output values
-├── versions.tf         # Provider version constraints
-├── examples/
-│   ├── minimal/        # Minimal working example
-│   └── complete/       # Full-featured example
-└── tests/              # Test files
-    └── module_test.tftest.hcl  # Or .go
-```
+Integrate into Makefile: `make pre-deploy ENV=staging` before `make apply`.
 
-### Best Practices Summary
+## Zero-to-deployment
 
-**Variables:**
-- ✅ Always include `description`
-- ✅ Use explicit `type` constraints
-- ✅ Provide sensible `default` values where appropriate
-- ✅ Add `validation` blocks for complex constraints
-- ✅ Use `sensitive = true` for secrets
+Fresh disks expose every implicit dependency. See [references/zero-to-deploy-checklist.md](references/zero-to-deploy-checklist.md).
 
-**Outputs:**
-- ✅ Always include `description`
-- ✅ Mark sensitive outputs with `sensitive = true`
-- ✅ Consider returning objects for related values
-- ✅ Document what consumers should do with each output
-
-**For detailed module patterns, see:**
-- **Module Patterns Guide** - Variable best practices, output design, ✅ DO vs ❌ DON'T patterns
-- **Quick Reference** - Resource naming, variable naming, file organization
-
-## CI/CD Integration
-
-### Recommended Workflow Stages
-
-1. **Validate** - Format check + syntax validation + linting
-2. **Test** - Run automated tests (native or Terratest)
-3. **Plan** - Generate and review execution plan
-4. **Apply** - Execute changes (with approvals for production)
-
-### Cost Optimization Strategy
-
-1. **Use mocking for PR validation** (free)
-2. **Run integration tests only on main branch** (controlled cost)
-3. **Implement auto-cleanup** (prevent orphaned resources)
-4. **Tag all test resources** (track spending)
-
-**For complete CI/CD templates, see:**
-- **CI/CD Workflows Guide** - GitHub Actions, GitLab CI, Atlantis integration, cost optimization
-- **Quick Reference** - Common CI/CD issues and solutions
-
-## Security & Compliance
-
-### Essential Security Checks
-
-```bash
-# Static security scanning
-trivy config .
-checkov -d .
-```
-
-### Common Issues to Avoid
-
-❌ **Don't:**
-- Store secrets in variables
-- Use default VPC
-- Skip encryption
-- Open security groups to 0.0.0.0/0
-
-✅ **Do:**
-- Use AWS Secrets Manager / Parameter Store
-- Create dedicated VPCs
-- Enable encryption at rest
-- Use least-privilege security groups
-
-**For detailed security guidance, see:**
-- **Security & Compliance Guide** - Trivy/Checkov integration, secrets management, state file security, compliance testing
-
-## Version Management
-
-### Version Constraint Syntax
-
-```hcl
-version = "5.0.0"      # Exact (avoid - inflexible)
-version = "~> 5.0"     # Recommended: 5.0.x only
-version = ">= 5.0"     # Minimum (risky - breaking changes)
-```
-
-### Strategy by Component
-
-| Component | Strategy | Example |
-|-----------|----------|---------|
-| **Terraform** | Pin minor version | `required_version = "~> 1.9"` |
-| **Providers** | Pin major version | `version = "~> 5.0"` |
-| **Modules (prod)** | Pin exact version | `version = "5.1.2"` |
-| **Modules (dev)** | Allow patch updates | `version = "~> 5.1"` |
-
-### Update Workflow
-
-```bash
-# Lock versions initially
-terraform init              # Creates .terraform.lock.hcl
-
-# Update to latest within constraints
-terraform init -upgrade     # Updates providers
-
-# Review and test
-terraform plan
-```
-
-**For detailed version management, see:** Code Patterns: Version Management
-
-## Modern Terraform Features (1.0+)
-
-### Feature Availability by Version
-
-| Feature | Version | Use Case |
-|---------|---------|----------|
-| `try()` function | 0.13+ | Safe fallbacks, replaces `element(concat())` |
-| `nullable = false` | 1.1+ | Prevent null values in variables |
-| `moved` blocks | 1.1+ | Refactor without destroy/recreate |
-| `optional()` with defaults | 1.3+ | Optional object attributes |
-| Native testing | 1.6+ | Built-in test framework |
-| Mock providers | 1.7+ | Cost-free unit testing |
-| Provider functions | 1.8+ | Provider-specific data transformation |
-| Cross-variable validation | 1.9+ | Validate relationships between variables |
-| Write-only arguments | 1.11+ | Secrets never stored in state |
-
-### Quick Examples
-
-```hcl
-# try() - Safe fallbacks (0.13+)
-output "sg_id" {
-  value = try(aws_security_group.this[0].id, "")
-}
-
-# optional() - Optional attributes with defaults (1.3+)
-variable "config" {
-  type = object({
-    name    = string
-    timeout = optional(number, 300)  # Default: 300
-  })
-}
-
-# Cross-variable validation (1.9+)
-variable "environment" { type = string }
-variable "backup_days" {
-  type = number
-  validation {
-    condition     = var.environment == "prod" ? var.backup_days >= 7 : true
-    error_message = "Production requires backup_days >= 7"
-  }
-}
-```
-
-**For complete patterns and examples, see:** Code Patterns: Modern Terraform Features
-
-## Version-Specific Guidance
-
-### Terraform 1.0-1.5
-- Use Terratest for testing
-- No native testing framework available
-- Focus on static analysis and plan validation
-
-### Terraform 1.6+ / OpenTofu 1.6+
-- **New:** Native `terraform test` / `tofu test` command
-- Consider migrating from external frameworks for simple tests
-- Keep Terratest only for complex integration tests
-
-### Terraform 1.7+ / OpenTofu 1.7+
-- **New:** Mock providers for unit testing
-- Reduce cost by mocking external dependencies
-- Use real integration tests for final validation
-
-### Terraform vs OpenTofu
-
-Both are fully supported by this skill. For licensing, governance, and feature comparison, see Quick Reference: Terraform vs OpenTofu.
-
-## Detailed Guides
-
-This skill uses **progressive disclosure** - essential information is in this main file, detailed guides are available when needed:
-
-📚 **Reference Files:**
-- **Testing Frameworks** - In-depth guide to static analysis, native tests, and Terratest
-- **Module Patterns** - Module structure, variable/output best practices, ✅ DO vs ❌ DON'T patterns
-- **CI/CD Workflows** - GitHub Actions, GitLab CI templates, cost optimization, automated cleanup
-- **Security & Compliance** - Trivy/Checkov integration, secrets management, compliance testing
-- **Quick Reference** - Command cheat sheets, decision flowcharts, troubleshooting guide
-
-**How to use:** When you need detailed information on a topic, reference the appropriate guide. Claude will load it on demand to provide comprehensive guidance.
-
-## License
-
-This skill is licensed under the **Apache License 2.0**. See the LICENSE file for full terms.
-
-**Copyright © 2026 Anton Babenko**
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Key items that break provisioners on fresh instances:
+1. **Directories**: `mkdir -p /data/{svc1,svc2}` in cloud-init — `file` provisioner fails if target dir missing
+2. **Databases**: Explicit `CREATE DATABASE` — PG init scripts only run on empty data dir
+3. **Migrations**: Tracked in `schema_migrations` table, applied idempotently
+4. **Provisioner ordering**: `depends_on` between resources sharing Docker networks
+5. **Memory**: Stop non-critical containers during Docker build on small instances (≤8GB)
+6. **Domain parameterization**: Every domain in Caddyfile/compose must be `{$VAR}` / `${VAR:?required}`
+7. **Credential format**: Caddy needs API Token (`cfut_`), not Global API Key

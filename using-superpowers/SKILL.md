@@ -1,98 +1,90 @@
 ---
 name: using-superpowers
-description: "Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions"
-risk: unknown
-source: community
-date_added: "2026-02-27"
+description: 在开始任何对话时使用——确立如何查找和使用技能，要求在任何响应（包括澄清性问题）之前调用 Skill 工具
+version: "1.0.0"
+license: MIT
+metadata:
+  hermes:
+    tags: [meta, getting-started]
 ---
 
+<SUBAGENT-STOP>
+如果你是作为子智能体被分派来执行特定任务的，忽略此技能。
+</SUBAGENT-STOP>
+
 <EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+如果你认为哪怕只有 1% 的可能性某个技能适用于你正在做的事情，你绝对必须调用该技能。
 
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+如果一个技能适用于你的任务，你没有选择。你必须使用它。
 
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+这不可协商。你不能通过合理化来逃避。
 </EXTREMELY-IMPORTANT>
 
-## How to Access Skills
+## 规则
 
-**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+**在任何响应或操作之前调用相关或被请求的技能**——包括澄清性问题、探索代码库、或查看文件之前。如果调用后发现技能不适合当前情况，你不需要使用它。
 
-**In other environments:** Check your platform's documentation for how skills are loaded.
+**在进入 EnterPlanMode 之前：** 如果你还没有头脑风暴过，先调用头脑风暴技能。
 
-# Using Skills
+然后宣布"使用 [技能] 来 [目的]"，并严格遵循该技能。如果它有检查清单，为每个条目创建一个待办。
 
-## The Rule
+## 技能优先级
 
-**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+当多个技能都适用时，流程技能优先——它们决定处理方式，然后由实现技能（前端设计等）负责执行。头脑风暴和系统化调试是 Superpowers 中最常见的流程技能，但这条规则适用于任何流程技能。
 
-```dot
-digraph skill_flow {
-    "User message received" [shape=doublecircle];
-    "Might any skill apply?" [shape=diamond];
-    "Invoke Skill tool" [shape=box];
-    "Announce: 'Using [skill] to [purpose]'" [shape=box];
-    "Has checklist?" [shape=diamond];
-    "Create TodoWrite todo per item" [shape=box];
-    "Follow skill exactly" [shape=box];
-    "Respond (including clarifications)" [shape=doublecircle];
+- "让我们构建 X" → 先用 superpowers:brainstorming，再用实现技能。
+- "修复这个 bug" → 先用 superpowers:systematic-debugging，再用领域技能。
 
-    "User message received" -> "Might any skill apply?";
-    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
-    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
-    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
-    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
-    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
-    "Has checklist?" -> "Follow skill exactly" [label="no"];
-    "Create TodoWrite todo per item" -> "Follow skill exactly";
-}
-```
+## 红线
 
-## Red Flags
+这些想法意味着停下——你在合理化：
 
-These thoughts mean STOP—you're rationalizing:
+| 想法 | 现实 |
+|------|------|
+| "这只是一个简单的问题" | 问题就是任务。检查技能。 |
+| "我需要先了解更多上下文" | 技能检查在澄清性问题之前。 |
+| "让我先探索一下代码库" | 技能告诉你如何探索。先检查。 |
+| "我可以快速查一下 git/文件" | 文件缺少对话上下文。检查技能。 |
+| "让我先收集信息" | 技能告诉你如何收集信息。 |
+| "这不需要正式的技能" | 如果技能存在，就使用它。 |
+| "我记得这个技能" | 技能会迭代更新。阅读当前版本。 |
+| "这不算一个任务" | 行动 = 任务。检查技能。 |
+| "技能太小题大做了" | 简单的事会变复杂。使用它。 |
+| "让我先做这一件事" | 在做任何事之前先检查。 |
+| "这样做感觉很高效" | 无纪律的行动浪费时间。技能防止这一点。 |
+| "我知道那是什么意思" | 知道概念 ≠ 使用技能。调用它。 |
 
-| Thought | Reality |
-|---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
-| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
-| "Let me gather information first" | Skills tell you HOW to gather information. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I remember this skill" | Skills evolve. Read current version. |
-| "This doesn't count as a task" | Action = task. Check for skills. |
-| "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just do this one thing first" | Check BEFORE doing anything. |
-| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
-| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+## 平台适配
 
-## Skill Priority
+如果你的运行环境在下面列出，请阅读对应的参考文件获取特殊说明：
 
-When multiple skills could apply, use this order:
+- Codex：`references/codex-tools.md`
+- Pi：`references/pi-tools.md`
+- Copilot CLI：`references/copilot-tools.md`
+- Hermes Agent：`references/hermes-tools.md`
+- Qoder：`references/qoder-tools.md`
 
-1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
-2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+Gemini CLI 用户通过 GEMINI.md 自动获得 `references/gemini-tools.md` 的工具映射。
 
-"Let's build X" → brainstorming first, then implementation skills.
-"Fix this bug" → debugging first, then domain-specific skills.
+## 中国特色技能路由
 
-## Skill Types
+当检测到以下场景时，**必须**优先调用对应的中国特色技能：
 
-**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+| 场景 | 调用技能 |
+|------|---------|
+| 代码审查且团队使用中文沟通 | **superpowers:chinese-code-review** |
+| 使用 Gitee/Coding/极狐 GitLab | **superpowers:chinese-git-workflow** |
+| 编写中文技术文档或 README | **superpowers:chinese-documentation** |
+| 编写 git commit message（中文项目） | **superpowers:chinese-commit-conventions** |
+| 构建 MCP 服务器/工具 | **superpowers:mcp-builder** |
 
-**Flexible** (patterns): Adapt principles to context.
+**判断依据：**
+- 项目中有中文注释、中文 README、或 .gitee 目录 → 启用中文系列技能
+- commit 历史中有中文 → 使用中文提交规范
+- 用户用中文交流 → 所有输出使用中文，优先考虑中国特色技能
 
-The skill itself tells you which.
+中国特色技能与翻译技能**叠加使用**，不互斥。例如：做代码审查时，同时使用 requesting-code-review（流程）+ chinese-code-review（风格）。
 
-## User Instructions
+## 用户指令
 
-Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+用户指令（CLAUDE.md、AGENTS.md、GEMINI.md 等、直接请求）优先于技能，技能又优先于默认行为。只有当你的人类伙伴明确告诉你跳过时，才能跳过技能工作流或指令。

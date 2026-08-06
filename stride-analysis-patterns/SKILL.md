@@ -1,13 +1,16 @@
 ---
 name: stride-analysis-patterns
-description: Apply STRIDE methodology to systematically identify threats. Use when analyzing system security, conducting threat modeling sessions, or creating security documentation.
+description: "Apply STRIDE methodology to systematically identify threats. Use when analyzing system security, conducting threat modeling sessions, or creating security documentation."
+risk: safe
+source: community
+date_added: "2026-02-27"
 ---
 
 # STRIDE Analysis Patterns
 
 Systematic threat identification using the STRIDE methodology.
 
-## When to Use This Skill
+## Use this skill when
 
 - Starting new threat modeling sessions
 - Analyzing existing system architecture
@@ -16,51 +19,23 @@ Systematic threat identification using the STRIDE methodology.
 - Training teams on threat identification
 - Compliance and audit preparation
 
-## Core Concepts
+## Do not use this skill when
 
-### 1. STRIDE Categories
+- The task is unrelated to stride analysis patterns
+- You need a different domain or tool outside this scope
 
-```
-S - Spoofing       → Authentication threats
-T - Tampering      → Integrity threats
-R - Repudiation    → Non-repudiation threats
-I - Information    → Confidentiality threats
-    Disclosure
-D - Denial of      → Availability threats
-    Service
-E - Elevation of   → Authorization threats
-    Privilege
-```
+## Instructions
 
-### 2. Threat Analysis Matrix
+- Clarify goals, constraints, and required inputs.
+- Apply relevant best practices and validate outcomes.
+- Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
 
-| Category            | Question                                  | Control Family |
-| ------------------- | ----------------------------------------- | -------------- |
-| **Spoofing**        | Can attacker pretend to be someone else?  | Authentication |
-| **Tampering**       | Can attacker modify data in transit/rest? | Integrity      |
-| **Repudiation**     | Can attacker deny actions?                | Logging/Audit  |
-| **Info Disclosure** | Can attacker access unauthorized data?    | Encryption     |
-| **DoS**             | Can attacker disrupt availability?        | Rate limiting  |
-| **Elevation**       | Can attacker gain higher privileges?      | Authorization  |
+## Resources
 
-## Templates and detailed worked examples
+- `resources/implementation-playbook.md` for detailed patterns and examples.
 
-Full template library lives in `references/details.md`. Read that file when you need concrete templates for this skill.
-
-## Best Practices
-
-### Do's
-
-- **Involve stakeholders** - Security, dev, and ops perspectives
-- **Be systematic** - Cover all STRIDE categories
-- **Prioritize realistically** - Focus on high-impact threats
-- **Update regularly** - Threat models are living documents
-- **Use visual aids** - DFDs help communication
-
-### Don'ts
-
-- **Don't skip categories** - Each reveals different threats
-- **Don't assume security** - Question every component
-- **Don't work in isolation** - Collaborative modeling is better
-- **Don't ignore low-probability** - High-impact threats matter
-- **Don't stop at identification** - Follow through with mitigations
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

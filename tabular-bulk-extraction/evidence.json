@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "tabular-bulk-extraction",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "This skill encodes a data-extraction methodology, not jurisdiction-specific legal facts. Claims below are about the method and the interoperability/format standards it aligns to, plus the local script self-check. No live document set was extracted. The core discipline is anti-fabrication: an unreadable cell is a flagged blank, never a guessed value, and provenance is carried on every row.",
+  "claims": [
+    {
+      "claim_id": "schema-first-mergeability",
+      "claim": "A bulk extraction is only mergeable and computable when a fixed column schema, column order, and row grain are defined before extraction; extracting without a schema yields ragged output that will not stack across documents.",
+      "source_url": "local:references/schema-and-types.md",
+      "raw_snippet": "Every document produces rows with the SAME columns in the SAME order, including blanks for columns a given document lacks. This is what lets 200 documents stack into one table.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 1", "SKILL_HE.md שלב 1", "references/schema-and-types.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "provenance-per-row",
+      "claim": "Every extracted row must carry its provenance (source document plus a page/row/cell location) so any value can be traced back and checked; a value without a source location is itself a flag.",
+      "source_url": "local:references/extraction-workflow.md",
+      "raw_snippet": "Provenance columns: source_doc + a location (page / row / cell). A value without a source location cannot be checked, and an unverifiable extraction is exactly the fabrication risk this skill exists to prevent.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 1", "SKILL.md Step 5", "SKILL_HE.md שלב 1", "references/extraction-workflow.md"]
+    },
+    {
+      "claim_id": "iso-normalization-targets",
+      "claim": "Extracted values normalize to unambiguous standards: dates to ISO 8601 (YYYY-MM-DD), currency tags to ISO 4217 three-letter codes, and emitted CSV to RFC 4180 rules, so the output parses cleanly and is computable downstream.",
+      "source_url": "https://www.iso.org/iso-8601-date-and-time-format.html",
+      "raw_snippet": "ISO 8601 defines the unambiguous YYYY-MM-DD date format; ISO 4217 defines currency codes; RFC 4180 defines CSV quoting/header rules.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL.md Reference Links", "SKILL_HE.md שלב 3", "references/schema-and-types.md"]
+    },
+    {
+      "claim_id": "ambiguity-not-guessed",
+      "claim": "Ambiguous values (DD/MM vs MM/DD dates, US vs EU decimal/thousands separators, parenthesized/CR-DR signed numbers, split/merged cells) must be resolved from document context or flagged for review, never coerced with a single silent assumption; a misread separator is a 1000x error.",
+      "source_url": "local:references/schema-and-types.md",
+      "raw_snippet": "1,234.50 (US) and 1.234,50 (EU) are the same amount written oppositely; misreading one is a 1000x error. 03/04/2024 = Mar 4 or Apr 3 -- resolve from context or flag.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 3", "SKILL.md Gotchas", "SKILL_HE.md שלב 3", "references/schema-and-types.md"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled table_extract.py is Python stdlib only (csv/json/re, no network, no third-party deps) and ships an embedded self-check runnable via --selftest, which passes; it normalizes US/EU money and disambiguable dates, flags ambiguous cells, and never guesses missing values.",
+      "source_url": "local:scripts/table_extract.py",
+      "raw_snippet": "`python scripts/table_extract.py --selftest` prints 'selftest OK'. Verified 2026-07-09 on python3.11. Normalizes 1,234.50->1234.5, 1.000,00->1000.0, (500)->-500; flags ambiguous 03/04 dates and non-numeric money cells. Does not reconcile totals, convert currencies, OCR images, or guess missing values.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/table_extract.py", "SKILL.md Bundled Resources", "SKILL_HE.md משאבים מצורפים"]
+    }
+  ]
+}
