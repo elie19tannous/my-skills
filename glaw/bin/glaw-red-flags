@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""GLAW red-flag ledger: open, resolve, list, and gate blocking findings."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+BLOCKING = {"critical", "high"}
+SOURCE_ID_RE = re.compile(r"\bSRC-\d{4}\b")
+SOURCE_EVIDENCE_PARTS = {"evidence", "source_documents", "sources"}
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def home() -> Path:
+    return Path(os.environ.get("GLAW_HOME", str(Path.home() / ".glaw")))
+
+
+def active_slug() -> str:
+    p = home() / ".active"
+    return p.read_text(encoding="utf-8").strip() if p.exists() else ""
+
+
+def matter_dir(slug: str | None) -> Path:
+    s = slug or active_slug()
+    if not s:
+        raise SystemExit("ERROR: no active matter. Run `glaw matter new \"<name>\"` first.")
+    d = home() / "matters" / s
+    if not d.is_dir():
+        raise SystemExit(f"ERROR: matter not found: {s}")
+    return d
+
+
+def ledger_path(d: Path) -> Path:
+    return d / "red_flags.jsonl"
+
+
+def read_rows(d: Path) -> list[dict]:
+    p = ledger_path(d)
+    if not p.exists():
+        return []
+    return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def is_source_evidence(path: Path, root: Path) -> bool:
+    if not path.is_file():
+        return False
+    return bool(set(path.relative_to(root).parts) & SOURCE_EVIDENCE_PARTS)
+
+
+def current_source_ids(d: Path) -> set[str]:
+    paths = [p for p in d.rglob("*") if is_source_evidence(p, d) and p.stat().st_size > 0]
+    return {f"SRC-{idx:04d}" for idx, _path in enumerate(sorted(paths), start=1)}
+
+
+def cited_source_ids(text: str) -> set[str]:
+    return set(SOURCE_ID_RE.findall(text or ""))
+
+
+def invalid_resolution_sources(rows: list[dict], d: Path) -> list[str]:
+    current = current_source_ids(d)
+    failures = []
+    for row in rows:
+        if str(row.get("severity", "")).lower() not in BLOCKING:
+            continue
+        if row.get("status", "open") != "resolved":
+            continue
+        evidence = str(row.get("resolution_evidence", ""))
+        cited = cited_source_ids(evidence)
+        if not cited:
+            failures.append(f"{row.get('id')} resolution evidence missing source id")
+        elif not current:
+            failures.append(f"{row.get('id')} resolution cites {', '.join(sorted(cited))} but no source artifacts exist")
+        else:
+            stale = sorted(cited - current)
+            if stale:
+                failures.append(f"{row.get('id')} resolution cites non-current source id(s): {', '.join(stale)}")
+    return failures
+
+
+def validate_current_source_text(text: str, d: Path, label: str) -> list[str]:
+    cited = cited_source_ids(text)
+    current = current_source_ids(d)
+    if not cited:
+        return [f"{label} missing source id"]
+    if not current:
+        return [f"{label} cites {', '.join(sorted(cited))} but no source artifacts exist"]
+    stale = sorted(cited - current)
+    if stale:
+        return [f"{label} cites non-current source id(s): {', '.join(stale)}"]
+    return []
+
+
+def write_rows(d: Path, rows: list[dict]) -> None:
+    ledger_path(d).write_text("".join(json.dumps(r, sort_keys=False) + "\n" for r in rows), encoding="utf-8")
+
+
+def timeline(d: Path, event: str, **extra: object) -> None:
+    with (d / "timeline.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts": now(), "event": event, **extra}) + "\n")
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    source_failures = validate_current_source_text(args.source, d, "red flag source")
+    if source_failures:
+        print("ERROR: red flag source must cite a current source artifact id from evidence/, sources/, or source_documents/", file=sys.stderr)
+        for failure in source_failures:
+            print(f"ERROR: {failure}", file=sys.stderr)
+        return 1
+    rows = read_rows(d)
+    rid = args.id or f"RF-{len(rows) + 1:04d}"
+    row = {
+        "ts": now(),
+        "id": rid,
+        "severity": args.severity,
+        "owner": args.owner,
+        "source": args.source,
+        "finding": args.finding,
+        "required_fix": args.required_fix,
+        "status": "open",
+        "resolution_evidence": "",
+    }
+    rows.append(row)
+    write_rows(d, rows)
+    timeline(d, "red_flag_opened", id=rid, severity=args.severity, owner=args.owner)
+    print(f"OPENED {rid}")
+    return 0
+
+
+def cmd_resolve(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    source_ids = cited_source_ids(args.evidence)
+    if not source_ids:
+        print("ERROR: resolution evidence must cite a source evidence id such as SRC-0001", file=sys.stderr)
+        return 1
+    current = current_source_ids(d)
+    stale = sorted(source_ids - current)
+    if stale or not current:
+        print("ERROR: resolution evidence must cite a current source artifact id from evidence/, sources/, or source_documents/", file=sys.stderr)
+        if stale:
+            print(f"ERROR: non-current source id(s): {', '.join(stale)}", file=sys.stderr)
+        return 1
+    rows = read_rows(d)
+    found = False
+    for row in rows:
+        if row.get("id") == args.id:
+            row["status"] = "resolved"
+            row["resolved_at"] = now()
+            row["resolution_evidence"] = args.evidence
+            found = True
+            break
+    if not found:
+        print(f"ERROR: red flag not found: {args.id}", file=sys.stderr)
+        return 1
+    write_rows(d, rows)
+    timeline(d, "red_flag_resolved", id=args.id)
+    print(f"RESOLVED {args.id}")
+    return 0
+
+
+def blocking(rows: list[dict]) -> list[dict]:
+    return [
+        r for r in rows
+        if r.get("status", "open") != "resolved" and str(r.get("severity", "")).lower() in BLOCKING
+    ]
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    rows = read_rows(d)
+    bad = blocking(rows)
+    source_failures = invalid_resolution_sources(rows, d)
+    print(f"RED FLAGS {d.name}: {len(rows)} total, {len(bad)} blocking")
+    for row in rows:
+        print(f"  {row.get('id')} {row.get('severity')} {row.get('status')}: {row.get('finding')}")
+    for failure in source_failures:
+        print(f"  SOURCE BLOCK: {failure}")
+    if bad or source_failures:
+        print("RED FLAGS BLOCKED")
+        return 1
+    print("RED FLAGS CLEAR")
+    return 0
+
+
+def cmd_complete(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    rc = cmd_status(args)
+    if rc != 0:
+        return rc
+    timeline(d, "red_flags_clear")
+    print("RED FLAGS COMPLETE")
+    return 0
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    print(json.dumps(read_rows(d), indent=2))
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="glaw-red-flags")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("add")
+    p.add_argument("--id", default="")
+    p.add_argument("--severity", required=True, choices=["critical", "high", "medium", "low"])
+    p.add_argument("--owner", required=True)
+    p.add_argument("--source", required=True)
+    p.add_argument("--finding", required=True)
+    p.add_argument("--required-fix", required=True)
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_add)
+    p = sub.add_parser("resolve")
+    p.add_argument("id")
+    p.add_argument("--evidence", required=True)
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_resolve)
+    p = sub.add_parser("status")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_status)
+    p = sub.add_parser("complete", help="log red_flags_clear when no critical/high flags remain")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_complete)
+    p = sub.add_parser("list")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_list)
+    args = ap.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,309 @@
+#!/usr/bin/env python3
+"""Create the matter accounting_control.json required by final accounting/tax packets."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+
+
+SOURCE_EVIDENCE_PARTS = {"evidence", "source_documents", "sources"}
+
+
+def repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def home() -> Path:
+    return Path(os.environ.get("GLAW_HOME", str(Path.home() / ".glaw")))
+
+
+def active_slug() -> str:
+    p = home() / ".active"
+    return p.read_text(encoding="utf-8").strip() if p.exists() else ""
+
+
+def matter_dir(slug: str | None) -> Path:
+    s = slug or active_slug()
+    if not s:
+        raise SystemExit("ERROR: no active matter. Run `glaw matter new \"<name>\"` first.")
+    d = home() / "matters" / s
+    if not d.is_dir():
+        raise SystemExit(f"ERROR: matter not found: {s}")
+    return d
+
+
+def read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise SystemExit(f"ERROR: missing JSON artifact: {path}") from None
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"ERROR: invalid JSON artifact {path}: {exc}") from None
+
+
+def is_source_evidence(path: Path, root: Path) -> bool:
+    if not path.is_file() or path.stat().st_size <= 0:
+        return False
+    return bool(set(path.relative_to(root).parts) & SOURCE_EVIDENCE_PARTS)
+
+
+def current_source_ids(d: Path) -> set[str]:
+    paths = sorted(p for p in d.rglob("*") if is_source_evidence(p, d))
+    return {f"SRC-{idx:04d}" for idx, _path in enumerate(paths, start=1)}
+
+
+def evidence_source_ids(text: str) -> list[str]:
+    return sorted(set(re.findall(r"\bSRC-\d{4}\b", text)))
+
+
+def boolish(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value == 1
+    return str(value).strip().lower() in {"true", "yes", "1", "pass"}
+
+
+def require_current_source(source: str, d: Path) -> None:
+    cited = evidence_source_ids(source)
+    if not cited:
+        raise SystemExit(
+            "ERROR: --source must cite a current matter source ID from evidence/, "
+            "sources/, or source_documents/ such as SRC-0001"
+        )
+    current = current_source_ids(d)
+    stale = sorted(set(cited) - current)
+    if stale:
+        raise SystemExit(
+            "ERROR: --source cites non-current matter source ID(s): "
+            + ", ".join(stale)
+        )
+
+
+def rel(path: Path, d: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(d.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def copy_artifact(src: Path, dest: Path) -> Path:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.resolve() != dest.resolve():
+        shutil.copyfile(src, dest)
+    return dest
+
+
+def run_books_doctor(ledger: Path, rec: Path, d: Path) -> Path:
+    out = d / "workpapers" / "books-doctor.txt"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        str(repo_root() / "bin" / "glaw-books-doctor"),
+        str(ledger),
+        "--rec",
+        str(rec),
+        "--require-rec",
+    ]
+    proc = subprocess.run(cmd, cwd=str(repo_root()), capture_output=True, text=True)
+    out.write_text(proc.stdout + proc.stderr, encoding="utf-8")
+    if proc.returncode != 0:
+        raise SystemExit(f"ERROR: glaw-books-doctor failed; see {out}")
+    return out
+
+
+def require_array_field(data: dict, key: str, label: str) -> list:
+    if key not in data:
+        raise SystemExit(f"ERROR: {label} requires explicit {key} array")
+    value = data.get(key)
+    if not isinstance(value, list):
+        raise SystemExit(f"ERROR: {label} {key} must be a JSON array")
+    return value
+
+
+def require_object_field(data: dict, key: str, label: str) -> dict:
+    if key not in data:
+        raise SystemExit(f"ERROR: {label} requires explicit {key} object")
+    value = data.get(key)
+    if not isinstance(value, dict):
+        raise SystemExit(f"ERROR: {label} {key} must be a JSON object")
+    return value
+
+
+def require_boolish_field(data: dict, key: str, label: str) -> bool:
+    if key not in data:
+        raise SystemExit(f"ERROR: {label} requires explicit {key} boolean")
+    return boolish(data.get(key))
+
+
+def require_equal_field(data: dict, key: str, expected: object, label: str) -> None:
+    if data.get(key) != expected:
+        raise SystemExit(f"ERROR: {label} requires {key}={expected!r}")
+
+
+def require_decimal_field(data: dict, key: str, label: str) -> str:
+    if key not in data:
+        raise SystemExit(f"ERROR: {label} requires explicit {key} amount")
+    value = str(data.get(key))
+    try:
+        Decimal(value)
+    except InvalidOperation:
+        raise SystemExit(f"ERROR: {label} {key} must be a decimal amount") from None
+    return value
+
+
+def bank_rec_block(rec: dict, artifact: str) -> dict:
+    book_only = require_array_field(rec, "book_only", "bank reconciliation")
+    bank_only = require_array_field(rec, "bank_only", "bank reconciliation")
+    reconciled = boolish(rec.get("reconciled"))
+    diff = str(rec.get("unreconciled_difference", ""))
+    try:
+        diff_is_zero = Decimal(diff) == 0
+    except InvalidOperation:
+        diff_is_zero = False
+    block = {
+        "status": "pass" if reconciled and diff_is_zero and not book_only and not bank_only else "fail",
+        "artifact": artifact,
+        "reconciled": reconciled,
+        "unreconciled_difference": diff,
+        "book_only_count": len(book_only),
+        "bank_only_count": len(bank_only),
+        "matched": rec.get("matched", 0),
+    }
+    if block["status"] != "pass":
+        raise SystemExit(
+            "ERROR: bank reconciliation is not clean "
+            f"(diff={diff}, book_only={len(book_only)}, bank_only={len(bank_only)})"
+        )
+    return block
+
+
+def tax_tieout_block(path: Path | None, d: Path, required: bool) -> dict | None:
+    if path is None:
+        if required:
+            raise SystemExit("ERROR: tax profile requires --tax-tieout JSON from glaw-tax-tieout --format json")
+        return None
+    data = read_json(path)
+    dest = copy_artifact(path, d / "workpapers" / "tax-tieout.json")
+    require_equal_field(data, "schema_version", 1, "tax tie-out")
+    require_equal_field(data, "source_tool", "glaw-tax-tieout", "tax tie-out")
+    require_equal_field(data, "mode", "recompute", "tax tie-out")
+    require_decimal_field(data, "recomputed_total_provision", "tax tie-out")
+    require_decimal_field(data, "posted_income_tax_expense", "tax tie-out")
+    internal = require_object_field(data, "internal", "tax tie-out")
+    require_equal_field(internal, "source_tool", "glaw-tax-tieout", "tax tie-out internal")
+    require_decimal_field(internal, "income_tax_expense", "tax tie-out internal")
+    require_decimal_field(internal, "expense_should_equal", "tax tie-out internal")
+    provision_ties = require_boolish_field(data, "provision_ties", "tax tie-out")
+    internal_consistency = require_boolish_field(internal, "consistent", "tax tie-out internal")
+    block = {
+        "status": "pass" if provision_ties and internal_consistency else "fail",
+        "artifact": rel(dest, d),
+        "provision_ties": provision_ties,
+        "internal_consistency": internal_consistency,
+    }
+    if block["status"] != "pass":
+        raise SystemExit("ERROR: tax tie-out did not pass provision/internal consistency checks")
+    return block
+
+
+def audit_tieout_block(path: Path | None, d: Path, required: bool) -> dict | None:
+    if path is None:
+        if required:
+            raise SystemExit("ERROR: sec-reporting profile requires --audit-tieout JSON")
+        return None
+    data = read_json(path)
+    dest = copy_artifact(path, d / "workpapers" / "audit-tieout.json")
+    financial_statements_tie = boolish(data.get("financial_statements_tie"))
+    icfr_reviewed = boolish(data.get("icfr_reviewed"))
+    pcaob_reviewed = boolish(data.get("pcaob_reviewed"))
+    open_deficiencies = require_array_field(data, "open_deficiencies", "SEC audit tie-out")
+    material_weaknesses = require_array_field(data, "material_weaknesses", "SEC audit tie-out")
+    unresolved_audit_differences = require_array_field(data, "unresolved_audit_differences", "SEC audit tie-out")
+    block = {
+        "status": "pass"
+        if (
+            financial_statements_tie
+            and icfr_reviewed
+            and pcaob_reviewed
+            and not open_deficiencies
+            and not material_weaknesses
+            and not unresolved_audit_differences
+        )
+        else "fail",
+        "artifact": rel(dest, d),
+        "financial_statements_tie": financial_statements_tie,
+        "icfr_reviewed": icfr_reviewed,
+        "pcaob_reviewed": pcaob_reviewed,
+        "open_deficiencies_count": len(open_deficiencies),
+        "material_weaknesses_count": len(material_weaknesses),
+        "unresolved_audit_differences_count": len(unresolved_audit_differences),
+    }
+    if block["status"] != "pass":
+        raise SystemExit(
+            "ERROR: SEC audit tie-out did not pass financial-statement, ICFR, PCAOB, "
+            "deficiency, material-weakness, and audit-difference checks"
+        )
+    return block
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="glaw-accounting-control")
+    ap.add_argument("--matter", default=None)
+    ap.add_argument("--profile", choices=["accounting", "accounting-tax", "tax", "sec-reporting"], default="accounting")
+    ap.add_argument("--source", required=True, help='current source basis, e.g. "SRC-0001 bank source package"')
+    ap.add_argument("--ledger", required=True, help="ledger JSON consumed by glaw-books-doctor")
+    ap.add_argument("--bank-rec", required=True, help="JSON output from glaw-bank-rec --format json")
+    ap.add_argument("--tax-tieout", default=None, help="JSON output from glaw-tax-tieout --format json")
+    ap.add_argument("--audit-tieout", default=None, help="SEC/audit tie-out JSON for sec-reporting profiles")
+    ap.add_argument("--out", default=None, help="default: <matter>/accounting_control.json")
+    args = ap.parse_args()
+
+    d = matter_dir(args.matter)
+    require_current_source(args.source, d)
+    ledger = Path(args.ledger)
+    rec_src = Path(args.bank_rec)
+    tax_src = Path(args.tax_tieout) if args.tax_tieout else None
+    audit_src = Path(args.audit_tieout) if args.audit_tieout else None
+
+    books_out = run_books_doctor(ledger, rec_src, d)
+    ledger_dest = copy_artifact(ledger, d / "workpapers" / "ledger.json")
+    rec_dest = copy_artifact(rec_src, d / "workpapers" / "bank-rec.json")
+    rec = read_json(rec_dest)
+    payload = {
+        "schema_version": 1,
+        "status": "pass",
+        "source": args.source,
+        "ledger": {
+            "status": "pass",
+            "artifact": rel(ledger_dest, d),
+        },
+        "books_doctor": {
+            "status": "pass",
+            "artifact": rel(books_out, d),
+            "require_rec": True,
+        },
+        "bank_reconciliation": bank_rec_block(rec, rel(rec_dest, d)),
+    }
+    tax = tax_tieout_block(tax_src, d, required=args.profile in {"accounting-tax", "tax"})
+    if tax is not None:
+        payload["tax_tieout"] = tax
+    audit = audit_tieout_block(audit_src, d, required=args.profile == "sec-reporting")
+    if audit is not None:
+        payload["audit_tieout"] = audit
+
+    out = Path(args.out) if args.out else d / "accounting_control.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    print(f"ACCOUNTING CONTROL PASS {rel(out, d)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# glaw-estimated-tax — quarterly safe-harbor installments + Form 2220/2210 underpayment penalty.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_LIB="$(cd "$SCRIPT_DIR/../lib/bookkeeping" && pwd)"
+GLAW_LIB="${GLAW:+$GLAW/lib/bookkeeping}"
+[ -n "${GLAW_LIB:-}" ] && [ -d "$GLAW_LIB" ] || GLAW_LIB="$SCRIPT_LIB"
+PY="$(command -v python3)"
+exec "$PY" "$GLAW_LIB/estimated_tax.py" "$@"

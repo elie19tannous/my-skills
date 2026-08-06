@@ -1,0 +1,434 @@
+#!/usr/bin/env python3
+"""GLAW self-learning ledger - source-linked institutional memory.
+
+Every Chief/Council/adversarial/accounting run may append defects, episodes, or
+procedures. Future runs query the ledger before drafting so known mistakes are
+not repeated.
+
+Store: $GLAW_LEARNINGS_STORE, else $GLAW_HOME/learnings/learnings.jsonl, else
+       ~/.glaw/learnings/learnings.jsonl
+
+Usage:
+  glaw-learnings add '<json>'                 # append/update source-linked memory
+  glaw-learnings preflight [matter] [--track T] # formatted known-defects digest
+  glaw-learnings query "<query>" [--json] [--limit N] [--matter M] [--type T] [--track T]
+  glaw-learnings eval '<json>' [--json]       # score retrieval expectations
+  glaw-learnings search "<query>"             # alias for query
+  glaw-learnings list [--limit N] [--json]
+  glaw-learnings stats
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+import re
+import sys
+from pathlib import Path
+from urllib.parse import urlparse
+
+
+def store_path() -> Path:
+    explicit = os.environ.get("GLAW_LEARNINGS_STORE", "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+    home = os.environ.get("GLAW_HOME", "").strip()
+    if home:
+        return Path(home).expanduser() / "learnings" / "learnings.jsonl"
+    return Path.home() / ".glaw" / "learnings" / "learnings.jsonl"
+
+
+STORE = store_path()
+STORE.parent.mkdir(parents=True, exist_ok=True)
+
+REQUIRED = ("error_class", "where", "wrong", "fix")
+TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9._/-]*", re.I)
+
+
+def now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+def load() -> list[dict]:
+    if not STORE.exists():
+        return []
+    out = []
+    for line in STORE.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def write_all(items: list[dict]) -> None:
+    STORE.write_text("".join(json.dumps(item, sort_keys=False) + "\n" for item in items), encoding="utf-8")
+
+
+def tokens(text: str) -> set[str]:
+    return {m.group(0).lower() for m in TOKEN_RE.finditer(text or "") if len(m.group(0)) > 1}
+
+
+def stable_id(item: dict) -> str:
+    payload = {
+        "type": item.get("type", "defect"),
+        "scope": item.get("scope", "firm"),
+        "error_class": item.get("error_class", ""),
+        "where": item.get("where", ""),
+        "wrong": item.get("wrong", ""),
+        "fix": item.get("fix", ""),
+        "matter": item.get("matter", ""),
+    }
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return f"MEM-{digest[:16]}"
+
+
+def source_links(item: dict) -> list[dict]:
+    raw = item.get("source_links", item.get("sources", []))
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raw = []
+    links = []
+    authority = str(item.get("authority", "")).strip()
+    if authority:
+        raw.append(authority)
+    for value in raw:
+        if isinstance(value, dict):
+            label = str(value.get("label") or value.get("id") or value.get("url") or "").strip()
+            url = str(value.get("url") or "").strip()
+        else:
+            label = str(value).strip()
+            url = label if label.startswith(("http://", "https://")) else ""
+        if not label and not url:
+            continue
+        links.append({"label": label or url, "url": url})
+    return links
+
+
+def valid_source_links(links: list[dict]) -> bool:
+    if not links:
+        return False
+    for link in links:
+        url = str(link.get("url", "")).strip()
+        label = str(link.get("label", "")).strip()
+        if url:
+            parsed = urlparse(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                return False
+        elif not (label.startswith("SRC-") or label.startswith("matter:") or label.startswith("file:")):
+            return False
+    return True
+
+
+def normalize(item: dict) -> dict:
+    item = dict(item)
+    item.setdefault("type", "defect")
+    item.setdefault("scope", "firm")
+    item.setdefault("confidence", 8)
+    item.setdefault("ts", now())
+    item["source_links"] = source_links(item)
+    item["memory_id"] = item.get("memory_id") or stable_id(item)
+    item["keywords"] = sorted(tokens(" ".join(str(item.get(k, "")) for k in (
+        "type", "scope", "error_class", "where", "wrong", "fix", "matter", "run_id",
+        "workflow_track", "track", "matter_type", "profile",
+    ))))
+    return item
+
+
+def validate(item: dict) -> list[str]:
+    if item.get("type") == "knowledge" and item.get("rule"):
+        required = ("error_class", "rule")
+    else:
+        required = REQUIRED
+    failures = [f"{key} required" for key in required if not str(item.get(key, "")).strip()]
+    try:
+        confidence = float(item.get("confidence", 0))
+        if confidence < 1 or confidence > 10:
+            failures.append("confidence must be 1..10")
+    except (TypeError, ValueError):
+        failures.append("confidence must be numeric")
+    if not valid_source_links(item.get("source_links", [])):
+        failures.append("source_links required with http(s), SRC-####, matter:, or file: reference")
+    return failures
+
+
+def track_values(item: dict) -> set[str]:
+    out: set[str] = set()
+    for key in ("workflow_track", "track", "matter_type", "profile"):
+        value = item.get(key)
+        if isinstance(value, str):
+            stripped = value.strip().lower()
+            if stripped:
+                out.add(stripped)
+        elif isinstance(value, list):
+            out.update(str(part).strip().lower() for part in value if str(part).strip())
+    return out
+
+
+def track_boost(item: dict, track: str) -> int:
+    track = track.strip().lower()
+    if not track:
+        return 0
+    values = track_values(item)
+    if track in values:
+        return 12
+    item_tokens = tokens(" ".join(
+        [
+            json.dumps(sorted(values)),
+            str(item.get("matter", "")),
+            str(item.get("scope", "")),
+            str(item.get("error_class", "")),
+            " ".join(str(x) for x in item.get("keywords", [])),
+        ]
+    ))
+    if tokens(track) & item_tokens:
+        return 4
+    return 0
+
+
+def score(item: dict, query: str, *, matter: str = "", type_filter: str = "", track: str = "") -> float:
+    if type_filter and item.get("type") != type_filter:
+        return -1
+    if matter and matter not in str(item.get("matter", "")) and item.get("scope") != "firm":
+        return -1
+    q = tokens(query)
+    blob = " ".join(json.dumps(item, sort_keys=True).lower().split())
+    item_tokens = tokens(blob)
+    overlap = len(q & item_tokens)
+    if q and overlap == 0:
+        return -1
+    confidence = float(item.get("confidence", 8))
+    meta_boost = 2 if item.get("type") == "knowledge" else 0
+    firm_boost = 1 if item.get("scope") == "firm" else 0
+    return overlap * 10 + confidence + meta_boost + firm_boost + track_boost(item, track)
+
+
+def query_items(query: str, *, limit: int, matter: str = "", type_filter: str = "", track: str = "") -> list[dict]:
+    scored = []
+    for item in load():
+        s = score(item, query, matter=matter, type_filter=type_filter, track=track)
+        if s >= 0:
+            row = dict(item)
+            row["score"] = s
+            if track:
+                row["score_track_boost"] = track_boost(item, track)
+            scored.append(row)
+    scored.sort(key=lambda x: (-float(x.get("score", 0)), -float(x.get("confidence", 0)), x.get("ts", "")))
+    return scored[:limit]
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    try:
+        raw = json.loads(args.json)
+    except json.JSONDecodeError as exc:
+        print(f"bad json: {exc}", file=sys.stderr)
+        return 1
+    item = normalize(raw)
+    failures = validate(item)
+    if failures:
+        for failure in failures:
+            print(f"ERROR: {failure}", file=sys.stderr)
+        return 2
+    items = load()
+    key = item["memory_id"]
+    replaced = False
+    for idx, existing in enumerate(items):
+        if existing.get("memory_id") == key:
+            items[idx] = item
+            replaced = True
+            break
+    if not replaced:
+        items.append(item)
+    write_all(items)
+    action = "UPDATED" if replaced else "LEARNED"
+    print(f"{action}: {item['memory_id']} [{item.get('error_class')}] {str(item.get('wrong', item.get('rule', '')))[:80]}")
+    return 0
+
+
+def print_digest(items: list[dict]) -> None:
+    if not items:
+        print("KNOWN DEFECTS - none recorded yet (first run).")
+        return
+    print(f"KNOWN DEFECTS - DO NOT REPEAT ({len(items)} retrieved memories):")
+    meta = [x for x in items if x.get("type") == "knowledge" and x.get("rule")]
+    specs = [x for x in items if x not in meta]
+    if meta:
+        print("  -- synthesized meta-rules --")
+        for item in meta:
+            print(f"  * {item.get('rule')} ({item.get('memory_id')})")
+        print("  -- specific prior defects --")
+    for item in specs:
+        src = "; ".join(link.get("label", "") for link in item.get("source_links", []))
+        print(
+            f"- {item.get('memory_id')} [{item.get('error_class')}] "
+            f"WRONG: {item.get('wrong', '')} -> FIX: {item.get('fix', '')}"
+            + (f" (sources: {src})" if src else "")
+        )
+
+
+def cmd_preflight(args: argparse.Namespace) -> int:
+    query = args.query or args.matter or "audit tax citation filing accounting gate"
+    items = query_items(query, limit=args.limit, matter=args.matter or "", track=args.track or "")
+    print_digest(items)
+    return 0
+
+
+def cmd_query(args: argparse.Namespace) -> int:
+    items = query_items(
+        args.query,
+        limit=args.limit,
+        matter=args.matter or "",
+        type_filter=args.type or "",
+        track=args.track or "",
+    )
+    if args.json:
+        print(json.dumps(items, indent=2, sort_keys=False))
+    else:
+        print_digest(items)
+    return 0
+
+
+def cmd_eval(args: argparse.Namespace) -> int:
+    try:
+        spec = json.loads(args.json_spec)
+    except json.JSONDecodeError as exc:
+        print(f"bad eval json: {exc}", file=sys.stderr)
+        return 1
+    cases = spec.get("cases") if isinstance(spec, dict) else spec
+    if not isinstance(cases, list) or not cases:
+        print("ERROR: eval spec requires a nonempty cases list", file=sys.stderr)
+        return 2
+    results = []
+    for idx, case in enumerate(cases, start=1):
+        if not isinstance(case, dict):
+            results.append({"case": idx, "status": "fail", "reason": "case is not an object"})
+            continue
+        query = str(case.get("query", "")).strip()
+        expected = str(case.get("expect_error_class", case.get("expect", ""))).strip()
+        if not query or not expected:
+            results.append({"case": idx, "status": "fail", "reason": "query and expect_error_class are required"})
+            continue
+        try:
+            limit = max(1, int(case.get("limit", 5)))
+        except (TypeError, ValueError):
+            results.append({"case": idx, "status": "fail", "reason": "limit must be numeric"})
+            continue
+        rows = query_items(
+            query,
+            limit=limit,
+            matter=str(case.get("matter", "")),
+            type_filter=str(case.get("type", "")),
+            track=str(case.get("track", "")),
+        )
+        top = rows[0] if rows else {}
+        got = str(top.get("error_class", ""))
+        results.append({
+            "case": idx,
+            "name": str(case.get("name", f"case-{idx}")),
+            "status": "pass" if got == expected else "fail",
+            "query": query,
+            "track": str(case.get("track", "")),
+            "expected": expected,
+            "got": got,
+            "top_memory_id": top.get("memory_id", ""),
+            "score": top.get("score", 0),
+            "score_track_boost": top.get("score_track_boost", 0),
+        })
+    failed = [row for row in results if row["status"] != "pass"]
+    payload = {
+        "status": "pass" if not failed else "fail",
+        "total": len(results),
+        "passed": len(results) - len(failed),
+        "failed": len(failed),
+        "results": results,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=False))
+    else:
+        print(f"GLAW MEMORY EVAL: {payload['status']} ({payload['passed']}/{payload['total']} passed)")
+        for row in results:
+            print(
+                f"  {row['status']}: {row.get('name')} expected={row.get('expected')} "
+                f"got={row.get('got')} track={row.get('track')}"
+            )
+    return 0 if not failed else 1
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    items = load()[-args.limit:]
+    if args.json:
+        print(json.dumps(items, indent=2, sort_keys=False))
+    else:
+        for item in items:
+            print(json.dumps(item, sort_keys=False))
+    return 0
+
+
+def cmd_stats(_args: argparse.Namespace) -> int:
+    items = load()
+    by_class: dict[str, int] = {}
+    by_type: dict[str, int] = {}
+    sourced = 0
+    for item in items:
+        by_class[item.get("error_class", "?")] = by_class.get(item.get("error_class", "?"), 0) + 1
+        by_type[item.get("type", "defect")] = by_type.get(item.get("type", "defect"), 0) + 1
+        if valid_source_links(item.get("source_links", [])):
+            sourced += 1
+    print(f"store: {STORE}")
+    print(f"total learnings: {len(items)}")
+    print(f"source-linked: {sourced}/{len(items)}")
+    print("by type:")
+    for key, value in sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0])):
+        print(f"  {value:3d}  {key}")
+    print("by error_class:")
+    for key, value in sorted(by_class.items(), key=lambda kv: (-kv[1], kv[0])):
+        print(f"  {value:3d}  {key}")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="glaw-learnings")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("add")
+    p.add_argument("json")
+    p.set_defaults(func=cmd_add)
+    p = sub.add_parser("preflight")
+    p.add_argument("matter", nargs="?")
+    p.add_argument("--query", default="")
+    p.add_argument("--limit", type=int, default=8)
+    p.add_argument("--track", default="")
+    p.set_defaults(func=cmd_preflight)
+    for name in ("query", "search"):
+        p = sub.add_parser(name)
+        p.add_argument("query")
+        p.add_argument("--json", action="store_true")
+        p.add_argument("--limit", type=int, default=10)
+        p.add_argument("--matter", default="")
+        p.add_argument("--type", default="")
+        p.add_argument("--track", default="")
+        p.set_defaults(func=cmd_query)
+    p = sub.add_parser("eval")
+    p.add_argument("json_spec")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_eval)
+    p = sub.add_parser("list")
+    p.add_argument("--limit", type=int, default=50)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_list)
+    p = sub.add_parser("stats")
+    p.set_defaults(func=cmd_stats)
+    return args_func(ap.parse_args(argv))
+
+
+def args_func(args: argparse.Namespace) -> int:
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

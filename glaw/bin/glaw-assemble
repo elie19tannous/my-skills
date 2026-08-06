@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""glaw-assemble — fill a DOCX template from matter JSON data.
+
+The headless, server-free take on docassemble's document assembly: turn GLAW's
+repeated outputs into reusable DOCX templates with {{ merge_fields }}, then fill
+them from a matter's structured data (e.g. the glaw-tax-report object or any JSON).
+
+Template syntax (inside the .docx): {{ filer.name }}, {{ tax_year }}.
+Jinja conditionals are not supported in zero-dependency mode.
+
+Usage:
+  glaw-assemble vars <template.docx>                 list the {{ variables }} a template needs
+  glaw-assemble <template.docx> <data.json> -o <out.docx>
+"""
+import sys, json, re, zipfile
+
+VAR_RE = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*}}")
+
+def _read_document_xml(path):
+    with zipfile.ZipFile(path) as zf:
+        return zf.read("word/document.xml").decode("utf-8")
+
+def _lookup(data, key):
+    cur = data
+    for part in key.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return ""
+    return "" if cur is None else str(cur)
+
+def cmd_vars(tpl):
+    xml = _read_document_xml(tpl)
+    v = sorted(set(VAR_RE.findall(xml)))
+    print(f"{len(v)} template variables:")
+    for x in v: print("  -", x)
+
+def cmd_render(tpl, data_path, out):
+    data = json.load(open(data_path))
+    with zipfile.ZipFile(tpl) as zin, zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            payload = zin.read(item.filename)
+            if item.filename == "word/document.xml":
+                xml = payload.decode("utf-8")
+                xml = VAR_RE.sub(lambda m: _lookup(data, m.group(1)), xml)
+                payload = xml.encode("utf-8")
+            zout.writestr(item, payload)
+    print(f"assembled -> {out}  (from {tpl} + {data_path})")
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if len(a) >= 2 and a[0] == "vars":
+        cmd_vars(a[1])
+    elif len(a) >= 4 and a[-2] == "-o":
+        cmd_render(a[0], a[1], a[-1])
+    else:
+        print(__doc__); sys.exit(1)

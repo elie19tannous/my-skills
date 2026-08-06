@@ -1,0 +1,610 @@
+#!/usr/bin/env python3
+"""glaw-sandbox - isolated failure-mode simulations for GLAW gates.
+
+Usage:
+  glaw-sandbox list [--json]
+  glaw-sandbox run [--scenario all|NAME] [--json]
+
+The sandbox never writes to the live matter store. Each scenario creates a
+temporary GLAW_HOME, runs real GLAW commands as black-box fixtures, and passes
+only when the expected fail-closed behavior is observable.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from datetime import date, timedelta, timezone, datetime
+from pathlib import Path
+from typing import Callable
+
+ROOT = Path(__file__).resolve().parents[1]
+BIN = ROOT / "bin"
+sys.path.insert(0, str(ROOT / "lib"))
+
+
+AUTHORITY = (
+    "Simulation only; no filing, signing, serving, transmitting, charging, "
+    "paying, or live submission authority."
+)
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def run_cmd(args: list[str], *, home: Path, cwd: Path | None = None) -> dict:
+    env = os.environ.copy()
+    env["GLAW_HOME"] = str(home)
+    proc = subprocess.run(
+        args,
+        cwd=str(cwd or ROOT),
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    return {
+        "args": args,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+    }
+
+
+def parse_json(result: dict) -> dict:
+    try:
+        return json.loads(result.get("stdout") or "{}")
+    except json.JSONDecodeError:
+        return {}
+
+
+def check(check_id: str, ok: bool, detail: str) -> dict:
+    return {"id": check_id, "status": "pass" if ok else "fail", "detail": detail}
+
+
+def scenario(name: str, checks: list[dict], *, home: Path) -> dict:
+    failed = [item for item in checks if item["status"] != "pass"]
+    return {
+        "name": name,
+        "status": "pass" if not failed else "fail",
+        "home": str(home),
+        "checks": checks,
+    }
+
+
+def make_matter(home: Path, title: str) -> str:
+    result = run_cmd([str(BIN / "glaw"), "matter", "new", title], home=home)
+    if result["returncode"] != 0:
+        raise RuntimeError(result["stderr"] or result["stdout"] or "matter new failed")
+    slug = title.lower().replace(" ", "-")
+    return slug
+
+
+def simulate_conscience_human_act() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug = make_matter(home, "Sandbox Authority")
+        result = run_cmd(
+            [
+                str(BIN / "glaw-conscience"),
+                "check-call",
+                "--command",
+                "bin/glaw-loop once --request-action file",
+                "--matter",
+                slug,
+                "--json",
+            ],
+            home=home,
+        )
+        payload = parse_json(result)
+        failure_ids = {item.get("id") for item in payload.get("failures", [])}
+        checks = [
+            check("conscience_blocks_human_only_action", result["returncode"] == 1, "human-only request must be blocked"),
+            check("failure_id_is_explicit", "human_only_requested_action" in failure_ids, "failure must name human_only_requested_action"),
+        ]
+        return scenario("conscience-human-act", checks, home=home)
+
+
+def simulate_oversight_kill_switch() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug = make_matter(home, "Sandbox Oversight")
+        halt = run_cmd(
+            [str(BIN / "glaw-oversight"), "halt", "--by", "Sandbox Board", "--reason", "simulation halt", "--json"],
+            home=home,
+        )
+        status = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(status)
+        checks = [
+            check("halt_command_passes", halt["returncode"] == 0, "oversight halt should record kill-switch"),
+            check("loop_reports_oversight_gate", payload.get("next_gate") == "oversight", "loop must stop at oversight gate"),
+            check("loop_routes_to_board", payload.get("owner") == "human-oversight-board", "owner must be human oversight board"),
+            check("loop_reports_human_escalation", payload.get("quality_state") == "human_escalation_required", "halted loop must report human escalation"),
+        ]
+        return scenario("oversight-kill-switch", checks, home=home)
+
+
+def simulate_deadline_daemon() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        make_matter(home, "Sandbox Deadline")
+        evidence = home / "matters" / "sandbox-deadline" / "evidence"
+        evidence.mkdir(parents=True, exist_ok=True)
+        (evidence / "source.txt").write_text("deadline source\n", encoding="utf-8")
+        due = (date.today() + timedelta(days=5)).isoformat()
+        docket = run_cmd(
+            [
+                str(BIN / "glaw"),
+                "docket",
+                "add",
+                "--owner",
+                "sandbox docket",
+                "--source",
+                "SRC-0001 court order",
+                due,
+                "response deadline",
+            ],
+            home=home,
+        )
+        run = run_cmd([str(BIN / "glaw-daemon"), "once", "--json"], home=home)
+        payload = parse_json(run)
+        actions = payload.get("actions", [])
+        checks = [
+            check("docket_row_created", docket["returncode"] == 0, "source-backed deadline should be accepted"),
+            check("daemon_attention_required", run["returncode"] == 1 and payload.get("status") == "attention_required", "upcoming deadline must require attention"),
+            check("deadline_severity_high", bool(actions) and actions[0].get("severity") == "high", "deadline inside 7 days must be high severity"),
+            check("daemon_routes_through_loop", bool(actions) and "glaw-loop once" in actions[0].get("next_command", ""), "daemon must route through glaw-loop"),
+        ]
+        return scenario("deadline-daemon", checks, home=home)
+
+
+def simulate_jurisdiction_pack_fail() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        bad_pack = home / "bad-pack.json"
+        bad_pack.write_text(
+            json.dumps(
+                {
+                    "matter": "sandbox",
+                    "jurisdictions": [],
+                    "source_ids": [],
+                    "governing_law": {},
+                    "forum": {},
+                    "tax": {},
+                    "licenses": [],
+                    "filings": [],
+                    "deadlines": [],
+                    "adversarial_lenses": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-jurisdiction-pack"), "validate", str(bad_pack), "--json"], home=home)
+        payload = parse_json(result)
+        checks = [
+            check("jurisdiction_gate_fails_bad_pack", result["returncode"] == 1, "empty jurisdiction pack must fail"),
+            check("failure_status_is_clear", payload.get("status") == "fail", "JSON status must be fail"),
+            check("failure_has_findings", bool(payload.get("failures") or payload.get("findings")), "failure must identify findings"),
+        ]
+        return scenario("jurisdiction-pack-fail", checks, home=home)
+
+
+def simulate_profile_map() -> dict:
+    import glaw_profiles
+
+    profile_names = sorted(set(glaw_profiles.COUNCIL_PROFILES) | set(glaw_profiles.ADVERSARIAL_PROFILES))
+    missing_profiles: list[str] = []
+    unmapped_reviewers: list[str] = []
+    no_government_adversary: list[str] = []
+    for profile in profile_names:
+        council = glaw_profiles.COUNCIL_PROFILES.get(profile, ())
+        adversarial = glaw_profiles.ADVERSARIAL_PROFILES.get(profile, ())
+        if not council or not adversarial:
+            missing_profiles.append(profile)
+        if adversarial and not (set(adversarial) & glaw_profiles.GOVERNMENT_ADVERSARY_LENSES):
+            no_government_adversary.append(profile)
+        for reviewer in list(council) + list(adversarial):
+            if reviewer not in glaw_profiles.REVIEWER_SKILL_MAP:
+                unmapped_reviewers.append(f"{profile}:{reviewer}")
+    checks = [
+        check("profiles_have_council_and_adversaries", not missing_profiles, "profiles with missing panels: " + ", ".join(missing_profiles[:10]) if missing_profiles else "all profiles have panels"),
+        check("reviewers_map_to_skills", not unmapped_reviewers, "unmapped reviewers: " + ", ".join(unmapped_reviewers[:10]) if unmapped_reviewers else "all reviewers map to skills"),
+        check("profiles_have_government_adversary", not no_government_adversary, "profiles without government/regulatory/litigation adversary: " + ", ".join(no_government_adversary[:10]) if no_government_adversary else "all profiles include a government/regulatory/litigation adversary lens"),
+    ]
+    return {
+        "name": "profile-map",
+        "status": "pass" if all(item["status"] == "pass" for item in checks) else "fail",
+        "home": "in-process",
+        "checks": checks,
+    }
+
+
+def simulate_government_adversary_routing() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug, matter = ready_matter(home, "Sandbox Government Adversary", "accounting-tax")
+        (matter / "final_packet.json").write_text(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "compliance_manifest": [
+                        {
+                            "id": "government-adversary",
+                            "owner": "glaw-adversarial",
+                            "status": "fail",
+                            "missing": ["government_adversary_manifest"],
+                            "detail": "government/regulatory RED-team evidence missing",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(result)
+        failures = payload.get("compliance_failures") or []
+        checks = [
+            check("loop_status_passes", result["returncode"] == 0, "loop status should emit a routing decision"),
+            check("routes_to_adversarial_owner", payload.get("owner") == "adversarial", "government-adversary failure must route to adversarial owner"),
+            check("uses_adversarial_command", payload.get("next_command") == "bin/glaw-adversarial status --profile auto", "next command must call the adversarial gate"),
+            check("carries_failure_row", bool(failures) and failures[0].get("id") == "government-adversary", "routing payload must carry the failed compliance row"),
+        ]
+        return scenario("government-adversary-routing", checks, home=home)
+
+
+def ready_matter(home: Path, title: str, track: str) -> tuple[str, Path]:
+    slug = make_matter(home, title)
+    matter = home / "matters" / slug
+    evidence = matter / "evidence"
+    evidence.mkdir(parents=True, exist_ok=True)
+    (evidence / "source.txt").write_text("SEC/IRS/source-controlled accounting packet\n", encoding="utf-8")
+    (matter / ".stage").write_text("draft\n", encoding="utf-8")
+    if track == "sec-reporting":
+        track_specific = {
+            "filer_status": "accelerated filer",
+            "period_end": "2026-06-30",
+            "forms_needed": ["Form 10-K", "Form 8-K"],
+            "audited_financial_sources": ["SRC-0001 evidence/source.txt"],
+            "xbrl_scope": "financial statements and notes",
+        }
+    elif track == "accounting-tax":
+        track_specific = {
+            "bank_statement_sources": ["SRC-0001 evidence/source.txt"],
+            "tax_years": ["2026"],
+            "entity_tax_type": "partnership",
+            "books_status": "open pending reconciliation",
+            "irs_forms_needed": ["Form 1065"],
+        }
+    else:
+        track_specific = {}
+    (matter / "intake.json").write_text(
+        json.dumps(
+            {
+                "status": "complete",
+                "universal": {
+                    "workflow_track": track,
+                    "matter_name": title,
+                    "client_names": ["Example Client LLC"],
+                    "parties": ["Example Client LLC", "Example Bank", "SEC", "IRS"],
+                    "jurisdiction": "US federal / Delaware",
+                    "goal": "Prepare source-backed accounting, tax, SEC, and government-adversary review package.",
+                    "source_documents": ["SRC-0001 SEC/IRS/source-controlled accounting packet"],
+                    "deadlines": ["2026-09-15 tax extension deadline"],
+                    "facts_timeline": ["SRC-0001 bank activity and financial statements imported for adversarial testing"],
+                    "open_questions": ["SRC-0001 identify blocked final-packet control rows"],
+                    "conflicts_parties": ["Example Client LLC", "Example Bank", "SEC", "IRS"],
+                    "authorized_scope": "Analysis and workpaper preparation only; no filing or signature authority.",
+                },
+                "track_specific": track_specific,
+                "review": {
+                    "completed_by": "Morgan Rivera",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (matter / "ethics.json").write_text(
+        json.dumps(
+            {
+                "status": "complete",
+                "conflicts_status": "cleared",
+                "conflicts_source": "SRC-0001 conflicts checked against provided parties",
+                "engagement": {
+                    "status": "drafted",
+                    "scope": "Analysis and workpaper preparation only; no filing or signature authority.",
+                    "responsible_professional": "Alexandra Chen",
+                    "source": "SRC-0001 engagement authority and source fixture",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (matter / "timeline.jsonl").write_text(
+        "\n".join(
+            [
+                '{"event":"intake_complete"}',
+                '{"event":"conflicts_cleared"}',
+                '{"event":"citations_verified"}',
+                '{"event":"adversarial_done"}',
+                '{"event":"red_flags_clear"}',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return slug, matter
+
+
+def simulate_fortune500_accounting_priority() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug, matter = ready_matter(home, "Sandbox Fortune 500 Accounting", "accounting-tax")
+        (matter / "final_packet.json").write_text(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "compliance_manifest": [
+                        {
+                            "id": "accounting-control",
+                            "owner": "glaw-accounting",
+                            "status": "fail",
+                            "missing": ["bank_reconciliation", "tax_tie_out", "source_subledger_hashes"],
+                            "next_command": "bin/glaw-accounting-control",
+                            "required_fix": "Rebuild books from source bank data, rerun bank reconciliation, and tie tax return numbers to the ledger.",
+                        },
+                        {
+                            "id": "government-adversary",
+                            "owner": "glaw-adversarial",
+                            "status": "fail",
+                            "missing": ["irs-examiner", "sec-staff-reviewer", "pcaob-audit-reviewer"],
+                            "next_command": "bin/glaw-adversarial status --profile auto",
+                            "required_fix": "Run IRS, SEC, and PCAOB adversarial lenses until each source-cited attack survives or routes a red flag.",
+                        },
+                        {
+                            "id": "citation-grounding",
+                            "owner": "glaw-legal-research",
+                            "status": "fail",
+                            "missing": ["trusted_corpus_match"],
+                            "next_command": "bin/glaw-citation-gate status",
+                            "required_fix": "Capture authority from an allowlisted corpus and rerun groundedness before relying on the legal proposition.",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(result)
+        action_plan = payload.get("compliance_action_plan") or []
+        plan_ids = {row.get("id") for row in action_plan}
+        accounting = next((row for row in action_plan if row.get("id") == "accounting-control"), {})
+        checks = [
+            check("loop_status_passes", result["returncode"] == 0, "loop status should emit a routing decision"),
+            check("accounting_controls_are_first_owner", payload.get("owner") == "accounting-control", "accounting controls must be the first Fortune 500 blocker"),
+            check("accounting_command_is_explicit", payload.get("next_command") == "bin/glaw-accounting-control", "next command must route to accounting-control"),
+            check("all_failed_rows_in_action_plan", {"accounting-control", "government-adversary", "citation-grounding"} <= plan_ids, "action plan must preserve every failed row"),
+            check("required_fix_survives", "bank reconciliation" in accounting.get("required_fix", ""), "accounting action plan must preserve the required fix"),
+        ]
+        return scenario("fortune500-accounting-priority", checks, home=home)
+
+
+def simulate_sec_pcaob_tabletop() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug, matter = ready_matter(home, "Sandbox SEC PCAOB Tabletop", "sec-reporting")
+        (matter / "final_packet.json").write_text(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "government_adversary_manifest": [
+                        {"lens": "sec-staff-reviewer", "status": "pass", "evidence": "SRC-0001 disclosure controls reviewed"},
+                        {"lens": "pcaob-audit-reviewer", "status": "fail", "evidence": "SRC-0001 audit tie-out missing"},
+                    ],
+                    "compliance_manifest": [
+                        {
+                            "id": "government-adversary",
+                            "owner": "glaw-adversarial",
+                            "status": "fail",
+                            "missing": ["pcaob-audit-reviewer"],
+                            "next_command": "bin/glaw-adversarial status --profile auto",
+                            "required_fix": "Resolve the PCAOB audit-reviewer attack against the SEC reporting packet before Chief approval.",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(result)
+        lenses = set(payload.get("adversarial_required") or [])
+        plan = payload.get("compliance_action_plan") or []
+        first = plan[0] if plan else {}
+        checks = [
+            check("loop_status_passes", result["returncode"] == 0, "loop status should emit a routing decision"),
+            check("sec_profile_selected", payload.get("workflow_profile") == "sec-reporting", "SEC reporting intake must select the SEC profile"),
+            check("sec_and_pcaob_lenses_required", {"sec-staff-reviewer", "pcaob-audit-reviewer"} <= lenses, "SEC/PCAOB adversaries must be required"),
+            check("routes_failed_lens_to_red_team", payload.get("owner") == "adversarial" and payload.get("next_command") == "bin/glaw-adversarial status --profile auto", "failed PCAOB lens must route to adversarial gate"),
+            check("pcaob_fix_is_preserved", "PCAOB" in first.get("required_fix", ""), "action plan must preserve PCAOB-specific fix text"),
+        ]
+        return scenario("sec-pcaob-tabletop", checks, home=home)
+
+
+def simulate_citation_grounding_routing() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug, matter = ready_matter(home, "Sandbox Citation Grounding", "accounting-tax")
+        (matter / "final_packet.json").write_text(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "compliance_manifest": [
+                        {
+                            "id": "citation-grounding",
+                            "owner": "glaw-legal-research",
+                            "status": "fail",
+                            "missing": ["trusted_corpus_match", "groundedness"],
+                            "next_command": "bin/glaw-citation-gate status",
+                            "required_fix": "Capture allowlisted authority, verify the proposition against the corpus segment, and rerun groundedness.",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(result)
+        plan = payload.get("compliance_action_plan") or []
+        first = plan[0] if plan else {}
+        checks = [
+            check("loop_status_passes", result["returncode"] == 0, "loop status should emit a routing decision"),
+            check("routes_to_legal_research", payload.get("owner") == "legal-research", "citation-grounding failure must route to legal research"),
+            check("uses_citation_gate_status", payload.get("next_command") == "bin/glaw-citation-gate status", "next command must call citation gate status"),
+            check("citation_fix_is_preserved", "allowlisted authority" in first.get("required_fix", ""), "action plan must preserve corpus-grounding fix text"),
+        ]
+        return scenario("citation-grounding-routing", checks, home=home)
+
+
+def simulate_red_flag_accountability_routing() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug, matter = ready_matter(home, "Sandbox Red Flag Accountability", "accounting-tax")
+        (matter / "final_packet.json").write_text(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "compliance_manifest": [
+                        {
+                            "id": "red-flag-accountability",
+                            "owner": "glaw-red-flags",
+                            "status": "fail",
+                            "missing": ["owner_assigned_resolution", "source_backed_condition"],
+                            "next_command": "bin/glaw-red-flags status",
+                            "required_fix": "Assign a senior owner, source the red-flag condition, and record whether the Chief carries or resolves it.",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(result)
+        failures = payload.get("compliance_failures") or []
+        checks = [
+            check("loop_status_passes", result["returncode"] == 0, "loop status should emit a routing decision"),
+            check("routes_to_red_flags", payload.get("owner") == "red-flags", "red-flag failure must route to red-flags owner"),
+            check("uses_red_flags_status", payload.get("next_command") == "bin/glaw-red-flags status", "next command must call red-flags status"),
+            check("carries_red_flag_failure", bool(failures) and failures[0].get("id") == "red-flag-accountability", "routing payload must carry the failed red-flag row"),
+        ]
+        return scenario("red-flag-accountability-routing", checks, home=home)
+
+
+def simulate_report_quality_routing() -> dict:
+    with tempfile.TemporaryDirectory(prefix="glaw-sandbox-") as tmp:
+        home = Path(tmp)
+        slug, matter = ready_matter(home, "Sandbox Report Quality", "sec-reporting")
+        (matter / "final_packet.json").write_text(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "compliance_manifest": [
+                        {
+                            "id": "professional-report-quality",
+                            "owner": "glaw-compliance",
+                            "status": "fail",
+                            "missing": ["Owner:", "Report voice:", "Evidence:", "Sign-off conditions:"],
+                            "next_command": "bin/glaw-upl-check",
+                            "required_fix": "Fix external reports so every deliverable has owner, voice, findings, evidence, red flags, sign-off conditions, sources, and no placeholders.",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = run_cmd([str(BIN / "glaw-loop"), "status", "--matter", slug, "--json"], home=home)
+        payload = parse_json(result)
+        plan = payload.get("compliance_action_plan") or []
+        first = plan[0] if plan else {}
+        checks = [
+            check("loop_status_passes", result["returncode"] == 0, "loop status should emit a routing decision"),
+            check("routes_to_compliance", payload.get("owner") == "compliance", "report-quality failure must route to compliance"),
+            check("uses_final_packet_command", payload.get("next_command") == "bin/glaw-final-packet build --profile auto", "generic compliance failures must route through final-packet rebuild"),
+            check("report_quality_fix_is_preserved", "sign-off conditions" in first.get("required_fix", ""), "action plan must preserve professional report-quality fix text"),
+        ]
+        return scenario("report-quality-routing", checks, home=home)
+
+
+SCENARIOS: dict[str, tuple[str, Callable[[], dict]]] = {
+    "conscience-human-act": ("Conscience blocks autonomous human-only requested acts.", simulate_conscience_human_act),
+    "oversight-kill-switch": ("Oversight halt stops glaw-loop and routes to the Board.", simulate_oversight_kill_switch),
+    "deadline-daemon": ("Daemon surfaces sourced deadlines and routes through glaw-loop.", simulate_deadline_daemon),
+    "jurisdiction-pack-fail": ("Jurisdiction pack gate fails closed on unsupported matrices.", simulate_jurisdiction_pack_fail),
+    "profile-map": ("Profiles resolve council/adversarial reviewers to skills.", simulate_profile_map),
+    "government-adversary-routing": ("Loop routes final-packet government-adversary failures back to RED team.", simulate_government_adversary_routing),
+    "fortune500-accounting-priority": ("Fortune 500 accounting/tax/SEC packet routes bank-rec and tax tie-out controls before downstream legal sign-off.", simulate_fortune500_accounting_priority),
+    "sec-pcaob-tabletop": ("SEC reporting tabletop routes failed PCAOB/SEC adversarial lenses back to the RED team.", simulate_sec_pcaob_tabletop),
+    "citation-grounding-routing": ("Loop routes trusted-corpus and groundedness failures to legal research.", simulate_citation_grounding_routing),
+    "red-flag-accountability-routing": ("Loop routes unresolved source-backed red flags back to red-flag accountability.", simulate_red_flag_accountability_routing),
+    "report-quality-routing": ("Loop routes professional report-quality failures back through compliance/final-packet repair.", simulate_report_quality_routing),
+}
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    payload = {
+        "status": "pass",
+        "scenarios": [{"name": name, "description": desc} for name, (desc, _fn) in SCENARIOS.items()],
+        "authority": AUTHORITY,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=False))
+    else:
+        print("GLAW SANDBOX SCENARIOS")
+        for item in payload["scenarios"]:
+            print(f"- {item['name']}: {item['description']}")
+        print(AUTHORITY)
+    return 0
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    selected = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
+    reports = [SCENARIOS[name][1]() for name in selected]
+    failed = [report for report in reports if report["status"] != "pass"]
+    payload = {
+        "ts": now(),
+        "status": "pass" if not failed else "fail",
+        "scenario": args.scenario,
+        "scenarios": reports,
+        "authority": AUTHORITY,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=False))
+    else:
+        print(f"GLAW SANDBOX {payload['status'].upper()}: {args.scenario}")
+        for report in reports:
+            print(f"  {report['status']}: {report['name']}")
+            for item in report["checks"]:
+                print(f"    {item['status']}: {item['id']} - {item['detail']}")
+        print(AUTHORITY)
+    return 0 if not failed else 1
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="glaw-sandbox")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p_list = sub.add_parser("list")
+    p_list.add_argument("--json", action="store_true")
+    p_list.set_defaults(func=cmd_list)
+    p_run = sub.add_parser("run")
+    p_run.add_argument("--scenario", choices=["all", *SCENARIOS.keys()], default="all")
+    p_run.add_argument("--json", action="store_true")
+    p_run.set_defaults(func=cmd_run)
+    args = ap.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

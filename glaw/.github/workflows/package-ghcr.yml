@@ -1,0 +1,71 @@
+name: GLAW GHCR Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v1.2.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  source-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw="${{ github.event.release.tag_name || inputs.tag }}"
+          tag="${raw#v}"
+          echo "raw=$raw" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v6.0.3
+        with:
+          ref: ${{ steps.ref.outputs.raw }}
+
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Verify source before package
+        shell: bash
+        run: |
+          set -euo pipefail
+          GLAW_SKILL_DIR="$GITHUB_WORKSPACE" GLAW_SKILLS_ROOT="$HOME/.claude/skills" bash bin/glaw-setup
+          GLAW_SKILL_DIR="$GITHUB_WORKSPACE" GLAW_SKILLS_ROOT="$HOME/.codex/skills" bash bin/glaw-setup
+          GLAW_DOCTOR_CORE=1 bash bin/glaw-doctor
+          python3 bin/glaw-policy check
+          GLAW="$GITHUB_WORKSPACE" bash bin/glaw-bookkeeping-doctor
+          ! find . \( -name requirements.txt -o -name pyproject.toml -o -name package.json -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml \) -print | grep -q .
+
+      - name: Login to GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build source-only artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/rikitrader/glaw"
+          tag="${{ steps.ref.outputs.tag }}"
+          docker build -f packaging/Containerfile -t "$image:$tag" -t "$image:${{ steps.ref.outputs.raw }}" -t "$image:latest" .
+
+      - name: Publish source-only artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/rikitrader/glaw"
+          docker push "$image:${{ steps.ref.outputs.tag }}"
+          docker push "$image:${{ steps.ref.outputs.raw }}"
+          docker push "$image:latest"

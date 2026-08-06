@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""glaw-oversight - Oversight Board kill-switch and escalation ledger.
+
+Usage:
+  glaw-oversight status [--json] [--tail N]
+  glaw-oversight halt --by NAME --reason TEXT [--json]
+  glaw-oversight resume --by NAME --role ADMIN --reason TEXT [--json]
+  glaw-oversight escalate --matter SLUG --reason TEXT [--source SRC-0001] [--owner NAME] [--json]
+  glaw-oversight decision --matter SLUG --decision approve|fix|deny|halt --by NAME --role ADMIN --reason TEXT [--source SRC-0001] [--json]
+  glaw-oversight policy [--path PATH] [--json]
+  glaw-oversight policy-list [--json]
+  glaw-oversight validate-policy [--path PATH] [--json]
+
+The kill-switch is global. When halted, autonomous routing must stop and route to
+the human Oversight Board. Resuming or recording a Board decision requires RBAC
+ADMIN because it can unblock high-impact work.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "lib"))
+from glaw_oversight import decision, escalate, halt, resume, status
+from glaw_oversight_policy import DEFAULT_POLICY_PATH, load_policy, validate_policy_file
+
+POLICY_DIR = ROOT / "oversight-board" / "policies"
+
+
+def emit(data: dict, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(data, indent=2, sort_keys=False))
+        return
+    print(f"OVERSIGHT: {data.get('status', data.get('event', 'recorded'))}")
+    state = data.get("state")
+    if isinstance(state, dict):
+        print(f"  kill_switch: {'halted' if state.get('halted') else 'active'}")
+        if state.get("halted"):
+            print(f"  halted_by: {state.get('halted_by')}")
+            print(f"  reason: {state.get('halt_reason')}")
+    elif data.get("reason"):
+        print(f"  reason: {data.get('reason')}")
+    if data.get("ledger_path"):
+        print(f"  ledger: {data.get('ledger_path')}")
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="glaw-oversight")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("status")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--tail", type=int, default=20)
+
+    p = sub.add_parser("halt")
+    p.add_argument("--by", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("resume")
+    p.add_argument("--by", required=True)
+    p.add_argument("--role", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("escalate")
+    p.add_argument("--matter", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--source", default="")
+    p.add_argument("--owner", default="human-oversight-board")
+    p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("decision")
+    p.add_argument("--matter", required=True)
+    p.add_argument("--decision", required=True, choices=("approve", "fix", "deny", "halt"))
+    p.add_argument("--by", required=True)
+    p.add_argument("--role", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--source", default="")
+    p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("policy")
+    p.add_argument("--path", default=str(DEFAULT_POLICY_PATH))
+    p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("policy-list")
+    p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("validate-policy")
+    p.add_argument("--path", default=str(DEFAULT_POLICY_PATH))
+    p.add_argument("--json", action="store_true")
+
+    args = ap.parse_args(argv)
+    try:
+        if args.cmd == "status":
+            emit(status(args.tail), args.json)
+            return 0
+        if args.cmd == "halt":
+            data = halt(args.by, args.reason)
+            emit({"status": "halted", "state": data}, args.json)
+            return 0
+        if args.cmd == "resume":
+            ok, data = resume(args.by, args.role, args.reason)
+            emit({"status": "active" if ok else "blocked", "state": data} if ok else data, args.json)
+            return 0 if ok else 1
+        if args.cmd == "escalate":
+            row = escalate(matter=args.matter, reason=args.reason, source=args.source, owner=args.owner)
+            emit(row, args.json)
+            return 0
+        if args.cmd == "decision":
+            ok, row = decision(
+                matter=args.matter,
+                decision_text=args.decision,
+                actor=args.by,
+                role=args.role,
+                reason=args.reason,
+                source=args.source,
+            )
+            emit(row, args.json)
+            return 0 if ok else 1
+        if args.cmd == "policy":
+            policy_path = Path(args.path)
+            policy = load_policy(policy_path)
+            data = {"status": "pass", "path": str(policy_path), "policy": policy}
+            if args.json:
+                print(json.dumps(data, indent=2, sort_keys=False))
+            else:
+                print(f"OVERSIGHT POLICY: {policy.get('name')}")
+                print(f"  path: {policy_path}")
+                print(f"  authority: {policy.get('authority_boundary')}")
+                print(f"  triggers: {len(policy.get('escalation_triggers') or [])}")
+                print(f"  decisions: {len(policy.get('decision_rules') or [])}")
+            return 0
+        if args.cmd == "policy-list":
+            policies = []
+            for path in sorted(POLICY_DIR.glob("*.json")):
+                validation = validate_policy_file(path)
+                policies.append({
+                    "path": str(path.relative_to(ROOT)),
+                    "name": validation.get("name", ""),
+                    "status": validation.get("status", "fail"),
+                    "failure_count": len(validation.get("failures", [])),
+                })
+            data = {"status": "pass" if all(p["status"] == "pass" for p in policies) else "fail", "policies": policies}
+            if args.json:
+                print(json.dumps(data, indent=2, sort_keys=False))
+            else:
+                print(f"OVERSIGHT POLICIES: {data['status']}")
+                for policy in policies:
+                    print(f"  {policy['status']}: {policy['path']} - {policy['name']}")
+            return 0 if data["status"] == "pass" else 1
+        if args.cmd == "validate-policy":
+            data = validate_policy_file(Path(args.path))
+            if args.json:
+                print(json.dumps(data, indent=2, sort_keys=False))
+            else:
+                print(f"OVERSIGHT POLICY VALIDATION: {data.get('status')}")
+                print(f"  path: {data.get('path')}")
+                for failure in data.get("failures", []):
+                    print(f"  FAIL {failure.get('id')}: {failure.get('detail')}")
+            return 0 if data.get("status") == "pass" else 1
+    except Exception as exc:
+        data = {"status": "blocked", "reason": str(exc)}
+        emit(data, getattr(args, "json", False))
+        return 2
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

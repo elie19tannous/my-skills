@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""glaw-court-scrape — zero-dependency court-source helper.
+
+Usage:
+  glaw-court-scrape --list [filter]      list bundled court ids
+  glaw-court-scrape <court_id>           print a CourtListener/source-court handoff
+
+  <court_id> examples:
+               united_states.federal_appellate.ca11
+               united_states.state.fla
+
+GLAW runs in absolute zero-third-party-package mode. Live source scraping through
+zero-dependency court handoff is not installed or invoked. Use /glaw-court-records for CourtListener
+API work, or manually fetch the source-court page listed here.
+"""
+import sys, json
+
+COURTS = {
+    "united_states.federal_appellate.ca11": {
+        "name": "U.S. Court of Appeals, Eleventh Circuit",
+        "courtlistener": "ca11",
+        "source": "https://www.ca11.uscourts.gov/opinions",
+    },
+    "united_states.federal_district.flmd": {
+        "name": "U.S. District Court, Middle District of Florida",
+        "courtlistener": "flmd",
+        "source": "https://www.flmd.uscourts.gov/opinions",
+    },
+    "united_states.state.fla": {
+        "name": "Florida Supreme Court",
+        "courtlistener": "fla",
+        "source": "https://supremecourt.flcourts.gov/Opinions",
+    },
+}
+
+def list_courts(flt=None):
+    flt = (flt or "").lower()
+    return sorted(k for k, v in COURTS.items() if not flt or flt in k.lower() or flt in v["name"].lower())
+
+def run_court(cid):
+    if cid not in COURTS:
+        return {"court": cid, "error": "unknown bundled court id", "known": sorted(COURTS)}
+    meta = COURTS[cid]
+    return {
+        "court": cid,
+        "name": meta["name"],
+        "courtlistener_court_id": meta["courtlistener"],
+        "source_url": meta["source"],
+        "live_scraping": "disabled: zero third-party package mode",
+        "next_step": f"Use /glaw-court-records with CourtListener court id {meta['courtlistener']}, or manually fetch the source_url.",
+    }
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or sys.argv[1] == "--list":
+        flt = sys.argv[2] if len(sys.argv) > 2 else None
+        ids = list_courts(flt)
+        print(f"{len(ids)} bundled court ids" + (f" matching {flt!r}" if flt else "") + ":")
+        for i in ids:
+            print("  " + i)
+    else:
+        print(json.dumps(run_court(sys.argv[1]), indent=2, default=str))

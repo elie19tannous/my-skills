@@ -1,0 +1,315 @@
+#!/usr/bin/env python3
+"""glaw-citation-corpus - source corpus capture for citation verification.
+
+Usage:
+  glaw-citation-corpus capture --id <id> --source-url <url> (--text <text> | --file <path> | --fetch) [--authenticated-copy] [--segment <text>] [--matter <slug>]
+  glaw-citation-corpus status [--matter <slug>]
+  glaw-citation-corpus sources [--profile <profile>] [--json]
+
+The corpus stores checked source text and a minimal support segment with SHA-256
+hashes. Pasted --text is explicitly untrusted and cannot support a verified legal
+citation. Authoritative rows require --fetch from an approved source domain, or
+--file --authenticated-copy from an approved source URL for offline official copies.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "lib"))
+from glaw_authority_sources import (
+    authority_domain,
+    authority_source_for_url,
+    authority_sources,
+    approved_authority_url,
+)
+from glaw_corpus_freshness import (
+    DEFAULT_MAX_AGE_DAYS,
+    row_age_days,
+    freshness_failure as _shared_freshness_failure,
+)
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def freshness_failure(row: dict, max_age_days: int) -> str:
+    return _shared_freshness_failure(row, row.get("id"), max_age_days=max_age_days, style="prefix")
+
+
+def home() -> Path:
+    return Path(os.environ.get("GLAW_HOME", str(Path.home() / ".glaw")))
+
+
+def active_slug() -> str:
+    p = home() / ".active"
+    return p.read_text(encoding="utf-8").strip() if p.exists() else ""
+
+
+def matter_dir(slug: str | None) -> Path:
+    s = slug or active_slug()
+    if not s:
+        raise SystemExit("ERROR: no active matter. Run `glaw matter new \"<name>\"` first.")
+    d = home() / "matters" / s
+    if not d.is_dir():
+        raise SystemExit(f"ERROR: matter not found: {s}")
+    return d
+
+
+def valid_http_url(value: str) -> bool:
+    parsed = urlparse(str(value).strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def capture_method(args: argparse.Namespace) -> str:
+    if args.text:
+        return "text"
+    if args.file:
+        return "file"
+    return "fetch"
+
+
+def trust_metadata(args: argparse.Namespace) -> dict:
+    method = capture_method(args)
+    approved = approved_authority_url(args.source_url)
+    source = authority_source_for_url(args.source_url)
+    if method == "fetch" and approved:
+        trust_level = "authoritative"
+        basis = "fetched directly from approved authority source URL"
+    elif method == "file" and args.authenticated_copy and approved:
+        trust_level = "authenticated-copy"
+        basis = "local file represented as an authenticated official copy from approved authority source URL"
+    else:
+        trust_level = "untrusted"
+        if method == "text":
+            basis = "pasted text is user-supplied and cannot verify legal authority"
+        elif not approved:
+            basis = "source URL domain is not on the approved authority-source list"
+        else:
+            basis = "local files require --authenticated-copy to support verified legal citations"
+    return {
+        "source_method": method,
+        "trust_level": trust_level,
+        "authority_domain": authority_domain(args.source_url),
+        "authority_source_id": source.get("id", ""),
+        "authority_source_name": source.get("name", ""),
+        "authority_source_kind": source.get("kind", ""),
+        "approved_authority_source": approved,
+        "authenticated_copy": bool(args.authenticated_copy),
+        "trust_basis": basis,
+    }
+
+
+def safe_name(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-")[:80] or "source"
+
+
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def row_hash(row: dict) -> str:
+    payload = dict(row)
+    payload.pop("row_hash", None)
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def stamp_row_hash(row: dict) -> dict:
+    row["row_hash"] = row_hash(row)
+    return row
+
+
+def append_jsonl(path: Path, row: dict) -> None:
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, sort_keys=False) + "\n")
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    rows = []
+    for idx, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"ERROR: {path.name}:{idx} invalid JSON: {exc.msg}") from exc
+    return rows
+
+
+def validate_row_hashes(rows: list[dict], ledger_name: str) -> list[str]:
+    failures = []
+    for idx, row in enumerate(rows, start=1):
+        expected = row.get("row_hash")
+        if not expected:
+            failures.append(f"{ledger_name}:{idx} missing row_hash")
+        elif expected != row_hash(row):
+            failures.append(f"{ledger_name}:{idx} row_hash mismatch")
+    return failures
+
+
+def latest_by_id(rows: list[dict]) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for row in rows:
+        out[str(row.get("id", ""))] = row
+    return out
+
+
+def corpus_path(d: Path) -> Path:
+    return d / "citation_corpus.jsonl"
+
+
+def fetch_url(url: str) -> str:
+    req = Request(url, headers={"User-Agent": "GLAW citation corpus verifier"})
+    with urlopen(req, timeout=20) as resp:
+        charset = resp.headers.get_content_charset() or "utf-8"
+        return resp.read().decode(charset, errors="replace")
+
+
+def source_text(args: argparse.Namespace) -> str:
+    sources = [bool(args.text), bool(args.file), bool(args.fetch)]
+    if sum(1 for item in sources if item) != 1:
+        raise SystemExit("ERROR: choose exactly one of --text, --file, or --fetch")
+    if args.text:
+        return args.text
+    if args.file:
+        return Path(args.file).read_text(encoding="utf-8", errors="replace")
+    return fetch_url(args.source_url)
+
+
+def cmd_capture(args: argparse.Namespace) -> int:
+    if not valid_http_url(args.source_url):
+        print("ERROR: --source-url must be valid http(s)", file=sys.stderr)
+        return 2
+    if not approved_authority_url(args.source_url):
+        print("ERROR: --source-url domain is not approved for legal authority", file=sys.stderr)
+        return 2
+    if not args.id.strip():
+        print("ERROR: --id required", file=sys.stderr)
+        return 2
+    d = matter_dir(args.matter)
+    text = source_text(args)
+    if not text.strip():
+        print("ERROR: source text is empty", file=sys.stderr)
+        return 2
+    segment = args.segment if args.segment else text[:2000]
+    if segment not in text:
+        print("ERROR: --segment must be an exact substring of the source text", file=sys.stderr)
+        return 2
+    store = d / "citation_corpus"
+    store.mkdir(parents=True, exist_ok=True)
+    rel = Path("citation_corpus") / f"{safe_name(args.id)}.txt"
+    (d / rel).write_text(text, encoding="utf-8")
+    row = {
+        "ts": now(),
+        "id": args.id,
+        "source_url": args.source_url,
+        "source_path": str(rel),
+        "source_sha256": sha256_text(text),
+        "segment": segment,
+        "segment_sha256": sha256_text(segment),
+        "notes": args.notes,
+        **trust_metadata(args),
+    }
+    append_jsonl(corpus_path(d), stamp_row_hash(row))
+    print(f"CAPTURED corpus {args.id}: {row['source_sha256']} segment={row['segment_sha256']}")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    rows = read_jsonl(corpus_path(d))
+    failures = validate_row_hashes(rows, corpus_path(d).name)
+    latest = latest_by_id(rows)
+    max_age_days = args.max_age_days
+    print(f"CITATION CORPUS {d.name}: {len(latest)} source(s)")
+    for row in latest.values():
+        path = d / str(row.get("source_path", ""))
+        if not path.is_file():
+            failures.append(f"{row.get('id')}: source_path missing")
+        elif sha256_text(path.read_text(encoding="utf-8", errors="replace")) != row.get("source_sha256"):
+            failures.append(f"{row.get('id')}: source_path hash mismatch")
+        if row.get("trust_level") not in {"authoritative", "authenticated-copy"}:
+            failures.append(f"{row.get('id')}: corpus is not authoritative: trust={row.get('trust_level', 'untrusted')}")
+        if not approved_authority_url(str(row.get("source_url", ""))):
+            failures.append(f"{row.get('id')}: source domain is not approved for legal authority")
+        stale = freshness_failure(row, max_age_days)
+        if stale:
+            failures.append(stale)
+        age = row_age_days(row)
+        age_note = "unknown-age" if age is None else f"age={age}d"
+        print(
+            f"  {row.get('id')}: {row.get('source_url')} {row.get('source_sha256')} "
+            f"trust={row.get('trust_level', 'untrusted')} {age_note}"
+        )
+    if failures:
+        print("CITATION CORPUS BLOCKED")
+        for failure in failures:
+            print(f"  {failure}")
+        return 1
+    if not rows:
+        print("CITATION CORPUS EMPTY")
+        return 1
+    print("CITATION CORPUS READY")
+    return 0
+
+
+def cmd_sources(args: argparse.Namespace) -> int:
+    rows = authority_sources(args.profile)
+    if args.json:
+        print(json.dumps({"profile": args.profile or "all", "sources": rows}, indent=2, sort_keys=False))
+        return 0
+    label = args.profile or "all"
+    print(f"APPROVED AUTHORITY SOURCES ({label})")
+    for row in rows:
+        domains = ", ".join(row.get("domains", ()))
+        profiles = ", ".join(row.get("profiles", ()))
+        print(f"  {row.get('id')}: {row.get('name')} [{row.get('kind')}]")
+        print(f"    domains: {domains}")
+        print(f"    profiles: {profiles}")
+    if not rows:
+        print("  none")
+        return 1
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="glaw-citation-corpus")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("capture")
+    p.add_argument("--id", required=True)
+    p.add_argument("--source-url", required=True)
+    p.add_argument("--text", default="")
+    p.add_argument("--file", default="")
+    p.add_argument("--fetch", action="store_true")
+    p.add_argument("--authenticated-copy", action="store_true")
+    p.add_argument("--segment", default="")
+    p.add_argument("--notes", default="")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_capture)
+    p = sub.add_parser("status")
+    p.add_argument("--matter", default=None)
+    p.add_argument("--max-age-days", type=int, default=DEFAULT_MAX_AGE_DAYS)
+    p.set_defaults(func=cmd_status)
+    p = sub.add_parser("sources")
+    p.add_argument("--profile", default="")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_sources)
+    args = ap.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

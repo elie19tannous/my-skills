@@ -1,0 +1,819 @@
+#!/usr/bin/env bash
+# glaw-doctor — GLAW health/smoke harness. Read-only. The automated check the firm
+# was missing. Five assertions:
+#   1. SKILLS RESOLVE  — every glaw/<x>/SKILL.md has valid frontmatter; every deployed
+#                        /glaw-* command symlink resolves; deploy parity (setup ran).
+#   2. TOOLS RUN       — every bin/glaw-* runs a safe smoke command without crashing.
+#   3. NO DANGLING REFS— every /glaw-*, bin/glaw-*, lib/*, and mapped external skill
+#                        referenced in firm-roster.md (and across all SKILL.md) exists.
+#   4. SKILL CONTRACTS — every skill passes bin/glaw-test (frontmatter, name-parity,
+#                        When-to-invoke, UPL line, non-empty allowed-tools).
+#   5. CAPABILITY HONESTY— bin/glaw-capability-audit: no LoRA/EWC neural-learning
+#                        capability is falsely marked LIVE without the training infra.
+# Exit 0 = healthy, 1 = problems found.
+set -uo pipefail
+SCRIPT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${GLAW_SKILLS_ROOT:-${CODEX_HOME:-$HOME/.codex}/skills}"
+GLAW="${GLAW_SKILL_DIR:-$SCRIPT_ROOT}"
+FAIL=0; WARN=0
+ok(){ printf '  ✅ %s\n' "$1"; }
+bad(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
+warn(){ printf '  ⚠️  %s\n' "$1"; WARN=$((WARN+1)); }
+
+echo "═══ GLAW DOCTOR ═══"
+
+# ---- 1. SKILLS RESOLVE ----
+echo "[1/3] skills resolve"
+src_skills=$(find -H "$GLAW" -name SKILL.md | wc -l | tr -d ' ')
+deployed=$(ls -d "$ROOT"/glaw-*/ 2>/dev/null | wc -l | tr -d ' ')
+# every source SKILL.md has name + description
+nf=0
+for f in $(find -H "$GLAW" -name SKILL.md); do
+  grep -q '^name:' "$f" && grep -q '^description:' "$f" || { bad "missing frontmatter: ${f#$GLAW/}"; nf=$((nf+1)); }
+done
+[ "$nf" = 0 ] && ok "$src_skills source SKILL.md files, all have name+description"
+# every deployed symlink resolves
+dl=0
+for d in "$ROOT"/glaw-*/; do
+  [ -f "$d/SKILL.md" ] || { bad "dangling deploy: ${d}SKILL.md does not resolve"; dl=$((dl+1)); }
+done
+[ "$dl" = 0 ] && ok "$deployed deployed /glaw-* commands, all symlinks resolve"
+# deploy parity: each sub-skill dir (not orchestrator) should be deployed as glaw-<dir>
+miss=0
+for d in "$GLAW"/*/; do
+  name="$(basename "$d")"; [ -f "$d/SKILL.md" ] || continue
+  [ -e "$ROOT/glaw-$name" ] || { warn "not deployed (run glaw-setup): glaw-$name"; miss=$((miss+1)); }
+done
+[ "$miss" = 0 ] && ok "deploy parity: every sub-skill is a top-level command"
+seatmiss=0
+if [ -d "$GLAW/seats" ]; then
+  for d in "$GLAW"/seats/*/; do
+    name="$(basename "$d")"; [ -f "$d/SKILL.md" ] || continue
+    [ -f "$ROOT/$name/SKILL.md" ] || { bad "vendored seat not deployed: /$name"; seatmiss=$((seatmiss+1)); }
+  done
+fi
+[ "$seatmiss" = 0 ] && ok "vendored seat deploy parity: every seat is a top-level command"
+
+if [ -z "${GLAW_SKILLS_ROOT:-}" ]; then
+  if python3 - "$GLAW" "${CODEX_HOME:-$HOME/.codex}/skills" "${CLAUDE_HOME:-$HOME/.claude}/skills" <<'PY'
+import pathlib
+import sys
+
+glaw = pathlib.Path(sys.argv[1]).resolve()
+roots = [
+    ("Codex", pathlib.Path(sys.argv[2]).expanduser()),
+    ("Claude", pathlib.Path(sys.argv[3]).expanduser()),
+]
+
+expected = {"glaw": (glaw / "SKILL.md").resolve()}
+for child in sorted(glaw.iterdir()):
+    if child.name == "seats" or not child.is_dir():
+        continue
+    skill = child / "SKILL.md"
+    if skill.exists():
+        expected[f"glaw-{child.name}"] = skill.resolve()
+seats = glaw / "seats"
+if seats.exists():
+    for child in sorted(seats.iterdir()):
+        skill = child / "SKILL.md"
+        if skill.exists():
+            expected.setdefault(child.name, skill.resolve())
+
+failures = []
+for label, root in roots:
+    if not root.exists():
+        failures.append(f"{label} skills root missing: {root}")
+        continue
+    actual_names = {
+        p.name for p in root.glob("glaw*")
+        if not p.name.startswith("glaw.backup.")
+    }
+    missing = sorted(set(expected) - actual_names)
+    extra = sorted(actual_names - set(expected))
+    for name in missing:
+        failures.append(f"{label} missing /{name}")
+    for name in extra:
+        failures.append(f"{label} has unexpected GLAW command /{name}")
+    for name, target in expected.items():
+        skill = root / name / "SKILL.md"
+        if not skill.exists():
+            continue
+        resolved = skill.resolve()
+        if resolved != target:
+            failures.append(
+                f"{label} /{name} points to {resolved}, expected {target}"
+            )
+
+if failures:
+    for failure in failures:
+        print(failure)
+    sys.exit(1)
+print(f"{len(expected)} commands mirrored across Codex and Claude")
+PY
+  then
+    ok "Codex/Claude mirror parity: $(python3 - "$GLAW" <<'PY'
+import pathlib
+import sys
+glaw = pathlib.Path(sys.argv[1]).resolve()
+names = {"glaw"}
+for child in glaw.iterdir():
+    if child.name != "seats" and child.is_dir() and (child / "SKILL.md").exists():
+        names.add(f"glaw-{child.name}")
+seats = glaw / "seats"
+if seats.exists():
+    for child in seats.iterdir():
+        if (child / "SKILL.md").exists():
+            names.add(child.name)
+print(len(names))
+PY
+) commands resolve to the same GLAW source graph"
+  else
+    bad "Codex/Claude mirror parity failed"
+  fi
+fi
+
+# ---- 2. TOOLS RUN ----
+echo "[2/3] tools run (safe smoke)"
+declare -a TOOLS=(
+  "glaw|version" "glaw-bureau-score|weights" "glaw-tax-report|types"
+  "glaw-irs-file|scaffold 1099-NEC" "glaw-court-scrape|--list __none__"
+  "glaw-compliance-audit|" "glaw-doc-extract|" "glaw-exempt-org|" "glaw-assemble|"
+  "glaw-accounting-control|"
+  "glaw-policy|check"
+  "glaw-headless|--goal doctor --json"
+  "glaw-daemon|status --json"
+  "glaw-sandbox|list --json"
+  "glaw-host|manifest --json"
+  "glaw-mcp|tools --json"
+  "glaw-extism|tool_metadata --json"
+  "glaw-constitution-score|scaffold"
+  "glaw-jurisdiction-pack|scaffold"
+  "glaw-jurisdiction-pack|list"
+  "glaw-oversight|status --json"
+  "glaw-rbac|check --operation audit --role AUDITOR --actor doctor"
+  "glaw-conscience|check-call --command bin/glaw-intake"
+  "glaw-loop|status"
+  "glaw-learnings|stats" "glaw-reflect|"
+  "glaw-contract-score|scaffold" "glaw-publish|" "glaw-redline|" "glaw-redline-docx|" "glaw-chief-decision|"
+  "glaw-review-chain|" "glaw-adversarial|" "glaw-ethics|" "glaw-upl-check|" "glaw-citation-corpus|status" "glaw-citation-gate|" "glaw-groundedness|audit" "glaw-docket-gate|"
+)
+for entry in "${TOOLS[@]}"; do
+  tool="${entry%%|*}"; args="${entry#*|}"
+  bin="$GLAW/bin/$tool"
+  [ -x "$bin" ] || { bad "$tool: not executable"; continue; }
+  err=$("$bin" $args 2>&1 >/dev/null); rc=$?
+  if echo "$err" | grep -qiE 'Traceback|ModuleNotFoundError|No such file|command not found|SyntaxError'; then
+    bad "$tool: crashed — $(echo "$err" | grep -iE 'Error|Traceback' | head -1)"
+  elif [ "$rc" -ge 126 ]; then
+    bad "$tool: exit $rc"
+  else
+    ok "$tool ran (exit $rc)"
+  fi
+done
+# glaw-cites needs stdin
+if printf '' | "$GLAW/bin/glaw-cites" - >/dev/null 2>&1; then ok "glaw-cites ran"; else bad "glaw-cites failed"; fi
+# bookkeeping engine + finance tools: zero-dependency mode uses source/local smokes.
+if [ "${GLAW_FULL_BOOKKEEPING_SELFTEST:-0}" = "1" ]; then
+  _BKPY="$(command -v python3)"
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_smoke.py" >/dev/null 2>&1; then
+    ok "glaw-bank-ingest engine smoke passed (parse + dedup + Golden-Rule verify)"
+  else
+    bad "glaw-bank-ingest engine smoke FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_smoke.py"
+  fi
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_finance.py" >/dev/null 2>&1; then
+    ok "finance tools smoke passed (statements + books-doctor + bank-rec)"
+  else
+    bad "finance tools smoke FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_finance.py"
+  fi
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_finance2.py" >/dev/null 2>&1; then
+    ok "close-cycle tools smoke passed (depreciate + aging + cashflow + budget + monitor)"
+  else
+    bad "close-cycle tools smoke FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_finance2.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_ledger.py" >/dev/null 2>&1; then
+    ok "general-ledger smoke passed (balanced JEs + non-cash + as-of + lock + close + audit)"
+  else
+    bad "general-ledger smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_ledger.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance3.py" >/dev/null 2>&1; then
+    ok "reporting smoke passed (comparative + amortize + narrative)"
+  else
+    bad "reporting smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance3.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance5.py" >/dev/null 2>&1; then
+    ok "tier 2/3 calc smoke passed (revrec + fx + inventory + tax-provision + consolidate + cash-apply + recurring)"
+  else
+    bad "tier 2/3 calc smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance5.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance6.py" >/dev/null 2>&1; then
+    ok "dashboard KPI smoke passed (margins + liquidity + DSO/DPO + leverage)"
+  else
+    bad "dashboard KPI smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance6.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance7.py" >/dev/null 2>&1; then
+    ok "scheduled-close smoke passed (clean → pass+lock, broken → fail+unlocked)"
+  else
+    bad "scheduled-close smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance7.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance8.py" >/dev/null 2>&1; then
+    ok "tagged-COA + indirect cash flow smoke passed (reconciles to Δcash)"
+  else
+    bad "tagged-COA smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance8.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance9.py" >/dev/null 2>&1; then
+    ok "subledger auto-post smoke passed (depreciation/deferred-rev/loan, idempotent)"
+  else
+    bad "subledger smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance9.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance10.py" >/dev/null 2>&1; then
+    ok "JE forensics + Benford smoke passed (SAS-99 tests + first-digit analysis)"
+  else
+    bad "JE forensics smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance10.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance11.py" >/dev/null 2>&1; then
+    ok "report export smoke passed (branded HTML — statements + cash flow + KPIs + MD&A)"
+  else
+    bad "report export smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance11.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance12.py" >/dev/null 2>&1; then
+    ok "multi-account reconstruction smoke passed (transfers netted + continuity + tie-out)"
+  else
+    bad "reconstruction smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance12.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance13.py" >/dev/null 2>&1; then
+    ok "reconstruction hardening smoke passed (opening balances + no-false-audit-ready + currency + cards)"
+  else
+    bad "reconstruction hardening smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance13.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance14.py" >/dev/null 2>&1; then
+    ok "multi-currency GL smoke passed (per-currency balances + current-rate translation + CTA)"
+  else
+    bad "multi-currency smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance14.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance15.py" >/dev/null 2>&1; then
+    ok "multi-entity NCI + equity-method smoke passed"
+  else
+    bad "NCI/equity-method smoke FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance15.py"
+  fi
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_finance16.py" >/dev/null 2>&1; then
+    ok "invoice/bill extractor smoke passed (vendor + line items + tax + draft AP entry)"
+  else
+    bad "invoice extractor smoke FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_finance16.py"
+  fi
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_glossary.py" >/dev/null 2>&1; then
+    ok "accounting glossary smoke passed (terms indexed, core terms resolve)"
+  else
+    bad "accounting glossary smoke FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_glossary.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_tamper.py" >/dev/null 2>&1; then
+    ok "tamper-evidence chain passed (detects edit / currency / deletion / insertion)"
+  else
+    bad "tamper-evidence FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_tamper.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_concurrency.py" >/dev/null 2>&1; then
+    ok "ledger concurrency passed (flock serializes concurrent posts)"
+  else
+    bad "concurrency FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_concurrency.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_scale.py" >/dev/null 2>&1; then
+    ok "ledger scale passed (entries memo + O(1) dedup, chain holds over 500)"
+  else
+    bad "scale FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_scale.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_index.py" >/dev/null 2>&1; then
+    ok "balance index passed (index == full recompute, cross-process, self-healing)"
+  else
+    bad "balance-index FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_index.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance17.py" >/dev/null 2>&1; then
+    ok "FX conversion passed (realized gain/loss, reporting-balanced, per-currency tracked)"
+  else
+    bad "FX-convert FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance17.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance18.py" >/dev/null 2>&1; then
+    ok "tax provision wired to GL (pretax from P&L + posts the JE back)"
+  else
+    bad "tax-wire FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance18.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance19.py" >/dev/null 2>&1; then
+    ok "book-to-tax M-1 engine passed (perm/temp derived from the GL)"
+  else
+    bad "book-to-tax FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance19.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance20.py" >/dev/null 2>&1; then
+    ok "deferred-tax roll-forward passed (DTL/DTA balance + period movement)"
+  else
+    bad "deferred-tax FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance20.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance21.py" >/dev/null 2>&1; then
+    ok "return-line mapping passed (1120/1065 lines off the GL, ties to provision)"
+  else
+    bad "return-map FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance21.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance22.py" >/dev/null 2>&1; then
+    ok "MACRS depreciation passed (tables + 179/bonus + feeds the M-1)"
+  else
+    bad "MACRS FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance22.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance23.py" >/dev/null 2>&1; then
+    ok "NOL carryforward passed (80% cap, FIFO, wired into the return)"
+  else
+    bad "NOL FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance23.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance24.py" >/dev/null 2>&1; then
+    ok "K-1 allocation passed (pass-through split by ownership, ties out)"
+  else
+    bad "K-1 FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance24.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance25.py" >/dev/null 2>&1; then
+    ok "QBI §199A passed (wage/UBIA limit + SSTB phase-out + income cap)"
+  else
+    bad "QBI FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance25.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance26.py" >/dev/null 2>&1; then
+    ok "tax tie-out passed (posted provision ties; books-doctor [8/8] catches tampering)"
+  else
+    bad "tax-tieout FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance26.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance27.py" >/dev/null 2>&1; then
+    ok "estimated tax passed (safe harbor + 2220/2210 underpayment)"
+  else
+    bad "estimated-tax FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance27.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance28.py" >/dev/null 2>&1; then
+    ok "penalty & interest passed (FTF/FTP caps + daily-compounded interest)"
+  else
+    bad "penalties FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance28.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance29.py" >/dev/null 2>&1; then
+    ok "1099-NEC from GL passed (vendor payments >= \$600 aggregated)"
+  else
+    bad "1099 FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance29.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance30.py" >/dev/null 2>&1; then
+    ok "payroll tax passed (FICA + addl Medicare + FUTA/SUTA + 941)"
+  else
+    bad "payroll-tax FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance30.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance31.py" >/dev/null 2>&1; then
+    ok "sales & use tax passed (economic nexus + GL reconciliation)"
+  else
+    bad "sales-use FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance31.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance32.py" >/dev/null 2>&1; then
+    ok "state apportionment passed (3-factor / double-sales / single-sales)"
+  else
+    bad "apportion FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance32.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance33.py" >/dev/null 2>&1; then
+    ok "tax credits passed (R&D §41 + FTC + general business credit limits)"
+  else
+    bad "credits FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance33.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance34.py" >/dev/null 2>&1; then
+    ok "Form 1040 + Schedule SE passed (SE tax + brackets + assembly)"
+  else
+    bad "form1040 FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance34.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance35.py" >/dev/null 2>&1; then
+    ok "ASC 740 footnote passed (rate reconciliation + FIN 48 UTP rollforward)"
+  else
+    bad "tax-footnote FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance35.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance36.py" >/dev/null 2>&1; then
+    ok "statute of limitations passed (§6501 assessment + §6511 refund)"
+  else
+    bad "SOL FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance36.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance37.py" >/dev/null 2>&1; then
+    ok "transcript analysis passed (account TC reconstruction + W&I income)"
+  else
+    bad "transcript FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance37.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance38.py" >/dev/null 2>&1; then
+    ok "penalty abatement passed (FTA + reasonable cause → Form 843)"
+  else
+    bad "abatement FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance38.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance39.py" >/dev/null 2>&1; then
+    ok "audit package passed (GL substantiation + Form 4549 + IDR)"
+  else
+    bad "audit-package FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance39.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance40.py" >/dev/null 2>&1; then
+    ok "back-filing/SFR/installment passed (multi-year roll + collection plan)"
+  else
+    bad "back-filing FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance40.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance41.py" >/dev/null 2>&1; then
+    ok "OIC/collections/TFRP passed (RCP + CNC/CDP + trust-fund recovery)"
+  else
+    bad "OIC FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance41.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance42.py" >/dev/null 2>&1; then
+    ok "forensic pipeline passed (CSV -> double-entry GL, balanced, idempotent, review-flagged)"
+  else
+    bad "forensic-pipeline FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance42.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance43.py" >/dev/null 2>&1; then
+    ok "forensic deliverables passed (8 audit-ready reports from the GL + gap detection)"
+  else
+    bad "forensic-deliverables FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance43.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance44.py" >/dev/null 2>&1; then
+    ok "forensic monthly/yearly reports passed (period P&L + full transaction trace)"
+  else
+    bad "forensic-reports FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance44.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance45.py" >/dev/null 2>&1; then
+    ok "forensic adversarial gate passed (executable red-team + chief resolution)"
+  else
+    bad "forensic-adversarial FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance45.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance46.py" >/dev/null 2>&1; then
+    ok "entity engines passed (S-corp basis/AAA, partner basis, penalty taxes, 1041)"
+  else
+    bad "entity engines FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance46.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance47.py" >/dev/null 2>&1; then
+    ok "state tax engines passed (state income, PTET, franchise/margin, combined, nexus, sourcing)"
+  else
+    bad "state engines FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance47.py"
+  fi
+  if GLAW_HOME="$(mktemp -d)" "$_BKPY" "$GLAW/lib/bookkeeping/test_finance48.py" >/dev/null 2>&1; then
+    ok "international engines passed (GILTI, Subpart F, FDII, BEAT, 163j, 5471/5472)"
+  else
+    bad "intl engines FAILED — run: GLAW_HOME=\$(mktemp -d) $_BKPY $GLAW/lib/bookkeeping/test_finance48.py"
+  fi
+  if python3 "$GLAW/lib/federal-litigation/test_fed_causes.py" >/dev/null 2>&1; then
+    ok "federal causes library passed (56 causes + CLI + 8 complaints + statute excerpts)"
+  else
+    bad "federal-causes FAILED — run: python3 $GLAW/lib/federal-litigation/test_fed_causes.py"
+  fi
+  if printf '' | "$GLAW/bin/glaw-writing-check" - >/dev/null 2>&1 && python3 "$GLAW/lib/writing/test_writing_check.py" >/dev/null 2>&1; then
+    ok "legal-writing QC passed (glaw-writing-check linter + motion profile)"
+  else
+    bad "writing-check FAILED — run: python3 $GLAW/lib/writing/test_writing_check.py"
+  fi
+  if python3 "$GLAW/lib/render/test_federal_format.py" >/dev/null 2>&1; then
+    ok "federal render profile passed (generate→conforms, plain→fails — TNR/double/justified/1.25\" + page #s)"
+  else
+    bad "federal-format FAILED — run: python3 $GLAW/lib/render/test_federal_format.py"
+  fi
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_wiring.py" >/dev/null 2>&1; then
+    ok "orchestrator-wiring lock passed (/glaw-accounting routes to the finance subsystem)"
+  else
+    bad "wiring lock FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_wiring.py"
+  fi
+  if "$_BKPY" "$GLAW/lib/bookkeeping/test_bin_scorers.py" >/dev/null 2>&1; then
+    ok "bin-scorer locks passed (bureau-score clamp/weights + contract-score bound)"
+  else
+    bad "bin-scorer locks FAILED — run: $_BKPY $GLAW/lib/bookkeeping/test_bin_scorers.py"
+  fi
+else
+  if printf 'date,description,amount\n2026-01-01,Doctor smoke,1.00\n' > /tmp/glaw-doctor-bank.csv \
+     && GLAW="$GLAW" "$GLAW/bin/glaw-bank-ingest" /tmp/glaw-doctor-bank.csv --format json >/dev/null 2>&1; then
+    ok "zero-dependency bookkeeping smoke passed (CSV ingest via in-repo glaw_engine)"
+  else
+    bad "zero-dependency bookkeeping smoke FAILED — run: GLAW=$GLAW $GLAW/bin/glaw-bank-ingest /tmp/glaw-doctor-bank.csv --format json"
+  fi
+  if [ -x "$GLAW/bin/glaw-bookkeeping-doctor" ]; then
+    if GLAW="$GLAW" "$GLAW/bin/glaw-bookkeeping-doctor" >/tmp/glaw-bookkeeping-doctor.out 2>&1; then
+      ok "bookkeeping/IRS/adversarial gate passed (bank rec + ledger + forms + tax tie-out)"
+    else
+      bad "bookkeeping/IRS/adversarial gate FAILED — run: GLAW=$GLAW $GLAW/bin/glaw-bookkeeping-doctor"
+      grep -E '❌|Traceback|ERROR' /tmp/glaw-bookkeeping-doctor.out | sed 's/^/    /'
+    fi
+  else
+    bad "glaw-bookkeeping-doctor missing/executable bit absent"
+  fi
+fi
+# scripts: syntax-check (don't execute — they mutate/source)
+for s in glaw-setup glaw-preamble.sh glaw-gate; do
+  bash -n "$GLAW/bin/$s" 2>/dev/null && ok "$s syntax OK" || bad "$s syntax error"
+done
+# matter-ops/*.py: compile-check (they mutate state / hit network — never execute in doctor).
+# Includes the safety-critical launch-guard engine facts_validate.py + facts_gate.py.
+mo_fail=0; mo_n=0
+for p in "$GLAW"/bin/matter-ops/*.py; do
+  [ -f "$p" ] || continue; mo_n=$((mo_n+1))
+  python3 -m py_compile "$p" 2>/dev/null || { bad "matter-ops/$(basename "$p") syntax error"; mo_fail=$((mo_fail+1)); }
+done
+[ "$mo_fail" = 0 ] && ok "all $mo_n bin/matter-ops/*.py compile (incl. facts_validate/facts_gate guard)"
+# regression tests (safety-critical paths): launch-guard, hard gates, full lifecycle, profile routing
+for t in facts_validate_test:launch-guard gate_test:hard-gate lifecycle_test:full-lifecycle tax_profile_test:tax-profile sec_reporting_profile_test:sec-reporting-profile tax_wrapper_golden_test:tax-wrapper-golden tax_wrapper_gap_golden_test:tax-wrapper-gap-golden tax_wrapper_coverage_test:tax-wrapper-coverage roadmap_honesty_test:roadmap-honesty gate_docs_consistency_test:gate-docs-consistency compliance_manifest_contract_test:compliance-manifest-contract authority_gate_test:authority-gate rbac_test:rbac-soc2 host_adapter_test:host-adapter mcp_test:mcp-bridge extism_test:extism-contract headless_test:headless-report daemon_test:standing-goal-daemon sandbox_test:sandbox-simulation constitutional_test:constitutional-branch branch_substance_test:branch-substance jurisdiction_pack_test:jurisdiction-pack oversight_test:oversight-board conscience_test:autonomous-conscience authority_sources_test:authority-sources citation_corpus_test:citation-corpus citation_typology_test:citation-typology groundedness_test:groundedness compliance_audit_test:compliance-audit policy_test:policy-contract loop_test:orchestrator-loop golden_profile_test:golden-profiles memory_test:cross-matter-memory; do
+  script="$GLAW/test/${t%%:*}.sh"; name="${t#*:}"
+  [ -x "$script" ] || continue
+  if "$script" >/tmp/glaw-$$.out 2>&1; then
+    ok "$name test: $(grep -oE '[0-9]+ passed' /tmp/glaw-$$.out | head -1)"
+  else
+    bad "$name test FAILED — run: $script"; grep -E '✗|FAIL' /tmp/glaw-$$.out | sed 's/^/    /'
+  fi
+done; rm -f /tmp/glaw-$$.out
+
+# ---- 3. NO DANGLING REFS ----
+echo "[3/3] self-contained ecosystem — no dangling references"
+ROSTER="$GLAW/lib/firm-roster.md"
+
+# 3a. MANIFEST BIJECTION (deterministic, no prose parsing): seats/MANIFEST is the single
+#     source of truth for vendored seats. It must match seats/ exactly — no missing, no
+#     orphan — and every seat is a real skill (has SKILL.md). Nothing is "ignored".
+MAN="$GLAW/seats/MANIFEST"
+man=0
+if [ ! -f "$MAN" ]; then bad "seats/MANIFEST missing"; man=1; else
+  while IFS= read -r name; do
+    [ -z "$name" ] && continue
+    [ -f "$GLAW/seats/$name/SKILL.md" ] || { bad "MANIFEST lists '$name' but seats/$name/SKILL.md is missing"; man=$((man+1)); }
+  done < "$MAN"
+  for d in "$GLAW"/seats/*/; do
+    [ -d "$d" ] || continue
+    b="$(basename "$d")"
+    grep -qxF "$b" "$MAN" || { bad "seats/$b exists but is not in MANIFEST (orphan)"; man=$((man+1)); }
+    [ -f "$d/SKILL.md" ] || { bad "seats/$b has no SKILL.md"; man=$((man+1)); }
+  done
+fi
+[ "$man" = 0 ] && ok "manifest bijection: $(grep -c . "$MAN" 2>/dev/null) seats, all present with SKILL.md (no orphans)"
+
+# 3b. REFERENCE RESOLUTION (no ignored tokens): every glaw-* skill reference — written as
+#     /glaw-x or `glaw-x` anywhere in the roster or any SKILL.md — must resolve to a real
+#     thing: a glaw sub-skill ($GLAW/x), a vendored seat ($GLAW/seats/glaw-x), a bin tool
+#     ($GLAW/bin/glaw-x), or an installed sibling ($ROOT/glaw-x). The glaw- prefix makes
+#     every routing target self-identifying, so there is NO prose noise to ignore.
+ref=0
+# Strip bin/asset/forms-library tool paths first (checked as files, not skills), then
+# extract /glaw-x and `glaw-x` skill-invocation references.
+# Strip bin/asset/forms-library/<skill>/ file paths from FULL lines first (these are
+# files, not skill invocations), THEN extract the remaining /glaw-x and `glaw-x` refs.
+STRIP='s#(bin|assets|forms-library|[a-z0-9-]+)/glaw-[a-z0-9._-]*##g'
+TOKENS=$( { grep -rhE '/glaw-[a-z0-9-]+'   "$ROSTER" "$GLAW"/*/SKILL.md "$GLAW"/seats/*/SKILL.md 2>/dev/null | sed -E "$STRIP" | grep -oE '/glaw-[a-z0-9-]+' | sed 's#/##';
+            grep -rhoE '`glaw-[a-z0-9-]+`' "$ROSTER" "$GLAW"/*/SKILL.md "$GLAW"/seats/*/SKILL.md 2>/dev/null | tr -d '`'; } | sort -u )
+for t in $TOKENS; do
+  [ "$t" = "glaw" ] && continue
+  x="${t#glaw-}"
+  [ -f "$GLAW/$x/SKILL.md" ]        && continue   # glaw sub-skill (strategy, draft, ...)
+  [ -f "$GLAW/seats/$t/SKILL.md" ]  && continue   # vendored seat (glaw-financial-forensics, ...)
+  [ -e "$GLAW/bin/$t" ] || ls "$GLAW"/bin/"$t".* >/dev/null 2>&1 && continue   # bin tool (any ext)
+  [ -e "$ROOT/$t/SKILL.md" ]        && continue   # installed sibling
+  bad "reference /$t resolves to no skill, seat, or tool (gap)"; ref=$((ref+1))
+done
+[ "$ref" = 0 ] && ok "every glaw-* reference resolves ($(echo "$TOKENS" | grep -c .) refs, 0 ignored)"
+
+# 3b-2. Non-seat token allowlist must exist and only name real backticked roster
+#       tokens that are intentionally not vendorable skills.
+nonseat=0
+NONSEAT="$GLAW/seats/.nonseat-tokens"
+if [ ! -f "$NONSEAT" ]; then
+  bad "seats/.nonseat-tokens missing (required allowlist for non-vendored roster tokens)"
+  nonseat=$((nonseat+1))
+else
+  while IFS= read -r token; do
+    token="$(printf '%s' "$token" | sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+    [ -z "$token" ] && continue
+    if ! grep -RInF "\`$token\`" "$ROSTER" "$GLAW/SKILL.md" "$GLAW"/*/SKILL.md "$GLAW/docs" "$GLAW/README.md" 2>/dev/null | grep -q .; then
+      bad "seats/.nonseat-tokens contains unreferenced token: $token"
+      nonseat=$((nonseat+1))
+    fi
+  done < "$NONSEAT"
+fi
+[ "$nonseat" = 0 ] && ok "non-seat token allowlist present and referenced"
+
+# 3b-2b. Shared tax/legal figure spine must exist and be fresh enough that tax
+#        math cannot silently depend on an undated or stale figures file.
+if python3 - "$GLAW" <<'PY'
+from __future__ import annotations
+
+import datetime as dt
+import pathlib
+import re
+import sys
+
+glaw = pathlib.Path(sys.argv[1]).resolve()
+base = glaw / "tax-legal-shared"
+required = [
+    base / "current-figures.md",
+    base / "guardrails.md",
+    base / "evals.md",
+    base / "REVERIFY.md",
+]
+failures: list[str] = []
+for path in required:
+    if not path.is_file():
+        failures.append(f"missing {path.relative_to(glaw)}")
+
+figures = base / "current-figures.md"
+if figures.is_file():
+    text = figures.read_text(encoding="utf-8", errors="replace")
+    date_match = re.search(r"^updated_as_of:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*$", text, re.M)
+    age_match = re.search(r"^max_age_days:\s*([0-9]+)\s*$", text, re.M)
+    if not date_match:
+        failures.append("tax-legal-shared/current-figures.md missing updated_as_of")
+    if not age_match:
+        failures.append("tax-legal-shared/current-figures.md missing max_age_days")
+    if date_match and age_match:
+        updated = dt.date.fromisoformat(date_match.group(1))
+        max_age = int(age_match.group(1))
+        today = dt.date.today()
+        if updated > today:
+            failures.append("tax-legal-shared/current-figures.md updated_as_of is in the future")
+        elif (today - updated).days > max_age:
+            failures.append(
+                "tax-legal-shared/current-figures.md is stale: "
+                f"{(today - updated).days} days old, max {max_age}"
+            )
+    if "figure_id: FIG-YYYY-####" not in text:
+        failures.append("tax-legal-shared/current-figures.md missing required entry shape")
+
+if failures:
+    for failure in failures:
+        print(failure)
+    sys.exit(1)
+print("tax/legal figures spine exists and is within max age")
+PY
+then
+  ok "tax/legal figures spine present and fresh"
+else
+  bad "tax/legal figures spine failed"
+fi
+
+# 3b-3. Profile SSOT consistency: every reviewer/lens named by the executable
+#       council/adversarial profiles must map to a real skill carrying the identity
+#       posture markers required by final-packet reviewer manifests.
+if python3 - "$GLAW" <<'PY'
+import pathlib
+import sys
+
+glaw = pathlib.Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(glaw / "lib"))
+from glaw_profiles import ADVERSARIAL_PROFILES, COUNCIL_PROFILES, GOVERNMENT_ADVERSARY_LENSES, REVIEWER_SKILL_MAP
+
+
+def skill_name(path: pathlib.Path) -> str:
+    in_frontmatter = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip() == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+                continue
+            break
+        if in_frontmatter and line.startswith("name:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
+skill_paths: dict[str, list[pathlib.Path]] = {}
+for path in glaw.rglob("SKILL.md"):
+    if ".git" in path.parts:
+        continue
+    name = skill_name(path)
+    if name:
+        skill_paths.setdefault(name, []).append(path)
+
+failures: list[str] = []
+for profile_kind, profiles in (
+    ("council", COUNCIL_PROFILES),
+    ("adversarial", ADVERSARIAL_PROFILES),
+):
+    for profile, reviewers in profiles.items():
+        for reviewer in reviewers:
+            skill = REVIEWER_SKILL_MAP.get(reviewer)
+            if not skill:
+                failures.append(f"{profile_kind}:{profile}:{reviewer} missing REVIEWER_SKILL_MAP entry")
+                continue
+            matches = sorted(skill_paths.get(skill, []), key=lambda p: ("seats" in p.relative_to(glaw).parts, str(p.relative_to(glaw))))
+            if not matches:
+                failures.append(f"{profile_kind}:{profile}:{reviewer} maps to {skill}, but no SKILL.md has that name")
+                continue
+            text = matches[0].read_text(encoding="utf-8", errors="replace")
+            missing = [marker for marker in ("Identity:", "Soul:", "Report voice:") if marker not in text]
+            if missing:
+                failures.append(
+                    f"{profile_kind}:{profile}:{reviewer} -> {skill} missing {', '.join(missing)}"
+                )
+
+for profile, reviewers in ADVERSARIAL_PROFILES.items():
+    if not (set(reviewers) & GOVERNMENT_ADVERSARY_LENSES):
+        failures.append(
+            f"adversarial:{profile} lacks a government/regulatory/litigation adversary lens"
+        )
+
+if failures:
+    for failure in failures:
+        print(failure)
+    sys.exit(1)
+print("profile reviewer map resolves and every profile has a government/regulatory/litigation adversary")
+PY
+then
+  ok "profile consistency: every council/adversarial reviewer maps to a real identity-bearing skill and government adversary"
+else
+  bad "profile consistency failed"
+fi
+
+# 3c. lib/ paths referenced -> exist
+dlib=0
+for r in $(grep -oE 'lib/[a-zA-Z0-9._/-]+' "$ROSTER" 2>/dev/null | sort -u); do
+  [ -e "$GLAW/$r" ] || { warn "roster -> $r (missing, maybe templated)"; dlib=$((dlib+1)); }
+done
+[ "$dlib" = 0 ] && ok "all lib/ roster refs resolve"
+
+# 3d. Single-app docs must not drift back to external/stub wording for bundled seats.
+single_app_drift=0
+if grep -rIE 'external companions|Seats marked.*external|Reference stub|fetched at install time|ENCRYPTION-GATED|distributed separately|install.*full skill locally|not vendored into' \
+   "$GLAW/SKILL.md" "$GLAW/README.md" "$GLAW/docs" "$GLAW/seats" 2>/dev/null \
+   | grep -vE '/seats/UPSTREAM.md:|/bin/glaw-doctor:' | grep -q .; then
+  bad "single-app documentation drift: bundled seats described as external/stubbed"
+  single_app_drift=$((single_app_drift+1))
+fi
+[ "$single_app_drift" = 0 ] && ok "single-app docs: no external/stubbed bundled-seat wording"
+
+# 3e. Skill/docs command examples must stay portable across Claude and Codex.
+portable_path_drift=0
+if grep -RInE '~/.claude/skills/glaw|\.claude/skills/glaw' \
+   "$GLAW/SKILL.md" "$GLAW"/*/SKILL.md "$GLAW"/seats/*/SKILL.md "$GLAW/docs" "$GLAW/README.md" "$GLAW/lib"/*.md "$GLAW/lib/style"/*.md 2>/dev/null \
+   | grep -vE '/bin/glaw-doctor:' | grep -q .; then
+  bad "portable docs drift: skill/docs examples contain Claude-only ~/.claude/skills/glaw paths"
+  portable_path_drift=$((portable_path_drift+1))
+fi
+[ "$portable_path_drift" = 0 ] && ok "portable docs: no Claude-only GLAW command paths"
+
+# 3f. Review gate examples must not drift back to evidence-only approvals.
+review_gate_drift=0
+if grep -RInP 'glaw-council record[^\n]*--decision approve(?![^\n]*--notes)|glaw-adversarial record[^\n]*--decision survive(?![^\n]*--attack)' \
+   "$GLAW/SKILL.md" "$GLAW"/*/SKILL.md "$GLAW"/seats/*/SKILL.md "$GLAW/docs" "$GLAW/README.md" "$GLAW/test" "$GLAW/bin" "$GLAW/lib" 2>/dev/null \
+   | grep -vE '/bin/glaw-doctor:' | grep -q .; then
+  bad "review-gate documentation drift: council approve examples need --notes and adversarial survive examples need --attack"
+  review_gate_drift=$((review_gate_drift+1))
+fi
+[ "$review_gate_drift" = 0 ] && ok "review-gate docs: approvals require notes and survivals require attacks"
+
+# 3g. Core routing docs must use the actual /glaw-* command names for bundled seats.
+bare_ref=0
+if [ -f "$GLAW/seats/MANIFEST" ]; then
+  for seat in $(cat "$GLAW/seats/MANIFEST"); do
+    bare="${seat#glaw-}"
+    case "$seat" in
+      glaw-opendataloader-pdf) continue ;;  # also documented as a local helper binary name
+    esac
+    if grep -RInF "\`$bare\`" "$GLAW/docs/org-chart-and-usage.md" "$GLAW/lib/workflow.md" 2>/dev/null | grep -q .; then
+      bad "bare bundled-seat reference in core routing docs: \`$bare\` should be \`/$seat\`"
+      bare_ref=$((bare_ref+1))
+    fi
+  done
+fi
+[ "$bare_ref" = 0 ] && ok "core routing docs use /glaw-* names for bundled seats"
+
+# ---- 4. SKILL CONTRACTS (per-skill, the ~40 personas) ----
+echo "[4/5] skill contracts (glaw-test)"
+if [ -x "$GLAW/bin/glaw-test" ]; then
+  if "$GLAW/bin/glaw-test" >/tmp/glaw-test.out 2>&1; then
+    ok "$(grep -oE 'passed: [0-9]+' /tmp/glaw-test.out | head -1) — all skill contracts pass"
+  else
+    bad "skill contracts FAILED — run: $GLAW/bin/glaw-test"
+    grep -E '✗|violations:' /tmp/glaw-test.out | sed 's/^/    /'
+  fi
+else
+  warn "glaw-test not found/executable (skipping contract check)"
+fi
+
+# ---- 5. CAPABILITY HONESTY (no false LIVE claims for LoRA/EWC neural learning) ----
+echo "[5/5] capability honesty (glaw-capability-audit)"
+if [ -x "$GLAW/bin/glaw-capability-audit" ]; then
+  if "$GLAW/bin/glaw-capability-audit" >/tmp/glaw-cap.out 2>&1; then
+    ok "no false LIVE claims — LoRA/EWC honestly scoped (📐 DESIGNED)"
+  else
+    bad "FALSE capability claim detected — run: $GLAW/bin/glaw-capability-audit"
+    grep -E '❌|FALSE' /tmp/glaw-cap.out | sed 's/^/    /'
+  fi
+else
+  warn "glaw-capability-audit not found/executable (skipping honesty check)"
+fi
+
+echo "[6/6] no secrets, keys, or personal data (content scan)"
+# Root-cause guard: the committed tree must never carry live secrets, credential
+# files, or personal/case data. Scans content, not just filenames. Excludes the
+# ignored generated caches and documented EXAMPLE placeholders.
+SCANROOT="$GLAW"
+scan() { grep -rIE "$1" "$SCANROOT" 2>/dev/null \
+  | grep -vE '/__pycache__/|/node_modules/|/\.git/|UPSTREAM-LICENSE|bin/glaw-doctor'; }
+sec=0
+# (a) live key/token formats (AKIA…EXAMPLE and obvious placeholders excluded)
+if scan 'sk-[a-zA-Z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|ghp_[a-zA-Z0-9]{36}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY' \
+   | grep -vE 'EXAMPLE|placeholder|your.?key|xxxx|<your|process\.env|expect\(|test' | grep -q .; then
+  bad "possible live secret/key in tree — run: grep -rIE 'sk-|AKIA|BEGIN .*PRIVATE KEY' (excluding tests/examples)"; sec=$((sec+1))
+fi
+# (b) credential files
+if find "$SCANROOT" -path '*/__pycache__' -prune -o -path '*/node_modules' -prune -o \
+     \( -name '*.key' -o -name '*.pem' -o -name '.env' -o -name '*.enc' -o -name '*token*.json' -o -name '*credentials*.json' \) -print 2>/dev/null \
+   | grep -q .; then
+  bad "credential file committed (.key/.pem/.env/.enc/token/credentials)"; sec=$((sec+1))
+fi
+# (c) personal / real-client case data (the leak that prompted this guard).
+#     Specific identifiers only — generic legal terms (indigent, hardship) are
+#     legitimate skill content and must NOT trip this.
+if scan 'prieto_v_|_v_avila|monikavila|monica\.avila|case_20[0-9]{2}-[0-9]{4,6}\.(json|bd|md)|LAW_SKILLS_TEST' | grep -q .; then
+  bad "real-client case data in tree (party names / case files)"; sec=$((sec+1))
+fi
+[ "$sec" = 0 ] && ok "no secrets, keys, or personal data committed"
+
+echo "═══ RESULT ═══"
+echo "  failures: $FAIL   warnings: $WARN"
+[ "$FAIL" = 0 ] && { echo "  HEALTHY ✅"; exit 0; } || { echo "  PROBLEMS FOUND ❌"; exit 1; }

@@ -1,0 +1,1621 @@
+#!/usr/bin/env bash
+# glaw-gate — code-ENFORCEMENT of the firm's hard gates (was prose-only in SKILL.md).
+# A stage transition is BLOCKED unless the gate events required to enter it are present
+# in the matter's timeline.jsonl. Fail-closed: if the required event is absent, exit 1.
+#
+# GATES (mirror CLAUDE.md "Hard gates"):
+#   enter strategy  ⇐ intake_complete              (structured intake before work)
+#                   ⇐ conflicts_cleared            (gate 1: conflicts before strategy)
+#   enter file      ⇐ citations_verified           (gate 2: cites verified before file)
+#                   ⇐ adversarial_done             (gate 3: RED→BLUE before file)
+#                   ⇐ red_flags_clear              (no critical/high open findings)
+#                   ⇐ final_packet_ready           (required council + manifest)
+#                   ⇐ chief_approved               (Chief/Council final approval)
+#   enter matter-retro ⇐ docket_gate_complete      (deadline review before close-out)
+#                      ⇐ docket_done
+# For guarded stages, event presence is necessary but not sufficient; the backing ledgers must
+# prove the gate state.
+#
+# Usage:
+#   glaw-gate check <target-stage> [slug]   # exit 0 = clear, 1 = blocked
+#   glaw-gate status [slug]                 # show every gate's state for the matter
+set -uo pipefail
+GLAW_HOME="${GLAW_HOME:-$HOME/.glaw}"
+MATTERS="$GLAW_HOME/matters"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# stage -> space-separated required timeline events
+_required_events() {
+  case "$1" in
+    strategy) echo "intake_complete conflicts_cleared" ;;
+    file)     echo "citations_verified adversarial_done red_flags_clear final_packet_ready chief_approved" ;;
+    matter-retro) echo "docket_gate_complete docket_done" ;;
+    *)        echo "" ;;   # unguarded transition
+  esac
+}
+
+_has_event() {  # _has_event <timeline-file> <event>
+  [ -f "$1" ] && grep -Eq "\"event\"[[:space:]]*:[[:space:]]*\"$2\"" "$1"
+}
+
+_strategy_artifacts_valid() {  # _strategy_artifacts_valid <matter-dir> <repo-root>
+  python3 - "$1" "$2" <<'PY'
+import json
+import pathlib
+import re
+import sys
+from decimal import Decimal, InvalidOperation
+
+d = pathlib.Path(sys.argv[1])
+root = pathlib.Path(sys.argv[2])
+sys.path.insert(0, str(root / "lib"))
+from glaw_profiles import TRACKS
+SOURCE_ID_RE = re.compile(r"\bSRC-\d{4}\b")
+GENERIC_PROFESSIONAL_RE = re.compile(
+    r"^\s*(?:licensed\s+)?(?:reviewer|attorney|cpa|ea|professional|signer|counsel)\s*$"
+    r"|^\s*(?:tbd|todo|n/?a|unknown|pending)\s*$",
+    re.IGNORECASE,
+)
+GENERIC_INTAKE_REVIEWER_RE = re.compile(
+    r"^\s*(?:intake\s+)?(?:reviewer|operator|user|clerk|agent|professional|counsel)\s*$"
+    r"|^\s*(?:tbd|todo|n/?a|unknown|pending)\s*$",
+    re.IGNORECASE,
+)
+BRACKET_PLACEHOLDER_RE = re.compile(r"\[[^\]]+\]")
+
+
+def responsible_professional_blocker(value):
+    text = str(value or "").strip()
+    alpha_words = re.findall(r"[A-Za-z][A-Za-z.'-]+", text)
+    if not text:
+        return "ethics responsible professional is missing"
+    if BRACKET_PLACEHOLDER_RE.search(text):
+        return "ethics responsible professional is a placeholder"
+    if GENERIC_PROFESSIONAL_RE.match(text):
+        return "ethics responsible professional is a generic role"
+    if len(alpha_words) < 2:
+        return "ethics responsible professional must include a named accountable reviewer"
+    return ""
+
+
+def intake_reviewer_blocker(value):
+    text = str(value or "").strip()
+    alpha_words = re.findall(r"[A-Za-z][A-Za-z.'-]+", text)
+    if not text:
+        return "intake review.completed_by is missing"
+    if BRACKET_PLACEHOLDER_RE.search(text):
+        return "intake review.completed_by is a placeholder"
+    if GENERIC_INTAKE_REVIEWER_RE.match(text):
+        return "intake review.completed_by is a generic role"
+    if len(alpha_words) < 2:
+        return "intake review.completed_by must include a named accountable reviewer"
+    return ""
+
+REQUIRED_INTAKE = (
+    "matter_name",
+    "workflow_track",
+    "client_names",
+    "parties",
+    "jurisdiction",
+    "goal",
+    "source_documents",
+    "deadlines",
+    "facts_timeline",
+    "open_questions",
+    "conflicts_parties",
+    "authorized_scope",
+)
+
+
+def intake_missing_fields(intake):
+    universal = intake.get("universal", {})
+    missing = []
+    if intake.get("status") != "complete":
+        missing.append("status=complete")
+    for key in REQUIRED_INTAKE:
+        val = universal.get(key)
+        if val in ("", None, [], {}):
+            missing.append(f"universal.{key}")
+    track = universal.get("workflow_track") or intake.get("workflow_track")
+    if track not in TRACKS:
+        missing.append("universal.workflow_track(valid)")
+    for key in TRACKS.get(track, ()):
+        val = intake.get("track_specific", {}).get(key)
+        if val in ("", None, [], {}):
+            missing.append(f"track_specific.{key}")
+    reviewer_blocker = intake_reviewer_blocker(intake.get("review", {}).get("completed_by", ""))
+    if reviewer_blocker:
+        missing.append(reviewer_blocker)
+    return missing
+
+
+def source_evidence_manifest():
+    paths = []
+    for part in ("evidence", "source_documents", "sources"):
+        base = d / part
+        if not base.exists():
+            continue
+        paths.extend(path for path in base.rglob("*") if path.is_file() and path.stat().st_size > 0)
+    return [
+        {"id": f"SRC-{idx:04d}", "path": str(path.relative_to(d))}
+        for idx, path in enumerate(sorted(paths), start=1)
+    ]
+
+
+def validate_current_source(text, label, source_ids):
+    text = str(text or "")
+    refs = sorted(set(SOURCE_ID_RE.findall(text)))
+    if not refs:
+        print(f"{label} lacks source evidence id (SRC-####)")
+        sys.exit(1)
+    stale = [ref for ref in refs if ref not in source_ids]
+    if stale:
+        print(f"{label} cites non-current source evidence id(s): {', '.join(stale)}")
+        sys.exit(1)
+
+
+source_ids = {item["id"] for item in source_evidence_manifest()}
+if not source_ids:
+    print("no current nonempty source evidence file")
+    sys.exit(1)
+
+
+intake_path = d / "intake.json"
+ethics_path = d / "ethics.json"
+try:
+    intake = json.loads(intake_path.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    print("intake.json missing")
+    sys.exit(1)
+except json.JSONDecodeError:
+    print("intake.json is invalid JSON")
+    sys.exit(1)
+missing_intake = intake_missing_fields(intake)
+if missing_intake:
+    print("intake.json incomplete: " + ", ".join(missing_intake))
+    sys.exit(1)
+try:
+    ethics = json.loads(ethics_path.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    print("ethics.json missing")
+    sys.exit(1)
+except json.JSONDecodeError:
+    print("ethics.json is invalid JSON")
+    sys.exit(1)
+if ethics.get("status") != "complete":
+    print("ethics.json status is not complete")
+    sys.exit(1)
+if ethics.get("conflicts_status") not in {"cleared", "waived"}:
+    print("ethics conflicts_status is not cleared or waived")
+    sys.exit(1)
+validate_current_source(ethics.get("conflicts_source", ""), "ethics conflicts_source", source_ids)
+if ethics.get("conflicts_status") == "waived":
+    validate_current_source(ethics.get("waiver_evidence", ""), "ethics waiver_evidence", source_ids)
+engagement = ethics.get("engagement", {})
+if engagement.get("status") != "drafted":
+    print("ethics engagement is not drafted")
+    sys.exit(1)
+if not str(engagement.get("scope", "")).strip():
+    print("ethics engagement scope is missing")
+    sys.exit(1)
+professional_blocker = responsible_professional_blocker(engagement.get("responsible_professional", ""))
+if professional_blocker:
+    print(professional_blocker)
+    sys.exit(1)
+validate_current_source(engagement.get("source", ""), "ethics engagement source", source_ids)
+PY
+}
+
+_file_artifacts_valid() {  # _file_artifacts_valid <matter-dir> <repo-root>
+  python3 - "$1" "$2" <<'PY'
+import hashlib
+import json
+import pathlib
+import re
+import sys
+from urllib.parse import urlparse
+
+d = pathlib.Path(sys.argv[1])
+root = pathlib.Path(sys.argv[2])
+sys.path.insert(0, str(root / "lib"))
+from glaw_profiles import (
+    ADVERSARIAL_PROFILES,
+    COUNCIL_PROFILES,
+    GOVERNMENT_ADVERSARY_LENSES,
+    REVIEWER_SKILL_MAP,
+    TRACKS,
+    profile_for_track,
+)
+from glaw_authority_sources import approved_authority_url
+from glaw_groundedness import audit_matter
+from glaw_corpus_freshness import freshness_failure as _shared_freshness_failure
+from glaw_accounting_control import accounting_control_manifest
+
+GENERIC_INTAKE_REVIEWER_RE = re.compile(
+    r"^\s*(?:intake\s+)?(?:reviewer|operator|user|clerk|agent|professional|counsel)\s*$"
+    r"|^\s*(?:tbd|todo|n/?a|unknown|pending)\s*$",
+    re.IGNORECASE,
+)
+BRACKET_PLACEHOLDER_RE = re.compile(r"\[[^\]]+\]")
+
+
+def valid_http_url(value):
+    parsed = urlparse(str(value).strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+APPROVED_CORPUS_TRUST = {"authoritative", "authenticated-copy"}
+
+
+def corpus_freshness_failure(row, corpus_id):
+    return _shared_freshness_failure(row, corpus_id, style="prefix")
+
+
+def intake_reviewer_blocker(value):
+    text = str(value or "").strip()
+    alpha_words = re.findall(r"[A-Za-z][A-Za-z.'-]+", text)
+    if not text:
+        return "intake review.completed_by is missing"
+    if BRACKET_PLACEHOLDER_RE.search(text):
+        return "intake review.completed_by is a placeholder"
+    if GENERIC_INTAKE_REVIEWER_RE.match(text):
+        return "intake review.completed_by is a generic role"
+    if len(alpha_words) < 2:
+        return "intake review.completed_by must include a named accountable reviewer"
+    return ""
+
+
+def valid_legal_research_reviewer(value):
+    normalized = str(value).strip().lower().replace("_", "-")
+    return normalized in {"legal-research", "glaw-legal-research", "/glaw-legal-research"}
+
+REQUIRED_INTAKE = (
+    "matter_name",
+    "workflow_track",
+    "client_names",
+    "parties",
+    "jurisdiction",
+    "goal",
+    "source_documents",
+    "deadlines",
+    "facts_timeline",
+    "open_questions",
+    "conflicts_parties",
+    "authorized_scope",
+)
+
+
+def intake_missing_fields(intake):
+    universal = intake.get("universal", {})
+    missing = []
+    if intake.get("status") != "complete":
+        missing.append("status=complete")
+    for key in REQUIRED_INTAKE:
+        val = universal.get(key)
+        if val in ("", None, [], {}):
+            missing.append(f"universal.{key}")
+    track = universal.get("workflow_track") or intake.get("workflow_track")
+    if track not in TRACKS:
+        missing.append("universal.workflow_track(valid)")
+    for key in TRACKS.get(track, ()):
+        val = intake.get("track_specific", {}).get(key)
+        if val in ("", None, [], {}):
+            missing.append(f"track_specific.{key}")
+    reviewer_blocker = intake_reviewer_blocker(intake.get("review", {}).get("completed_by", ""))
+    if reviewer_blocker:
+        missing.append(reviewer_blocker)
+    return missing
+
+
+def read_jsonl(path):
+    rows = []
+    if not path.exists():
+        return rows
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            print(f"{path.name} contains invalid JSON")
+            sys.exit(1)
+    return rows
+
+
+def latest_by(rows, key):
+    latest = {}
+    for row in rows:
+        latest[str(row.get(key, ""))] = row
+    return latest
+
+
+def skill_name(path):
+    in_frontmatter = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip() == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+                continue
+            break
+        if in_frontmatter and line.startswith("name:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
+def skill_path_for(command):
+    matches = []
+    for path in root.rglob("SKILL.md"):
+        if ".git" in path.parts:
+            continue
+        if skill_name(path) == command:
+            matches.append(path)
+    if not matches:
+        return None
+    return sorted(matches, key=lambda p: ("seats" in p.relative_to(root).parts, str(p.relative_to(root))))[0]
+
+
+TEXT_DELIVERABLE_EXTS = {".md", ".html", ".htm", ".txt"}
+TEXT_DELIVERABLE_SKIP_NAMES = {
+    "matter.md",
+    "index.md",
+    "final_packet.md",
+}
+TEXT_DELIVERABLE_SKIP_PARTS = {
+    "citation_corpus",
+    "_published",
+    "_extracted",
+    "decisions",
+    "evidence",
+    "source_documents",
+    "sources",
+    "workpapers",
+}
+SOURCE_EVIDENCE_PARTS = {
+    "evidence",
+    "source_documents",
+    "sources",
+}
+SOURCE_ID_RE = re.compile(r"\bSRC-\d{4}\b")
+ACCOUNTING_CONTROL_PROFILES = {"accounting", "accounting-tax", "tax", "sec-reporting"}
+NEGATIVE_DECISION_RE = re.compile(r"\b(DENY|DENIED|REJECT|REJECTED|REFUSE|REFUSED|BLOCK|BLOCKED|DO NOT PROCEED|NOT READY|WITH[- ]?FIXES|FIXES REQUIRED|FIX REQUIRED)\b", re.I)
+APPROVAL_DECISION_RE = re.compile(r"\b(PROCEED|APPROVE|APPROVED|READY|FILE-READY)\b", re.I)
+FINAL_APPROVAL_MIN_SCORE = 90.0
+REQUIRED_GATE_ARTIFACTS = (
+    "intake.json",
+    "ethics.json",
+    "citation_corpus.jsonl",
+    "citations.jsonl",
+    "groundedness.json",
+    "council.jsonl",
+    "adversarial.jsonl",
+)
+OPTIONAL_GATE_ARTIFACTS = (
+    "red_flags.jsonl",
+    "accounting_control.json",
+)
+REPORT_REQUIRED_MARKERS = (
+    "Owner:",
+    "Report voice:",
+    "Findings:",
+    "Evidence:",
+    "Red flags:",
+    "Sign-off conditions:",
+)
+UNRESOLVED_PLACEHOLDER_RE = re.compile(r"\[(?:[A-Z][A-Z0-9 _./:-]{1,}|VERIFY|TODO|TBD)[^\]]*\]")
+UNRESOLVED_REVIEW_RE = re.compile(r"\bREVIEW\s*:", re.IGNORECASE)
+
+
+def is_external_text_deliverable(path):
+    if path.suffix.lower() not in TEXT_DELIVERABLE_EXTS:
+        return False
+    if path.name in TEXT_DELIVERABLE_SKIP_NAMES:
+        return False
+    return not bool(set(path.relative_to(d).parts) & TEXT_DELIVERABLE_SKIP_PARTS)
+
+
+def is_source_evidence(path):
+    if not path.is_file():
+        return False
+    return bool(set(path.relative_to(d).parts) & SOURCE_EVIDENCE_PARTS)
+
+
+def has_upl_footer(text):
+    lower = text.lower()
+    work_product = "attorney work-product" in lower or "work-product" in lower
+    no_advice = "not legal advice" in lower or "not legal, tax, or accounting advice" in lower
+    return work_product and no_advice
+
+
+def sha256_file(path):
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def sha256_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def source_evidence_manifest(paths):
+    return [
+        {
+            "id": f"SRC-{idx:04d}",
+            "path": str(path.relative_to(d)),
+            "sha256": sha256_file(path),
+            "size_bytes": path.stat().st_size,
+        }
+        for idx, path in enumerate(sorted(paths), start=1)
+    ]
+
+
+def reviewer_identity_manifest(profile):
+    required = [("citation", "legal-research")]
+    required.extend(("council", name) for name in COUNCIL_PROFILES.get(profile, ()))
+    required.extend(("adversarial", name) for name in ADVERSARIAL_PROFILES.get(profile, ()))
+    rows = []
+    for kind, name in required:
+        command = REVIEWER_SKILL_MAP.get(name, "")
+        missing = []
+        path = skill_path_for(command) if command else None
+        text = path.read_text(encoding="utf-8", errors="replace") if path else ""
+        if not command:
+            missing.append("reviewer skill mapping")
+        if not path:
+            missing.append("skill file")
+        if "Identity:" not in text:
+            missing.append("Identity:")
+        if "Soul:" not in text:
+            missing.append("Soul:")
+        if "Report voice:" not in text:
+            missing.append("Report voice:")
+        rows.append({
+            "kind": kind,
+            "name": name,
+            "skill": command,
+            "path": str(path.relative_to(root)) if path else "",
+            "sha256": sha256_file(path) if path else "",
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+        })
+    return rows
+
+
+def report_quality(path, source_manifest):
+    text = path.read_text(encoding="utf-8", errors="replace")
+    missing = [marker for marker in REPORT_REQUIRED_MARKERS if marker.lower() not in text.lower()]
+    placeholders = sorted(set(UNRESOLVED_PLACEHOLDER_RE.findall(text)))
+    review_markers = sorted(set(UNRESOLVED_REVIEW_RE.findall(text)))
+    source_ids = [item["id"] for item in source_manifest]
+    cited_sources = [sid for sid in source_ids if sid in text]
+    referenced_sources = sorted(set(SOURCE_ID_RE.findall(text)))
+    stale_sources = sorted(set(referenced_sources) - set(source_ids))
+    if not source_ids:
+        missing.append("source evidence manifest")
+    elif not cited_sources:
+        missing.append("source evidence id (SRC-####)")
+    elif stale_sources:
+        missing.append("non-current source evidence id")
+    if placeholders:
+        missing.append("unresolved placeholders")
+    if review_markers:
+        missing.append("unresolved REVIEW markers")
+    return {
+        "path": str(path.relative_to(d)),
+        "status": "pass" if not missing else "fail",
+        "missing_markers": missing,
+        "cited_source_ids": cited_sources,
+        "unresolved_placeholders": placeholders,
+        "unresolved_review_markers": review_markers,
+    }
+
+
+def review_evidence_manifest(council_rows, adversarial_rows, profile, source_manifest):
+    source_ids = [item["id"] for item in source_manifest]
+    rows = []
+    latest_council = latest_by(council_rows, "role")
+    for role in COUNCIL_PROFILES.get(profile, ()):
+        row = latest_council.get(role, {})
+        evidence = str(row.get("evidence", ""))
+        notes = str(row.get("notes", ""))
+        cited = [sid for sid in source_ids if sid in evidence]
+        referenced = sorted(set(SOURCE_ID_RE.findall(evidence)))
+        stale = sorted(set(referenced) - set(source_ids))
+        missing = []
+        if not row:
+            missing.append("review row")
+        if not evidence.strip():
+            missing.append("evidence")
+        if not cited:
+            missing.append("source evidence id (SRC-####)")
+        elif stale:
+            missing.append("non-current source evidence id")
+        if not notes.strip():
+            missing.append("notes/conclusion")
+        rows.append({
+            "kind": "council",
+            "name": role,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "cited_source_ids": cited,
+        })
+    latest_adversarial = latest_by(adversarial_rows, "lens")
+    for lens in ADVERSARIAL_PROFILES.get(profile, ()):
+        row = latest_adversarial.get(lens, {})
+        evidence = str(row.get("evidence", ""))
+        attack = str(row.get("attack", ""))
+        cited = [sid for sid in source_ids if sid in evidence]
+        attack_cited = [sid for sid in source_ids if sid in attack]
+        referenced = sorted(set(SOURCE_ID_RE.findall(evidence)))
+        attack_referenced = sorted(set(SOURCE_ID_RE.findall(attack)))
+        stale = sorted(set(referenced) - set(source_ids))
+        attack_stale = sorted(set(attack_referenced) - set(source_ids))
+        missing = []
+        if not row:
+            missing.append("review row")
+        if not evidence.strip():
+            missing.append("evidence")
+        if not cited:
+            missing.append("source evidence id (SRC-####)")
+        elif stale:
+            missing.append("non-current source evidence id")
+        if not attack.strip():
+            missing.append("attack/challenge")
+        if not attack_cited:
+            missing.append("attack source evidence id (SRC-####)")
+        elif attack_stale:
+            missing.append("non-current attack source evidence id")
+        rows.append({
+            "kind": "adversarial",
+            "name": lens,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "cited_source_ids": cited,
+            "attack_cited_source_ids": attack_cited,
+        })
+    return rows
+
+
+def government_adversary_manifest(senior_review_evidence_manifest):
+    rows = []
+    for item in senior_review_evidence_manifest:
+        if item.get("kind") != "adversarial":
+            continue
+        lens = str(item.get("name", ""))
+        if lens not in GOVERNMENT_ADVERSARY_LENSES:
+            continue
+        rows.append({
+            "lens": lens,
+            "status": item.get("status", "fail"),
+            "missing": item.get("missing", []),
+            "evidence_cited_source_ids": item.get("cited_source_ids", []),
+            "attack_cited_source_ids": item.get("attack_cited_source_ids", []),
+        })
+    return rows
+
+
+def red_flag_resolution_manifest(red_flags, source_manifest):
+    source_ids = [item["id"] for item in source_manifest]
+    rows = []
+    for flag in red_flags:
+        severity = str(flag.get("severity", "")).lower()
+        if severity not in {"critical", "high"}:
+            continue
+        if flag.get("status", "open") != "resolved":
+            continue
+        evidence = str(flag.get("resolution_evidence", ""))
+        cited = [sid for sid in source_ids if sid in evidence]
+        syntactic = sorted(set(SOURCE_ID_RE.findall(evidence)))
+        missing = []
+        if not evidence.strip():
+            missing.append("resolution evidence")
+        if not syntactic:
+            missing.append("source evidence id (SRC-####)")
+        elif not cited:
+            missing.append("current source evidence id")
+        elif sorted(set(syntactic) - set(source_ids)):
+            missing.append("non-current source evidence id")
+        rows.append({
+            "id": flag.get("id", ""),
+            "severity": severity,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "cited_source_ids": cited,
+            "referenced_source_ids": syntactic,
+        })
+    return rows
+
+
+def nonblocking_red_flag_manifest(red_flags, source_manifest):
+    source_ids = [item["id"] for item in source_manifest]
+    rows = []
+    for flag in red_flags:
+        severity = str(flag.get("severity", "")).lower()
+        if severity in {"critical", "high"}:
+            continue
+        if flag.get("status", "open") == "resolved":
+            continue
+        source = str(flag.get("source", ""))
+        cited = [sid for sid in source_ids if sid in source]
+        syntactic = sorted(set(SOURCE_ID_RE.findall(source)))
+        missing = []
+        if not severity:
+            missing.append("severity")
+        if not str(flag.get("finding", "")).strip():
+            missing.append("finding")
+        if not str(flag.get("owner", "")).strip():
+            missing.append("owner")
+        if not str(flag.get("required_fix", "")).strip():
+            missing.append("required_fix")
+        if not source.strip():
+            missing.append("source")
+        if not syntactic:
+            missing.append("source evidence id (SRC-####)")
+        elif not cited:
+            missing.append("current source evidence id")
+        elif sorted(set(syntactic) - set(source_ids)):
+            missing.append("non-current source evidence id")
+        rows.append({
+            "id": flag.get("id", ""),
+            "severity": severity,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "owner": flag.get("owner", ""),
+            "required_fix": flag.get("required_fix", ""),
+            "finding": flag.get("finding", ""),
+            "cited_source_ids": cited,
+            "referenced_source_ids": syntactic,
+        })
+    return rows
+
+
+def _boolish(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "pass", "passed", "ok"}
+
+
+def _zeroish(value):
+    try:
+        return float(str(value).strip()) == 0.0
+    except ValueError:
+        return False
+
+
+def _int_value(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return -1
+
+
+def _artifact_hash(path_text, label, missing):
+    if not str(path_text).strip():
+        missing.append(f"{label}.artifact")
+        return {"label": label, "path": str(path_text), "sha256": "", "size_bytes": 0}
+    path = (d / str(path_text)).resolve()
+    try:
+        rel_path = str(path.relative_to(d.resolve()))
+    except ValueError:
+        missing.append(f"{label}.artifact inside matter")
+        return {"label": label, "path": str(path_text), "sha256": "", "size_bytes": 0}
+    if not path.is_file():
+        missing.append(f"{label}.artifact exists")
+        return {"label": label, "path": rel_path, "sha256": "", "size_bytes": 0}
+    size = path.stat().st_size
+    if size <= 0:
+        missing.append(f"{label}.artifact nonempty")
+    return {"label": label, "path": rel_path, "sha256": sha256_file(path), "size_bytes": size}
+
+
+COMPLIANCE_ROW_ROUTES = {
+    "ethics-upl": (
+        "bin/glaw-ethics status",
+        "clear conflicts, engagement, and UPL footer evidence",
+    ),
+    "citation-grounding": (
+        "bin/glaw-citation-gate status",
+        "verify citations against the captured source corpus",
+    ),
+    "government-adversary": (
+        "bin/glaw-adversarial status --profile auto",
+        "record surviving government/regulatory/litigation adversary attacks",
+    ),
+    "senior-review-source-support": (
+        "bin/glaw-council status --profile auto",
+        "obtain source-backed senior reviewer approval notes",
+    ),
+    "red-flag-accountability": (
+        "bin/glaw-red-flags status",
+        "resolve blocking red flags and account for nonblocking flags",
+    ),
+    "source-evidence-chain": (
+        "bin/glaw-final-packet build --profile auto",
+        "refresh the source evidence manifest from current matter files",
+    ),
+    "professional-report-quality": (
+        "bin/glaw-upl-check",
+        "fix external reports so they carry owner, voice, findings, evidence, red flags, sign-off conditions, sources, and no placeholders",
+    ),
+    "reviewer-identity": (
+        "bin/glaw-doctor",
+        "repair reviewer skill mapping or identity markers",
+    ),
+    "accounting-control": (
+        "bin/glaw-accounting-control",
+        "run books-doctor, bank reconciliation, ledger, tax tie-out, and SEC audit tie-out controls",
+    ),
+    "accounting-control-not-required": (
+        "",
+        "no accounting control required for this profile",
+    ),
+}
+
+
+def _compliance_row(row_id, owner, ok, missing):
+    next_command, required_fix = COMPLIANCE_ROW_ROUTES.get(
+        row_id,
+        ("bin/glaw-final-packet build --profile auto", "refresh the final packet compliance manifest"),
+    )
+    return {
+        "id": row_id,
+        "owner": owner,
+        "status": "pass" if ok else "fail",
+        "missing": missing,
+        "next_command": next_command,
+        "required_fix": required_fix,
+    }
+
+
+def compliance_manifest(
+    profile,
+    gates,
+    *,
+    accounting_control,
+    government_adversary_rows,
+    source_manifest,
+    senior_review_evidence_manifest,
+    red_flag_resolution_evidence_manifest,
+    nonblocking_red_flags,
+    reviewer_identity,
+    report_quality_manifest,
+):
+    accounting_required = accounting_control.get("required") is True
+    return [
+        _compliance_row(
+            "ethics-upl",
+            "glaw-ethics-conflicts",
+            gates.get("conflicts_cleared", False)
+            and gates.get("ethics_gate_complete", False)
+            and gates.get("upl_footer_clear", False),
+            [
+                name
+                for name in ("conflicts_cleared", "ethics_gate_complete", "upl_footer_clear")
+                if not gates.get(name, False)
+            ],
+        ),
+        _compliance_row(
+            "citation-grounding",
+            "glaw-legal-research",
+            gates.get("citations_verified", False) and gates.get("citation_gate_complete", False),
+            [
+                name
+                for name in ("citations_verified", "citation_gate_complete")
+                if not gates.get(name, False)
+            ],
+        ),
+        _compliance_row(
+            "government-adversary",
+            "glaw-adversarial",
+            bool(government_adversary_rows)
+            and all(item.get("status") == "pass" for item in government_adversary_rows),
+            ["government_adversary_manifest"] if not government_adversary_rows else [
+                f"{item.get('lens')}:{','.join(item.get('missing') or [])}"
+                for item in government_adversary_rows
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "senior-review-source-support",
+            "glaw-council",
+            bool(senior_review_evidence_manifest)
+            and all(item.get("status") == "pass" for item in senior_review_evidence_manifest),
+            ["senior_review_evidence_manifest"] if not senior_review_evidence_manifest else [
+                f"{item.get('kind')}:{item.get('name')}:{','.join(item.get('missing') or [])}"
+                for item in senior_review_evidence_manifest
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "red-flag-accountability",
+            "glaw-red-flags",
+            gates.get("red_flags_clear", False)
+            and all(item.get("status") == "pass" for item in red_flag_resolution_evidence_manifest)
+            and all(item.get("status") == "pass" for item in nonblocking_red_flags),
+            [
+                name
+                for name in (
+                    "red_flags_clear",
+                    "red_flag_resolution_evidence_clear",
+                    "nonblocking_red_flags_accounted_clear",
+                )
+                if not gates.get(name, False)
+            ],
+        ),
+        _compliance_row(
+            "source-evidence-chain",
+            "glaw-final-packet",
+            bool(source_manifest)
+            and gates.get("source_evidence_manifest_clear", False),
+            ["source_evidence_manifest"] if not source_manifest else [
+                item.get("path", "")
+                for item in source_manifest
+                if int(item.get("size_bytes", 0)) <= 0
+            ],
+        ),
+        _compliance_row(
+            "professional-report-quality",
+            "glaw-legal-writing",
+            bool(report_quality_manifest)
+            and all(item.get("status") == "pass" for item in report_quality_manifest),
+            ["report_quality_manifest"] if not report_quality_manifest else [
+                f"{item.get('path')}:{','.join(item.get('missing_markers') or [])}"
+                for item in report_quality_manifest
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "reviewer-identity",
+            "glaw-final-packet",
+            bool(reviewer_identity)
+            and all(item.get("status") == "pass" for item in reviewer_identity),
+            ["reviewer_identity_manifest"] if not reviewer_identity else [
+                f"{item.get('kind')}:{item.get('name')}:{','.join(item.get('missing') or [])}"
+                for item in reviewer_identity
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "accounting-control" if accounting_required else "accounting-control-not-required",
+            "glaw-accounting",
+            accounting_control.get("status") in {"pass", "not_required"},
+            list(accounting_control.get("missing") or []),
+        ),
+    ]
+
+
+def decision_hash(row):
+    payload = dict(row)
+    payload.pop("decision_hash", None)
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def row_hash(row):
+    payload = dict(row)
+    payload.pop("row_hash", None)
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def text_hash(text):
+    return hashlib.sha256(str(text).encode("utf-8")).hexdigest()
+
+
+def validate_row_hashes(rows, ledger_name):
+    failures = []
+    for idx, row in enumerate(rows, start=1):
+        expected = row.get("row_hash")
+        if not expected:
+            failures.append(f"{ledger_name}:{idx} missing row_hash")
+        elif expected != row_hash(row):
+            failures.append(f"{ledger_name}:{idx} row_hash mismatch")
+    if failures:
+        print("review ledger row hash failure: " + "; ".join(failures))
+        sys.exit(1)
+
+
+p = d / "final_packet.json"
+if not p.exists():
+    print("final_packet.json missing")
+    sys.exit(1)
+try:
+    packet = json.loads(p.read_text(encoding="utf-8"))
+except json.JSONDecodeError:
+    print("final_packet.json is invalid JSON")
+    sys.exit(1)
+if packet.get("status") != "ready":
+    print("final_packet.json status is not ready")
+    sys.exit(1)
+profile = packet.get("workflow_profile") or "hybrid"
+if profile not in COUNCIL_PROFILES or profile not in ADVERSARIAL_PROFILES:
+    print(f"unknown workflow profile: {profile}")
+    sys.exit(1)
+packet_generated_at = packet.get("generated_at", "")
+if not packet_generated_at:
+    print("final_packet.json missing generated_at")
+    sys.exit(1)
+packet_sha256 = sha256_file(p)
+packet_md_path = d / "final_packet.md"
+expected_packet_md_sha256 = str(packet.get("final_packet_md_sha256", ""))
+if not expected_packet_md_sha256:
+    print("final_packet.json missing final_packet_md_sha256")
+    sys.exit(1)
+if not packet_md_path.exists():
+    print("final_packet.md missing")
+    sys.exit(1)
+current_packet_md_sha256 = sha256_text(packet_md_path.read_text(encoding="utf-8", errors="replace"))
+if current_packet_md_sha256 != expected_packet_md_sha256:
+    print("final_packet.md does not match final_packet.json digest")
+    sys.exit(1)
+missing = [k for k, v in packet.get("gates", {}).items() if not v]
+if missing:
+    print("final_packet.json has uncleared gate(s): " + ", ".join(missing))
+    sys.exit(1)
+intake_path = d / "intake.json"
+if not intake_path.exists():
+    print("intake.json missing")
+    sys.exit(1)
+try:
+    intake = json.loads(intake_path.read_text(encoding="utf-8"))
+except json.JSONDecodeError:
+    print("intake.json is invalid JSON")
+    sys.exit(1)
+missing_intake = intake_missing_fields(intake)
+if missing_intake:
+    print("current intake.json incomplete: " + ", ".join(missing_intake))
+    sys.exit(1)
+track = intake.get("universal", {}).get("workflow_track") or intake.get("workflow_track")
+expected_profile = profile_for_track(track)
+if profile != expected_profile:
+    print(f"final packet profile {profile} does not match intake workflow profile {expected_profile}")
+    sys.exit(1)
+
+deliverables = [p for p in sorted(d.rglob("*")) if p.is_file() and is_external_text_deliverable(p)]
+if not deliverables:
+    print("no current external text deliverable")
+    sys.exit(1)
+missing_upl = []
+for doc in deliverables:
+    text = doc.read_text(encoding="utf-8", errors="replace")
+    if not has_upl_footer(text):
+        missing_upl.append(str(doc.relative_to(d)))
+if missing_upl:
+    print("current deliverable(s) missing UPL footer: " + ", ".join(missing_upl))
+    sys.exit(1)
+expected_source_manifest = packet.get("source_evidence_manifest") or []
+if not expected_source_manifest:
+    print("final_packet.json missing source_evidence_manifest")
+    sys.exit(1)
+current_source_manifest = source_evidence_manifest(
+    [p for p in d.rglob("*") if is_source_evidence(p)]
+)
+if expected_source_manifest != current_source_manifest:
+    print("current source evidence manifest does not match final_packet.json")
+    sys.exit(1)
+empty_sources = [item["path"] for item in current_source_manifest if int(item.get("size_bytes", 0)) <= 0]
+if empty_sources:
+    print("current source evidence file(s) are empty: " + ", ".join(empty_sources))
+    sys.exit(1)
+expected_accounting_control = packet.get("accounting_control_manifest")
+if expected_accounting_control is None:
+    print("final_packet.json missing accounting_control_manifest")
+    sys.exit(1)
+current_accounting_control = accounting_control_manifest(
+    d, profile, current_source_manifest,
+    source_id_re=SOURCE_ID_RE, accounting_control_profiles=ACCOUNTING_CONTROL_PROFILES,
+)
+if expected_accounting_control != current_accounting_control:
+    print("current accounting control manifest does not match final_packet.json")
+    sys.exit(1)
+if current_accounting_control.get("status") == "fail":
+    print("current accounting control is incomplete: " + ", ".join(current_accounting_control.get("missing") or []))
+    sys.exit(1)
+expected_review_evidence_manifest = packet.get("senior_review_evidence_manifest") or []
+if not expected_review_evidence_manifest:
+    print("final_packet.json missing senior_review_evidence_manifest")
+    sys.exit(1)
+council_rows_for_evidence = [r for r in read_jsonl(d / "council.jsonl") if r.get("profile") == profile]
+adversarial_rows_for_evidence = [r for r in read_jsonl(d / "adversarial.jsonl") if r.get("profile") == profile]
+current_review_evidence_manifest = review_evidence_manifest(
+    council_rows_for_evidence,
+    adversarial_rows_for_evidence,
+    profile,
+    current_source_manifest,
+)
+if expected_review_evidence_manifest != current_review_evidence_manifest:
+    print("current senior review evidence manifest does not match final_packet.json")
+    sys.exit(1)
+failing_review_evidence = [
+    f"{item['kind']}:{item['name']} missing {', '.join(item['missing'])}"
+    for item in current_review_evidence_manifest
+    if item.get("status") != "pass"
+]
+if failing_review_evidence:
+    print("current senior review(s) fail source evidence IDs: " + "; ".join(failing_review_evidence))
+    sys.exit(1)
+expected_government_adversary_manifest = packet.get("government_adversary_manifest")
+if expected_government_adversary_manifest is None:
+    print("final_packet.json missing government_adversary_manifest")
+    sys.exit(1)
+current_government_adversary_manifest = government_adversary_manifest(current_review_evidence_manifest)
+if expected_government_adversary_manifest != current_government_adversary_manifest:
+    print("current government adversary manifest does not match final_packet.json")
+    sys.exit(1)
+failing_government_adversaries = [
+    f"{item['lens']} missing {', '.join(item['missing'])}"
+    for item in current_government_adversary_manifest
+    if item.get("status") != "pass"
+]
+if not current_government_adversary_manifest:
+    print("current government adversary manifest is empty")
+    sys.exit(1)
+if failing_government_adversaries:
+    print("current government adversary review(s) fail source evidence IDs: " + "; ".join(failing_government_adversaries))
+    sys.exit(1)
+red_flag_rows_for_evidence = read_jsonl(d / "red_flags.jsonl")
+expected_red_flag_resolution_manifest = packet.get("red_flag_resolution_evidence_manifest")
+if expected_red_flag_resolution_manifest is None:
+    print("final_packet.json missing red_flag_resolution_evidence_manifest")
+    sys.exit(1)
+current_red_flag_resolution_manifest = red_flag_resolution_manifest(
+    red_flag_rows_for_evidence,
+    current_source_manifest,
+)
+if expected_red_flag_resolution_manifest != current_red_flag_resolution_manifest:
+    print("current red flag resolution evidence manifest does not match final_packet.json")
+    sys.exit(1)
+failing_red_flag_resolutions = [
+    f"{item['id']} missing {', '.join(item['missing'])}"
+    for item in current_red_flag_resolution_manifest
+    if item.get("status") != "pass"
+]
+if failing_red_flag_resolutions:
+    print("current red flag resolution(s) fail source evidence IDs: " + "; ".join(failing_red_flag_resolutions))
+    sys.exit(1)
+expected_nonblocking_red_flag_manifest = packet.get("nonblocking_red_flag_manifest")
+if expected_nonblocking_red_flag_manifest is None:
+    print("final_packet.json missing nonblocking_red_flag_manifest")
+    sys.exit(1)
+current_nonblocking_red_flag_manifest = nonblocking_red_flag_manifest(
+    red_flag_rows_for_evidence,
+    current_source_manifest,
+)
+if expected_nonblocking_red_flag_manifest != current_nonblocking_red_flag_manifest:
+    print("current nonblocking red flag manifest does not match final_packet.json")
+    sys.exit(1)
+failing_nonblocking_red_flags = [
+    f"{item['id']} missing {', '.join(item['missing'])}"
+    for item in current_nonblocking_red_flag_manifest
+    if item.get("status") != "pass"
+]
+if failing_nonblocking_red_flags:
+    print("current nonblocking red flag(s) are not accountable: " + "; ".join(failing_nonblocking_red_flags))
+    sys.exit(1)
+expected_reviewer_identity_manifest = packet.get("reviewer_identity_manifest") or []
+if not expected_reviewer_identity_manifest:
+    print("final_packet.json missing reviewer_identity_manifest")
+    sys.exit(1)
+current_reviewer_identity_manifest = reviewer_identity_manifest(profile)
+if expected_reviewer_identity_manifest != current_reviewer_identity_manifest:
+    print("current reviewer identity manifest does not match final_packet.json")
+    sys.exit(1)
+failing_reviewer_identity = [
+    f"{item['kind']}:{item['name']} missing {', '.join(item['missing'])}"
+    for item in current_reviewer_identity_manifest
+    if item.get("status") != "pass"
+]
+if failing_reviewer_identity:
+    print("current reviewer identity manifest is incomplete: " + "; ".join(failing_reviewer_identity))
+    sys.exit(1)
+expected_report_markers = packet.get("report_quality_required_markers") or []
+if expected_report_markers != list(REPORT_REQUIRED_MARKERS):
+    print("final_packet.json report quality marker set is missing or stale")
+    sys.exit(1)
+expected_report_manifest = packet.get("report_quality_manifest") or []
+if not expected_report_manifest:
+    print("final_packet.json missing report_quality_manifest")
+    sys.exit(1)
+current_report_manifest = [report_quality(doc, current_source_manifest) for doc in deliverables]
+if expected_report_manifest != current_report_manifest:
+    print("current report quality manifest does not match final_packet.json")
+    sys.exit(1)
+failing_reports = [
+    f"{item['path']} missing {', '.join(item['missing_markers'])}"
+    for item in current_report_manifest
+    if item.get("status") != "pass"
+]
+if failing_reports:
+    print("current deliverable(s) fail professional report markers: " + "; ".join(failing_reports))
+    sys.exit(1)
+expected_compliance_manifest = packet.get("compliance_manifest")
+if expected_compliance_manifest is None:
+    print("final_packet.json missing compliance_manifest")
+    sys.exit(1)
+current_compliance_manifest = compliance_manifest(
+    profile,
+    packet.get("gates", {}),
+    accounting_control=current_accounting_control,
+    government_adversary_rows=current_government_adversary_manifest,
+    source_manifest=current_source_manifest,
+    senior_review_evidence_manifest=current_review_evidence_manifest,
+    red_flag_resolution_evidence_manifest=current_red_flag_resolution_manifest,
+    nonblocking_red_flags=current_nonblocking_red_flag_manifest,
+    reviewer_identity=current_reviewer_identity_manifest,
+    report_quality_manifest=current_report_manifest,
+)
+if expected_compliance_manifest != current_compliance_manifest:
+    print("current compliance manifest does not match final_packet.json")
+    sys.exit(1)
+failing_compliance = [
+    f"{item['id']} missing {', '.join(item['missing'])}"
+    for item in current_compliance_manifest
+    if item.get("status") != "pass"
+]
+if failing_compliance:
+    print("current compliance manifest is not clear: " + "; ".join(failing_compliance))
+    sys.exit(1)
+expected_hashes = packet.get("external_text_deliverable_hashes") or {}
+if not expected_hashes:
+    print("final_packet.json missing external_text_deliverable_hashes")
+    sys.exit(1)
+current_hashes = {
+    str(doc.relative_to(d)): sha256_file(doc)
+    for doc in deliverables
+}
+missing_from_disk = sorted(set(expected_hashes) - set(current_hashes))
+new_since_packet = sorted(set(current_hashes) - set(expected_hashes))
+changed_since_packet = sorted(
+    path for path, digest in expected_hashes.items()
+    if path in current_hashes and current_hashes[path] != digest
+)
+if missing_from_disk or new_since_packet or changed_since_packet:
+    parts = []
+    if missing_from_disk:
+        parts.append("missing: " + ", ".join(missing_from_disk))
+    if new_since_packet:
+        parts.append("new: " + ", ".join(new_since_packet))
+    if changed_since_packet:
+        parts.append("changed: " + ", ".join(changed_since_packet))
+    print("current deliverables do not match final_packet.json: " + "; ".join(parts))
+    sys.exit(1)
+
+expected_gate_hashes = packet.get("gate_artifact_hashes") or {}
+if not expected_gate_hashes:
+    print("final_packet.json missing gate_artifact_hashes")
+    sys.exit(1)
+missing_gate_hashes = sorted(set(REQUIRED_GATE_ARTIFACTS) - set(expected_gate_hashes))
+if missing_gate_hashes:
+    print("final_packet.json missing gate artifact hash(es): " + ", ".join(missing_gate_hashes))
+    sys.exit(1)
+known_gate_artifacts = REQUIRED_GATE_ARTIFACTS + OPTIONAL_GATE_ARTIFACTS
+current_gate_hashes = {}
+for name in known_gate_artifacts:
+    path = d / name
+    if path.exists():
+        current_gate_hashes[name] = sha256_file(path)
+missing_gate_artifacts = sorted(set(expected_gate_hashes) - set(current_gate_hashes))
+new_gate_artifacts = sorted(set(current_gate_hashes) - set(expected_gate_hashes))
+changed_gate_artifacts = sorted(
+    name for name, digest in expected_gate_hashes.items()
+    if name in current_gate_hashes and current_gate_hashes[name] != digest
+)
+if missing_gate_artifacts or new_gate_artifacts or changed_gate_artifacts:
+    parts = []
+    if missing_gate_artifacts:
+        parts.append("missing: " + ", ".join(missing_gate_artifacts))
+    if new_gate_artifacts:
+        parts.append("new: " + ", ".join(new_gate_artifacts))
+    if changed_gate_artifacts:
+        parts.append("changed: " + ", ".join(changed_gate_artifacts))
+    print("current gate artifacts do not match final_packet.json: " + "; ".join(parts))
+    sys.exit(1)
+
+red_flags = d / "red_flags.jsonl"
+if red_flags.exists():
+    blocking = []
+    for row in read_jsonl(red_flags):
+        if row.get("status", "open") != "resolved" and str(row.get("severity", "")).lower() in {"critical", "high"}:
+            blocking.append(row.get("id") or row.get("finding") or "unnamed")
+    if blocking:
+        print("current blocking red flag(s): " + ", ".join(str(x) for x in blocking))
+        sys.exit(1)
+
+citations = d / "citations.jsonl"
+if not citations.exists():
+    print("citations.jsonl missing")
+    sys.exit(1)
+citation_rows = read_jsonl(citations)
+validate_row_hashes(citation_rows, "citations.jsonl")
+latest_citations = latest_by(citation_rows, "id")
+if not latest_citations:
+    print("citations.jsonl has no citation rows")
+    sys.exit(1)
+corpus = d / "citation_corpus.jsonl"
+if not corpus.exists():
+    print("citation_corpus.jsonl missing")
+    sys.exit(1)
+corpus_rows = read_jsonl(corpus)
+validate_row_hashes(corpus_rows, "citation_corpus.jsonl")
+latest_corpus = latest_by(corpus_rows, "id")
+corpus_failures = []
+for corpus_id, corpus_row in latest_corpus.items():
+    source_path = d / str(corpus_row.get("source_path", ""))
+    if not source_path.is_file():
+        corpus_failures.append(f"{corpus_id}: source_path missing")
+        continue
+    text = source_path.read_text(encoding="utf-8", errors="replace")
+    if text_hash(text) != corpus_row.get("source_sha256"):
+        corpus_failures.append(f"{corpus_id}: source_path hash mismatch")
+    segment = str(corpus_row.get("segment", ""))
+    if not segment or segment not in text:
+        corpus_failures.append(f"{corpus_id}: segment missing from source text")
+    elif text_hash(segment) != corpus_row.get("segment_sha256"):
+        corpus_failures.append(f"{corpus_id}: segment hash mismatch")
+    if corpus_row.get("trust_level") not in APPROVED_CORPUS_TRUST:
+        corpus_failures.append(f"{corpus_id}: corpus is not authoritative: trust={corpus_row.get('trust_level', 'untrusted')}")
+    if not approved_authority_url(str(corpus_row.get("source_url", ""))):
+        corpus_failures.append(f"{corpus_id}: source domain is not approved for legal authority")
+    stale = corpus_freshness_failure(corpus_row, corpus_id)
+    if stale:
+        corpus_failures.append(stale)
+if corpus_failures:
+    print("citation corpus failure: " + "; ".join(corpus_failures))
+    sys.exit(1)
+blocking_citations = []
+defect_types = {"incorrect", "misgrounded", "ungrounded", "incomplete"}
+none_defects = {"", "none", "verified"}
+for cid, row in latest_citations.items():
+    status = str(row.get("status", "")).lower()
+    defect_type = str(row.get("defect_type", "")).lower().replace("_", "-")
+    corpus_id = str(row.get("corpus_id", "")).strip()
+    corpus_row = latest_corpus.get(corpus_id, {})
+    corpus_incomplete = status == "verified" and (
+        not corpus_id
+        or not corpus_row
+        or corpus_row.get("source_url") != row.get("source_url")
+        or not str(corpus_row.get("source_sha256", "")).strip()
+        or not str(corpus_row.get("segment_sha256", "")).strip()
+        or corpus_row.get("trust_level") not in APPROVED_CORPUS_TRUST
+        or not approved_authority_url(str(corpus_row.get("source_url", "")))
+        or bool(corpus_freshness_failure(corpus_row, corpus_id))
+        or (row.get("source_sha256") and row.get("source_sha256") != corpus_row.get("source_sha256"))
+        or (row.get("segment_sha256") and row.get("segment_sha256") != corpus_row.get("segment_sha256"))
+    )
+    verified_incomplete = status == "verified" and (
+        not str(row.get("proposition", "")).strip()
+        or not str(row.get("authority", "")).strip()
+        or not valid_legal_research_reviewer(row.get("reviewer", ""))
+        or not valid_http_url(row.get("source_url", ""))
+        or not str(row.get("support_summary", "")).strip()
+        or defect_type not in none_defects
+        or corpus_incomplete
+    )
+    blocking_defect_missing = status in {"pending", "needs-substitute", "struck", "weak"} and defect_type not in defect_types
+    if not cid or status in {"pending", "needs-substitute", "struck", "weak"} or verified_incomplete or blocking_defect_missing:
+        blocking_citations.append(cid or row.get("authority") or "unnamed")
+if blocking_citations:
+    print("current blocking citation(s): " + ", ".join(str(x) for x in blocking_citations))
+    sys.exit(1)
+
+groundedness_path = d / "groundedness.json"
+if not groundedness_path.exists():
+    print("groundedness.json missing")
+    sys.exit(1)
+groundedness = json.loads(groundedness_path.read_text(encoding="utf-8"))
+current_groundedness = audit_matter(d)
+if groundedness.get("status") != "pass":
+    print("groundedness.json status is not pass")
+    sys.exit(1)
+if current_groundedness.get("status") != "pass":
+    failures = current_groundedness.get("failures", [])
+    print("current groundedness audit fails: " + "; ".join(str(x) for x in failures))
+    sys.exit(1)
+if groundedness.get("rows") != current_groundedness.get("rows"):
+    print("groundedness.json is stale or does not match current citations/corpus")
+    sys.exit(1)
+if groundedness.get("failures", []) != current_groundedness.get("failures", []):
+    print("groundedness.json failure list does not match current audit")
+    sys.exit(1)
+
+council = d / "council.jsonl"
+if not council.exists():
+    print("council.jsonl missing")
+    sys.exit(1)
+council_rows = read_jsonl(council)
+validate_row_hashes(council_rows, "council.jsonl")
+latest_council = latest_by([r for r in council_rows if r.get("profile") == profile], "role")
+blocking_council = []
+for role in COUNCIL_PROFILES[profile]:
+    row = latest_council.get(role)
+    if not row:
+        blocking_council.append(role)
+        continue
+    if (
+        row.get("decision") != "approve"
+        or not str(row.get("evidence", "")).strip()
+        or not str(row.get("notes", "")).strip()
+    ):
+        blocking_council.append(role)
+if blocking_council:
+    print("current blocking council role(s): " + ", ".join(str(x) for x in blocking_council))
+    sys.exit(1)
+
+adversarial = d / "adversarial.jsonl"
+if not adversarial.exists():
+    print("adversarial.jsonl missing")
+    sys.exit(1)
+adversarial_rows = read_jsonl(adversarial)
+validate_row_hashes(adversarial_rows, "adversarial.jsonl")
+latest_adversarial = latest_by([r for r in adversarial_rows if r.get("profile") == profile], "lens")
+blocking_adversarial = []
+for lens in ADVERSARIAL_PROFILES[profile]:
+    row = latest_adversarial.get(lens)
+    if not row:
+        blocking_adversarial.append(lens)
+        continue
+    if (
+        row.get("decision") != "survive"
+        or not str(row.get("evidence", "")).strip()
+        or not str(row.get("attack", "")).strip()
+        or not SOURCE_ID_RE.search(str(row.get("attack", "")))
+    ):
+        blocking_adversarial.append(lens)
+if blocking_adversarial:
+    print("current blocking adversarial lens(es): " + ", ".join(str(x) for x in blocking_adversarial))
+    sys.exit(1)
+
+decisions = d / "decisions.jsonl"
+if not decisions.exists():
+    print("decisions.jsonl missing")
+    sys.exit(1)
+latest_final = None
+latest_packet_generated_at = ""
+latest_packet_sha256 = ""
+latest_final_row = None
+for line in decisions.read_text(encoding="utf-8", errors="replace").splitlines():
+    if not line.strip():
+        continue
+    try:
+        row = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if row.get("final_gate") in {"approved", "denied"}:
+        latest_final = row.get("final_gate")
+        latest_packet_generated_at = row.get("approved_packet_generated_at", "")
+        latest_packet_sha256 = row.get("approved_packet_sha256", "")
+        latest_final_row = row
+if latest_final != "approved":
+    print("latest Chief final decision is not approved")
+    sys.exit(1)
+if latest_packet_generated_at != packet_generated_at:
+    print("latest Chief approval does not match current final_packet.json generated_at")
+    sys.exit(1)
+if not latest_packet_sha256:
+    print("latest Chief approval missing approved_packet_sha256")
+    sys.exit(1)
+if latest_packet_sha256 != packet_sha256:
+    print("latest Chief approval does not match current final_packet.json sha256")
+    sys.exit(1)
+if not latest_final_row:
+    print("latest Chief approval row missing")
+    sys.exit(1)
+approval_missing = []
+for key in ("score", "grade", "rationale"):
+    if not str(latest_final_row.get(key, "")).strip():
+        approval_missing.append(key)
+if not latest_final_row.get("top_risks"):
+    approval_missing.append("top_risks")
+if not latest_final_row.get("conditions"):
+    approval_missing.append("conditions")
+if approval_missing:
+    print("latest Chief approval lacks complete sign-off field(s): " + ", ".join(approval_missing))
+    sys.exit(1)
+try:
+    approval_score = float(str(latest_final_row.get("score", "")).strip())
+except ValueError:
+    print("latest Chief approval score is not numeric")
+    sys.exit(1)
+if approval_score < FINAL_APPROVAL_MIN_SCORE:
+    print(f"latest Chief approval score below final approval threshold ({FINAL_APPROVAL_MIN_SCORE:.0f})")
+    sys.exit(1)
+approval_grade = str(latest_final_row.get("grade", "")).strip().upper()
+if not approval_grade.startswith("A"):
+    print("latest Chief approval grade is not A-range")
+    sys.exit(1)
+nonblocking_flags_for_approval = [
+    item for item in packet.get("nonblocking_red_flag_manifest", [])
+    if item.get("status") == "pass"
+]
+approval_ack_text = "\n".join(
+    str(value)
+    for value in (latest_final_row.get("top_risks", []), latest_final_row.get("conditions", []))
+)
+unacknowledged_nonblocking_flags = [
+    str(item.get("id", "")).strip()
+    for item in nonblocking_flags_for_approval
+    if str(item.get("id", "")).strip() and str(item.get("id", "")).strip() not in approval_ack_text
+]
+if unacknowledged_nonblocking_flags:
+    print("latest Chief approval does not acknowledge open nonblocking red flag(s): " + ", ".join(unacknowledged_nonblocking_flags))
+    sys.exit(1)
+approval_decision = str(latest_final_row.get("decision", ""))
+if NEGATIVE_DECISION_RE.search(approval_decision) or not APPROVAL_DECISION_RE.search(approval_decision):
+    print("latest Chief approval decision text contradicts final approval")
+    sys.exit(1)
+approval_rationale = str(latest_final_row.get("rationale", ""))
+approval_rationale_refs = sorted(set(SOURCE_ID_RE.findall(approval_rationale)))
+approval_rationale_current_refs = [
+    sid for sid in [item["id"] for item in current_source_manifest]
+    if sid in approval_rationale
+]
+approval_rationale_stale_refs = sorted(
+    set(approval_rationale_refs) - {item["id"] for item in current_source_manifest}
+)
+if not approval_rationale_refs:
+    print("latest Chief approval rationale lacks source evidence id (SRC-####)")
+    sys.exit(1)
+if approval_rationale_stale_refs:
+    print("latest Chief approval rationale cites non-current source evidence id(s): " + ", ".join(approval_rationale_stale_refs))
+    sys.exit(1)
+if not approval_rationale_current_refs:
+    print("latest Chief approval rationale cites no current source evidence id")
+    sys.exit(1)
+expected_decision_hash = str(latest_final_row.get("decision_hash", ""))
+if not expected_decision_hash:
+    print("latest Chief approval missing decision_hash")
+    sys.exit(1)
+if expected_decision_hash != decision_hash(latest_final_row):
+    print("latest Chief approval decision_hash does not match current decision row")
+    sys.exit(1)
+PY
+}
+
+_retro_artifacts_valid() {  # _retro_artifacts_valid <matter-dir>
+  python3 - "$1" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+d = pathlib.Path(sys.argv[1])
+docket = d / "docket.jsonl"
+source_id_re = re.compile(r"\bSRC-\d{4}\b")
+due_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+source_evidence_parts = {"evidence", "source_documents", "sources"}
+
+def is_source_evidence(path):
+    if not path.is_file():
+        return False
+    if path.stat().st_size <= 0:
+        return False
+    return bool(set(path.relative_to(d).parts) & source_evidence_parts)
+
+current_source_ids = {
+    f"SRC-{idx:04d}"
+    for idx, _path in enumerate(sorted(p for p in d.rglob("*") if is_source_evidence(p)), start=1)
+}
+
+def stale_source_refs(text):
+    refs = sorted(set(source_id_re.findall(text)))
+    return [ref for ref in refs if ref not in current_source_ids]
+
+open_deadlines = 0
+if docket.exists():
+    for idx, line in enumerate(docket.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            print("docket.jsonl contains invalid JSON")
+            sys.exit(1)
+        if row.get("status", "open") == "closed":
+            continue
+        due = str(row.get("due", "")).strip()
+        desc = str(row.get("desc", "")).strip()
+        owner = str(row.get("owner", "")).strip()
+        source = str(row.get("source", "")).strip()
+        if not due or not due_re.match(due):
+            print(f"docket.jsonl:{idx} missing valid YYYY-MM-DD due")
+            sys.exit(1)
+        if not desc:
+            print(f"docket.jsonl:{idx} missing desc")
+            sys.exit(1)
+        if not owner:
+            print(f"docket.jsonl:{idx} missing owner")
+            sys.exit(1)
+        if not source_id_re.search(source):
+            print(f"docket.jsonl:{idx} missing source evidence id (SRC-####)")
+            sys.exit(1)
+        stale_refs = stale_source_refs(source)
+        if stale_refs:
+            print(f"docket.jsonl:{idx} source evidence id not current: {', '.join(stale_refs)}")
+            sys.exit(1)
+        open_deadlines += 1
+if open_deadlines:
+    sys.exit(0)
+record_path = d / "docket_gate.json"
+if not record_path.exists():
+    print("no open docket deadlines and no docket_gate.json")
+    sys.exit(1)
+try:
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+except json.JSONDecodeError:
+    print("docket_gate.json is invalid JSON")
+    sys.exit(1)
+if (
+    record.get("status") != "no_deadlines"
+    or not record.get("rationale")
+    or not record.get("reviewer")
+    or not source_id_re.search(str(record.get("source", "")))
+):
+    print("docket_gate.json lacks sourced no-deadlines rationale/reviewer")
+    sys.exit(1)
+stale_refs = stale_source_refs(str(record.get("source", "")))
+if stale_refs:
+    print(f"docket_gate.json source evidence id not current: {', '.join(stale_refs)}")
+    sys.exit(1)
+PY
+}
+
+_slug() { local s="${1:-}"; [ -n "$s" ] && { echo "$s"; return; }; [ -f "$GLAW_HOME/.active" ] && cat "$GLAW_HOME/.active" || echo ""; }
+
+action="${1:-status}"; shift || true
+
+case "$action" in
+  check)
+    target="${1:-}"; slug="$(_slug "${2:-}")"
+    [ -z "$target" ] && { echo "usage: glaw-gate check <stage> [slug]"; exit 2; }
+    [ -z "$slug" ] && { echo "GATE: no active matter"; exit 2; }
+    tl="$MATTERS/$slug/timeline.jsonl"
+    req="$(_required_events "$target")"
+    [ -z "$req" ] && { echo "GATE CLEAR: entering '$target' has no prerequisite gate"; exit 0; }
+    missing=""
+    for ev in $req; do _has_event "$tl" "$ev" || missing="$missing $ev"; done
+    if [ -n "$missing" ]; then
+      echo "GATE BLOCKED: cannot enter '$target' for [$slug] — missing required gate event(s):$missing"
+      echo "  satisfy by running the owning gate command, not by hand-logging events."
+      exit 1
+    fi
+    if [ "$target" = "strategy" ] && ! artifact_msg="$(_strategy_artifacts_valid "$MATTERS/$slug" "$ROOT" 2>&1)"; then
+      echo "GATE BLOCKED: cannot enter 'strategy' for [$slug] — $artifact_msg"
+      exit 1
+    fi
+    if [ "$target" = "file" ] && ! artifact_msg="$(_file_artifacts_valid "$MATTERS/$slug" "$ROOT" 2>&1)"; then
+      echo "GATE BLOCKED: cannot enter 'file' for [$slug] — $artifact_msg"
+      exit 1
+    fi
+    if [ "$target" = "matter-retro" ] && ! artifact_msg="$(_retro_artifacts_valid "$MATTERS/$slug" 2>&1)"; then
+      echo "GATE BLOCKED: cannot enter 'matter-retro' for [$slug] — $artifact_msg"
+      exit 1
+    fi
+    echo "GATE CLEAR: '$target' prerequisites satisfied ($req)"
+    exit 0 ;;
+  status)
+    slug="$(_slug "${1:-}")"
+    [ -z "$slug" ] && { echo "GATE: no active matter"; exit 2; }
+    tl="$MATTERS/$slug/timeline.jsonl"
+    echo "═══ GATE STATUS — $slug ═══"
+    for pair in "intake_complete:before strategy" "conflicts_cleared:before strategy" "citations_verified:before file" "adversarial_done:before file" "red_flags_clear:before file" "final_packet_ready:before file" "chief_approved:before file" "docket_gate_complete:before matter-retro" "docket_done:before matter-retro"; do
+      ev="${pair%%:*}"; desc="${pair#*:}"
+      if _has_event "$tl" "$ev"; then echo "  ✅ $ev ($desc)"; else echo "  ❌ $ev ($desc) — NOT yet cleared"; fi
+    done
+    if artifact_msg="$(_file_artifacts_valid "$MATTERS/$slug" "$ROOT" 2>&1)"; then
+      echo "  ✅ file_artifacts_verified (before file)"
+    else
+      echo "  ❌ file_artifacts_verified (before file) — $artifact_msg"
+    fi
+    if artifact_msg="$(_strategy_artifacts_valid "$MATTERS/$slug" "$ROOT" 2>&1)"; then
+      echo "  ✅ strategy_artifacts_verified (before strategy)"
+    else
+      echo "  ❌ strategy_artifacts_verified (before strategy) — $artifact_msg"
+    fi
+    if artifact_msg="$(_retro_artifacts_valid "$MATTERS/$slug" 2>&1)"; then
+      echo "  ✅ docket_artifacts_verified (before matter-retro)"
+    else
+      echo "  ❌ docket_artifacts_verified (before matter-retro) — $artifact_msg"
+    fi ;;
+  *) echo "usage: glaw-gate check <stage> [slug] | status [slug]"; exit 2 ;;
+esac

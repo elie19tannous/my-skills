@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineer React Native"
+  short_description: "Build reliable cross-platform React Native apps"
+  default_prompt: "Use $engineer-react-native to implement this mobile feature with native platform behavior, resilient lifecycle handling, and real-device verification."

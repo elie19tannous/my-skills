@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineer React"
+  short_description: "Build resilient and maintainable React applications"
+  default_prompt: "Use $engineer-react to implement this React feature with clear state ownership, resilient async behavior, and focused verification."

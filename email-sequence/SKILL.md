@@ -1,145 +1,205 @@
 ---
-name: "email-sequence"
-description: When the user wants to create or optimize an email sequence, drip campaign, automated email flow, or lifecycle email program. Also use when the user mentions "email sequence," "drip campaign," "nurture sequence," "onboarding emails," "welcome sequence," "re-engagement emails," "email automation," or "lifecycle emails." For in-app onboarding, see onboarding-cro.
-license: MIT
-metadata:
-  version: 1.0.0
-  author: Alireza Rezvani
-  category: marketing
-  updated: 2026-03-06
+name: email-sequence
+description: |
+  가입·구매 후 단계별로 자동 발송할 이메일 시퀀스(발송 시점·제목·본문 초안)를 한국 정보통신망법에 맞게 설계해 드립니다.
+  다음과 같은 요청 시 사용하세요:
+  - "신규 가입자 온보딩 이메일 7단계로 만들어줘"
+  - "이메일 자동화 시퀀스 짜줘"
+  - "드립 캠페인 설계해줘"
+  - "90일 미접속 고객 재활성화 메일 써줘"
+  - "뉴스레터 시리즈 짜줘"
+  - "웰컴 이메일 본문 써줘"
+  - "(광고) 표시랑 수신거부 같은 법적 요건 맞춰서 메일 만들어줘"
+  발송 시점별 시퀀스 흐름, 제목·본문 초안, 수신거부 등 법적 체크리스트를 함께 만들고, 본문 텍스트는 moai-core:ai-slop-reviewer → moai-content:humanize-korean으로 다듬습니다.
+user-invocable: true
+version: 2.27.0
 ---
 
-# Email Sequence Design
+# 이메일 시퀀스 (Email Sequence)
 
-You are an expert in email marketing and automation. Your goal is to create email sequences that nurture relationships, drive action, and move people toward conversion.
+## 개요
 
-## Initial Assessment
+한국 정보통신망법(제50조) 수신동의 요건을 완전 준수하면서 비즈니스 목표를 달성하는 이메일 시퀀스를 설계합니다.
 
-**Check for product marketing context first:**
-If `.claude/product-marketing-context.md` exists, read it before asking questions. Use that context and only ask for information not already covered or specific to this task.
+드립 캠페인, 고객 온보딩, 재활성화, 뉴스레터 등 다양한 시퀀스 유형을 커버하며, 필수 법적 요소를 자동으로 포함합니다.
 
-Before creating a sequence, understand:
+## 트리거 키워드
 
-1. **Sequence Type**
-   - Welcome/onboarding sequence
-   - Lead nurture sequence
-   - Re-engagement sequence
-   - Post-purchase sequence
-   - Event-based sequence
-   - Educational sequence
-   - Sales sequence
+이메일 시퀀스, 드립 캠페인, 이메일 자동화, 뉴스레터, 온보딩 이메일, 재활성화 이메일, 이메일 마케팅, 이메일 플로우, 리드 너처링
 
-2. **Audience Context**
-   - Who are they?
-   - What triggered them into this sequence?
-   - What do they already know/believe?
-   - What's their current relationship with you?
+## 실전 이메일 마케팅 패턴 (한국 2026 시장)
 
-3. **Goals**
-   - Primary conversion goal
-   - Relationship-building goals
-   - Segmentation goals
-   - What defines success?
+이메일은 SNS보다 **타깃 도달률 38배**, 사용자 **99%가 매일 확인**하는 채널입니다. 그러나 정보통신망법 준수가 베이스, 그 위에 콘텐츠·테크닉·마케팅 3축이 유기적으로 작동해야 진짜 퍼포먼스가 나옵니다.
 
----
+### 7개 핵심 패턴
 
-## Core Principles
-→ See references/email-sequence-playbook.md for details
+**① 한국 평균 지표 (Stibee 2025 리포트 기준)**
 
-## Output Format
-
-### Sequence Overview
-```
-Sequence Name: [Name]
-Trigger: [What starts the sequence]
-Goal: [Primary conversion goal]
-Length: [Number of emails]
-Timing: [Delay between emails]
-Exit Conditions: [When they leave the sequence]
-```
-
-### For Each Email
-```
-Email [#]: [Name/Purpose]
-Send: [Timing]
-Subject: [Subject line]
-Preview: [Preview text]
-Body: [Full copy]
-CTA: [Button text] → [Link destination]
-Segment/Conditions: [If applicable]
-```
-
-### Metrics Plan
-What to measure and benchmarks
-
----
-
-## Tools
-
-| Tool | Invocation | Output |
+| 업종 | 평균 오픈율 | 평균 클릭률 |
 |---|---|---|
-| Sequence analyzer | `python3 scripts/sequence_analyzer.py --file sequence.json` (no arg = embedded demo; `--json` for pipelines) | Sequence quality score 0-100: pacing, subject-line variety, CTA consistency, exit-condition coverage |
+| 의류·패션잡화 | 19.9% (1위) | — |
+| 미디어 | 18.9% | 2.2% (1위) |
+| 예술·엔터테인먼트 | 17.4% | — |
+| 기업 회원 평균 | 13.9% | 1.1% |
+| 개인 회원 평균 | 25.4% | 3.0% |
 
-Run it on the assembled sequence (export the per-email blocks above as a JSON array) before handing off: fix anything it flags below 70, then attach the final score to the Metrics Plan.
+**개인 발행 뉴스레터 > 기업 발행** — 발행인-구독자 관계 밀도 차이. B2B SaaS·D2C는 보통 기업 회원 분포에 속함.
 
----
+**② 발송 타이밍 (Stibee 2025 데이터)**
 
-## Task-Specific Questions
+- **월요일 발송**: 오픈율 15.5% (최고)
+- **금요일**: 14.9%
+- **화요일**: 14.2%
 
-1. What triggers entry to this sequence?
-2. What's the primary goal/conversion action?
-3. What do they already know about you?
-4. What other emails are they receiving?
-5. What's your current email performance?
+한국은 글로벌 트렌드(화요일 우세)와 다름 — 주말 후 메일함 정리하는 시간대에 노출 효과.
 
----
+**③ 콘텐츠·테크닉·마케팅 3축 균형**
 
-## Tool Integrations
+이메일은 한 축만 잘하면 안 됨. 3축이 유기적으로 작동해야:
 
-Key email tools:
+| 축 | 목적 | 어울리는 메일 |
+|---|---|---|
+| **콘텐츠** | 브랜드 로열티·신뢰 | 지식 비즈니스·B2B·고관여 |
+| **테크닉** | 전달율·오픈율 | 사내 공지·트랜잭션·필수 알림 |
+| **마케팅** | 클릭율·랜딩 전환 | 직접 매출 영향 (퍼널 끝단) |
 
-| Tool | Best For | MCP |
-|------|----------|:---:|
-| **Customer.io** | Behavior-based automation | - |
-| **Mailchimp** | SMB email marketing | ✓ |
-| **Resend** | Developer-friendly transactional | ✓ |
-| **SendGrid** | Transactional email at scale | - |
-| **Kit** | Creator/newsletter focused | - |
+콘텐츠만 좋고 테크닉 약하면 도달 X. 테크닉만 좋고 콘텐츠 약하면 한 번 열고 끝. **3축 균형**이 누적 성과.
 
----
+**④ 자동화 이메일 = 일반 대비 2-4배 (2025 검증)**
 
-## Related Skills
+| 자동화 이메일 유형 | 일반 대비 |
+|---|---|
+| 자동화 이메일 (전체) | 오픈율 **1.6배**, 클릭률 **3.8배** |
+| 웰컴 이메일 | 오픈율·클릭률 **2.5배** |
 
-- **cold-email** — WHEN the sequence targets people who have NOT opted in (outbound prospecting). NOT for warm leads or subscribers who have expressed interest.
-- **copywriting** — WHEN landing pages linked from emails need copy optimization that matches the email's message and audience. NOT for the email copy itself.
-- **launch-strategy** — WHEN coordinating email sequences around a specific product launch, announcement, or release window. NOT for evergreen nurture or onboarding sequences.
-- **analytics-tracking** — WHEN setting up email click tracking, UTM parameters, and attribution to connect email engagement to downstream conversions. NOT for writing or designing the sequence.
-- **onboarding-cro** — WHEN email sequences are supporting a parallel in-app onboarding flow and need to be coordinated to avoid duplication. NOT as a replacement for in-app onboarding experience.
+가입 직후·구매 직후·이벤트 직후 등 **타이밍·개인화 자동 트리거**가 핵심. 수동 일괄 발송보다 자동화 우선.
 
----
+**⑤ 오픈율 높이는 제목 패턴 (한국)**
 
-## Communication
+- **단순 명료** (10자 이하): 호기심 자극
+- **긴급성**: "오늘 자정 마감"·"32분 24초 남았습니다"
+- **숫자·팩트**: "이번 주 1,238명이 신청"
+- **리스티클**: "OO할 때 보는 N가지 체크리스트"
+- **호기심 부정문**: "OO은 OO가 아닙니다"
+- **이름 개인화**: 받는 이 이름 = 오픈율 +17%
+- **이모지**: 적절 사용 = 오픈율 +0.5배
 
-Deliver email sequences as complete, ready-to-send drafts — include subject line, preview text, full body, and CTA for every email in the sequence. Always specify the trigger condition and send timing. When the sequence is long (5+ emails), lead with a sequence overview table before individual emails. Flag if any email could conflict with other sequences the audience receives. Load `marketing-context` for brand voice, ICP, and product context before writing.
+**⑥ 클릭률 높이는 5가지**
 
----
+- **역삼각형 구조**: 텍스트 → 이미지 → CTA 버튼 (시선 집중)
+- **CTA 1개 원칙**: 여러 버튼 X, 1개 클릭에 집중
+- **버튼 색 명암 차이**: 배경과 강한 대비
+- **모바일 우선 디자인**: 49% 이상이 모바일로 열람
+- **본문 500자 이내**: 짧고 임팩트
 
-## Proactive Triggers
+**⑦ 시퀀스 D+ 표준 구조 (한국 SaaS·D2C)**
 
-- User mentions low trial-to-paid conversion → ask if there's a trial expiration email sequence before recommending in-app or pricing changes.
-- User reports high open rates but low clicks → diagnose email body copy and CTA specificity before blaming subject lines.
-- User wants to "do email marketing" → clarify sequence type (welcome, nurture, re-engagement, etc.) before writing anything.
-- User has a product launch coming → recommend coordinating launch email sequence with in-app messaging and landing page copy for consistent messaging.
-- User mentions list is going cold → suggest re-engagement sequence with progressive offers before recommending acquisition spend.
+| 시점 | 목적 | CTA |
+|---|---|---|
+| D+0 | 웰컴·온보딩 (오픈율 2.5배) | 핵심 기능 1개 체험 |
+| D+1 | 가치 강화 | 튜토리얼·가이드 |
+| D+3 | 사회적 증거 | 후기·케이스 |
+| D+7 | 첫 결제 유도 | 한정 혜택 |
+| D+14 | 활성 사용자화 | 고급 기능 |
+| D+21 | 재참여 | 리텐션 콘텐츠 |
+| D+30 | 재활성화 OR 졸업 | 인센티브 OR 수신거부 |
 
----
+### 한국 정보통신망법 제50조 체크리스트 (2025 갱신)
 
-## Output Artifacts
+위반 시 **과태료 최대 3,000만원**. 한국은 글로벌 표준(GDPR·CCPA)과 별개로 더 엄격할 수 있음.
 
-| Artifact | Description |
-|----------|-------------|
-| Sequence Architecture Doc | Trigger, goal, length, timing, exit conditions, and branching logic for the full sequence |
-| Complete Email Drafts | Subject line, preview text, full body, and CTA for every email in the sequence |
-| Metrics Benchmarks | Open rate, click rate, and conversion rate targets per email type and sequence goal |
-| Segmentation Rules | Audience entry/exit conditions, behavioral branching, and suppression lists |
-| Subject Line Variations | 3 subject line alternatives per email for A/B testing |
+- [ ] 광고성 정보 수신 **명시적 사전 동의** (스팸성 옵트아웃 금지)
+- [ ] 이메일 제목 시작에 `(광고)` 표시
+- [ ] 본문 전송자 명칭·주소·전화번호
+- [ ] 무료 수신거부 방법 안내 (비용 부담 금지)
+- [ ] 수신거부 처리 결과 통지
+- [ ] 정기적 (2년) 수신동의 재확인
+- [ ] 야간 (21시-익일 8시) 광고 발송 금지 (별도 사전 동의 필요)
+- [ ] **개인정보보호법 동의와 정보통신망법 §50 동의 별도 처리** (혼합 X)
+
+### SPF·DKIM·DMARC 딜리버리율 기본
+
+이메일 위조 검증 — 미설정 시 스팸 필터 직행. 한국 도메인은 발송 도구(Stibee·메일플러그·메일침프) 사용 시 자동 세팅 가능. 직접 SMTP 운영 시는 DNS에 TXT 레코드 3종 등록.
+
+### 한국 이메일 발송 도구 비교 (2025)
+
+| 도구 | 강점 | 가격대 |
+|---|---|---|
+| Stibee | 한국 최적화·UI 친화·KR 통계 풍부 | 무료-월 ₩30K |
+| 메일침프 | 글로벌 표준·자동화 강력 | $0-$300+ |
+| 메일플러그 | 한국 기업 대량 발송 | 월 ₩50K+ |
+| 채널톡 / 카카오 채널 | 메신저 결합 CRM | 별도 |
+
+### 브랜드 활용 트렌드 (Stibee 2025)
+
+- 이메일 마케팅 주요 목적: **자사몰·홈페이지 방문 유도** 72.2%
+- 가장 많이 발송하는 유형: **뉴스레터** 88.9% (브랜드·제품·이벤트 정기 전달)
+
+> 💡 한국 이메일 마케팅 1위 실패 원인: **(1) 정보통신망법 미준수 → 과태료 (2) 자동화 없이 수동 일괄 발송 (3) 월요일·금요일·화요일 우세 타이밍 미준수 (4) 개인정보·광고 수신 동의 혼합 처리**. 자동화 + 웰컴 시퀀스만 잘 세팅해도 일반 발송 대비 2-4배 효과.
+
+## 워크플로우
+
+### 1단계: 시퀀스 목적 및 타겟 확인
+
+시퀀스 유형 선택(웰컴/온보딩, 드립 육성, 재활성화, 프로모션, 뉴스레터), 타겟 세그먼트 정의, 전환 목표 설정을 수행합니다.
+
+### 2단계: 법적 컴플라이언스 체크 (필수)
+
+정보통신망법 제50조 준수 필수 항목을 확인합니다:
+- 수신자의 광고성 정보 수신 명시적 사전 동의
+- 이메일 제목 시작 부분 `(광고)` 표시
+- 본문에 전송자 명칭·주소·전화번호 명시
+- 무료 수신거부 방법 안내
+- 수신거부 처리 시 결과 통지
+- 정기적 수신동의 여부 재확인
+
+### 3단계: 시퀀스 구조 설계
+
+D+0, D+1, D+3, D+7, D+14, D+21, D+30 등 단계별 이메일 발송 시점과 목적을 정의합니다. 각 단계의 핵심 메시지와 CTA를 설계합니다.
+
+### 4단계: 이메일 본문 작성
+
+AIDA 원칙(Attention-Interest-Desire-Action)을 적용하여 제목(30자 이내), 프리헤더(40자 이내), 본문(500자 이내 권장), CTA(버튼 1개 원칙), 푸터(전송자 정보, 수신거부 링크)를 작성합니다.
+
+### 5단계: 성과 지표 설정 및 A/B 테스트 계획
+
+오픈율 목표(B2B 25-35%, B2C 15-25%), 클릭률 목표(2.5-5%), 전환율 목표를 설정합니다. A/B 테스트 항목(제목, 발송 시간, CTA 버튼 문구)을 계획합니다.
+
+## 사용 예시
+
+**예시 1**: "SaaS 제품 신규 가입자 온보딩 이메일 7단계 시퀀스 만들어줘"
+→ 법적 체크 → 시퀀스 구조 → 각 단계 이메일 초안 → 발송 스케줄
+
+**예시 2**: "90일 이상 미활성 고객 재활성화 드립 캠페인 3단계 설계해줘"
+→ 세그먼트 정의 → 재활성화 시퀀스 → 인센티브 제안 → 최종 수신거부 처리
+
+## 출력 형식
+
+- 시퀀스 플로우 다이어그램 (단계별 트리거·조건)
+- 각 이메일 본문 초안 (제목 포함)
+- 정보통신망법 컴플라이언스 체크리스트
+- 성과 측정 KPI 대시보드 설계
+- 수신거부 처리 프로세스 문서
+
+## 주의사항
+
+| 상황 | 대응 |
+|------|------|
+| 고객 데이터나 세그먼트 정보가 없는 경우 | 업종·목표 기반 일반적 시퀀스 구성. 실제 데이터 확보 후 세분화 권고 |
+| 법적 요구사항이 불명확한 경우 | 보수적 기준(별도 광고 수신 동의)으로 설계. 법무팀 검토 권고 |
+| 발송 도구가 정해지지 않은 경우 | 규모·예산 기반 도구 추천 후 설계 방향 맞춤 조정 |
+
+## 후처리 (필수 체인)
+
+각 단계 이메일 본문·제목·프리헤더 등 **텍스트 산출물**은 발송 전 반드시 후처리 체인을 거칩니다. 시퀀스 플로우 다이어그램·KPI 표 등 구조·수치 산출물은 대상이 아닙니다.
+
+**권장 체인**: `email-sequence → moai-core:ai-slop-reviewer → moai-content:humanize-korean`
+
+## 관련 스킬
+
+| 스킬 | 사용 시점 |
+|------|----------|
+| `moai-marketing:sns-content` | SNS 콘텐츠나 소셜 미디어 캠페인 |
+| `moai-marketing:performance-report` | 마케팅 성과 분석 보고서 |
+| `moai-core:ai-slop-reviewer` | 사후 체이닝(필수): 이메일 본문의 AI 패턴 검수 |
+| `moai-content:humanize-korean` | 사후 체이닝(필수): ai-slop-reviewer 다음 단계로 한국어 AI 티 제거 |

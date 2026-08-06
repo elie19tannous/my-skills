@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# glaw-subledger — registered schedules (fixed-asset/deferred-revenue/loan) that auto-post
+# their period entry to the ledger. add-asset/add-deferred/add-loan/post/list.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_LIB="$(cd "$SCRIPT_DIR/../lib/bookkeeping" && pwd)"
+GLAW_LIB="${GLAW:+$GLAW/lib/bookkeeping}"
+[ -n "${GLAW_LIB:-}" ] && [ -d "$GLAW_LIB" ] || GLAW_LIB="$SCRIPT_LIB"
+PY="$(command -v python3)"
+exec "$PY" "$GLAW_LIB/subledger.py" "$@"

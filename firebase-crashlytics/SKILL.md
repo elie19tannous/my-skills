@@ -1,34 +1,181 @@
 ---
 name: firebase-crashlytics
-description: Comprehensive guide for Firebase Crashlytics, including provisioning and SDK usage. Use this skill when the user needs help setting up Crashlytics, adding crash reporting, or using the Crashlytics SDK in their application.
-compatibility: This skill is best used with the Firebase CLI, but does not require it. Firebase CLI can be accessed through `npx -y firebase-tools@latest`. 
+description: "Use when implementing crash reporting, capturing fatal/non-fatal errors, recording isolate/async exceptions, customizing reports, or uploading obfuscated symbols."
 ---
 
-# Crashlytics
+# Firebase Crashlytics Skill
 
-This skill provides a complete guide for getting started with Crashlytics on Android or iOS. Crash data collected from client applications can be read using the MCP server in the Firebase CLI.
+This skill defines how to correctly use Firebase Crashlytics in Flutter applications.
 
-## Prerequisites
+## When to Use
 
-Provisioning Crashlytics requires both a Firebase project and a Firebase app, either Android or iOS. To read the data collected by Crashlytics, install the MCP server in the Firebase CLI. See the `firebase-basics` skill for references.
+Use this skill when:
 
-## SDK Setup
+* Implementing crash reporting in a Flutter project.
+* Capturing fatal errors, non-fatal exceptions, and async/isolate errors.
+* Customizing crash reports with keys, logs, and user identifiers.
+* Configuring opt-in data collection or disabling reporting in debug builds.
+* Uploading symbol files for obfuscated builds.
 
-To learn how to setup Crashlytics in your application code, choose your platform:
+---
 
-*   **Android**: [android_setup.md](references/android_setup.md)
-*   **iOS**: [ios_setup.md](references/ios_setup.md)
+## 1. Setup and Configuration
 
-## SDK Usage
+```
+flutter pub add firebase_crashlytics
+flutter pub add firebase_analytics  # enables breadcrumb logs for better crash context
+```
 
-The SDK provides a number of features to make crash reports more actionable.
+Run `flutterfire configure` to update the Firebase configuration and add the required Crashlytics Gradle plugin for Android.
 
-* Add custom keys
-* Add custom logs
-* Set user identifiers
-* Report non-fatal exceptions
+```dart
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+```
 
-To learn how to customize crash reports and add additional debugging data, consult the documentation for your platform.
+**Obfuscated code:**
+- For apps built with `--split-debug-info` and/or `--obfuscate`, upload symbol files for readable stack traces.
+- **iOS:** Flutter 3.12.0+ and Crashlytics Flutter plugin 3.3.4+ handle symbol upload automatically.
+- **Android:** Use Firebase CLI (v11.9.0+) to upload Flutter debug symbols:
 
-*   **Android**: [Customize Crash Reports for Android](https://firebase.google.com/docs/crashlytics/android/customize-crash-reports.md)
-*   **iOS**: [Customize Crash Reports for Apple Platforms](https://firebase.google.com/docs/crashlytics/ios/customize-crash-reports.md)
+```bash
+firebase crashlytics:symbols:upload --app=FIREBASE_APP_ID PATH/TO/symbols
+```
+
+---
+
+## 2. Error Handling
+
+Configure comprehensive error capture in `main()` to catch errors from all sources:
+
+**Fatal Flutter errors:**
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+
+  // Pass all uncaught fatal errors from the framework to Crashlytics
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+  // Catch async errors not handled by the Flutter framework
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
+  runApp(MyApp());
+}
+```
+
+**Non-fatal Flutter errors:** use `recordFlutterError` instead of `recordFlutterFatalError`.
+
+**Isolate errors:**
+
+```dart
+Isolate.current.addErrorListener(RawReceivePort((pair) async {
+  final List<dynamic> errorAndStacktrace = pair;
+  await FirebaseCrashlytics.instance.recordError(
+    errorAndStacktrace.first,
+    errorAndStacktrace.last,
+    fatal: true,
+  );
+}).sendPort);
+```
+
+**Caught exceptions (non-fatal):**
+
+```dart
+await FirebaseCrashlytics.instance.recordError(
+  error,
+  stackTrace,
+  reason: 'a non-fatal error',
+  information: ['further diagnostic information about the error', 'version 2.0'],
+);
+```
+
+- Crashlytics only stores the **most recent 8 non-fatal exceptions** per session — older ones are discarded.
+
+---
+
+## 3. Crash Report Customization
+
+**Custom keys** (max 64 key/value pairs, up to 1 kB each):
+
+```dart
+FirebaseCrashlytics.instance.setCustomKey('str_key', 'hello');
+FirebaseCrashlytics.instance.setCustomKey('bool_key', true);
+FirebaseCrashlytics.instance.setCustomKey('int_key', 1);
+```
+
+**Custom log messages** (limit: 64 kB per session):
+
+```dart
+FirebaseCrashlytics.instance.log("User tapped on payment button");
+```
+
+**User identifier:**
+
+```dart
+FirebaseCrashlytics.instance.setUserIdentifier("user-123");
+// Clear by setting to blank string
+FirebaseCrashlytics.instance.setUserIdentifier("");
+```
+
+- Avoid putting unique values (user IDs, timestamps) directly in exception messages — use custom keys instead.
+
+---
+
+## 4. Performance and Optimization
+
+- Crashlytics processes exceptions on a **dedicated background thread** to minimize performance impact.
+- **Fatal** reports are sent in real-time without requiring an app restart.
+- **Non-fatal** reports are written to disk and sent with the next fatal report or on app restart.
+- Use breadcrumb logs (requires Firebase Analytics) to understand user actions leading up to a crash.
+
+**Disable Crashlytics in debug builds:**
+
+```dart
+if (kReleaseMode) {
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+} else {
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+}
+```
+
+---
+
+## 5. Testing and Debugging
+
+Force a test crash to verify the setup:
+
+```dart
+FirebaseCrashlytics.instance.crash();
+```
+
+**Verification workflow:**
+1. Build and run the app in release mode.
+2. Trigger the test crash.
+3. Reopen the app so the crash report is uploaded.
+4. Check the Firebase Console Crashlytics dashboard within 5 minutes.
+5. Verify that custom keys, logs, and user identifiers appear on the crash report.
+
+- Verify stack traces are properly symbolicated when using code obfuscation.
+
+---
+
+## 6. Opt-in Reporting
+
+By default, Crashlytics automatically collects crash reports for all users.
+
+To give users control over data collection:
+- Disable automatic reporting and enable it only via `setCrashlyticsCollectionEnabled(true)` when users opt in.
+- The override value **persists** across all subsequent app launches.
+- To opt a user out, pass `false` — this applies from the next app launch.
+- When disabled, crash info is **stored locally**; if later enabled, locally stored crashes are sent to Crashlytics.
+
+---
+
+## References
+
+- [Firebase Crashlytics Flutter documentation](https://firebase.google.com/docs/crashlytics/get-started?platform=flutter)
+- [Customize crash reports](https://firebase.google.com/docs/crashlytics/customize-crash-reports?platform=flutter)

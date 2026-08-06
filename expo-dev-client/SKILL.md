@@ -1,16 +1,13 @@
 ---
 name: expo-dev-client
-description: Build Expo app for development
-risk: unknown
-source: https://github.com/expo/skills/tree/main/plugins/expo/skills/expo-dev-client
-source_repo: expo/skills
-source_type: official
-date_added: 2026-07-01
+description: Framework (OSS). Build and distribute Expo development clients locally or via TestFlight for internal testing. For production TestFlight releases and store submission, use the eas-app-stores skill.
+version: 1.1.0
 license: MIT
-license_source: https://github.com/expo/skills/blob/main/LICENSE
 ---
 
 Use EAS Build to create development clients for testing native code changes on physical devices. Use this for creating custom Expo Go clients for testing branches of your app.
+
+> **Free locally; cloud builds are paid.** `expo-dev-client` itself is open source and building locally is free. Building or distributing via EAS Build/TestFlight uses your EAS plan's build minutes and needs a paid Apple Developer account for device/TestFlight distribution. See https://expo.dev/pricing.
 
 ## Important: When Development Clients Are Needed
 
@@ -81,10 +78,6 @@ Build a development client on your machine:
 
 ```bash
 # iOS (requires Xcode)
-## When to Use
-
-Use this skill when you need build Expo app for development.
-
 eas build -p ios --profile development --local
 
 # Android
@@ -180,8 +173,10 @@ eas --version
 eas update
 ```
 
-## Limitations
-
-- Use this skill only when the task clearly matches its upstream product or API scope.
-- Verify commands, API behavior, pricing, quotas, credentials, and deployment effects against current official documentation before making changes.
-- Do not treat generated examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.
+## Submitting Feedback
+If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
+```bash
+npx --yes submit-expo-feedback@latest --category skills --subject "expo-dev-client" "<actionable feedback>"
+```
+Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
+If an AI agent repeatedly failed or the user had to take over an Expo task, load the expo-skill-feedback skill and follow its eval-candidate flow instead of reusing the command above.

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# glaw-journal — post a balanced manual/adjusting journal entry to the general ledger.
+#   glaw-journal --date 2026-01-31 --memo "Jan depreciation" \
+#     --debit Expenses:Depreciation 1000 --credit "Assets:Accumulated Depreciation" 1000
+# (alias for: glaw-ledger post)
+set -euo pipefail
+SCRIPT_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib/bookkeeping" && pwd)"
+GLAW_LIB="${GLAW:+$GLAW/lib/bookkeeping}"
+[ -n "${GLAW_LIB:-}" ] && [ -d "$GLAW_LIB" ] || GLAW_LIB="$SCRIPT_LIB"
+PY="$(command -v python3)"
+BOOK=default; ARGS=()
+while [[ $# -gt 0 ]]; do case "$1" in --book) BOOK="$2"; shift 2;; *) ARGS+=("$1"); shift;; esac; done
+exec "$PY" "$GLAW_LIB/ledger_cli.py" --book "$BOOK" post ${ARGS[@]+"${ARGS[@]}"}

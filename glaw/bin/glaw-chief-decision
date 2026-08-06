@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""glaw-chief-decision — record a Chief decision card to the active GLAW matter.
+
+Writes the card three ways (no fabrication; you pass the real score/decision):
+  - appends a JSON event to  matters/<slug>/timeline.jsonl   (event: chief_decision)
+  - appends the structured card to matters/<slug>/decisions.jsonl
+  - renders a markdown card to matters/<slug>/decisions/<ts>-<chief-slug>.md
+
+Pair with score.py: pass its grade/score/recommendation in. For final file/outcome gates,
+use --approve-final or --deny-final. The orchestrator blocks final filing until an explicit
+chief_approved event exists.
+
+Usage:
+  glaw-chief-decision --chief "Chief Tax Strategist" --score 73 --grade C \
+     --decision "PROCEED WITH FIXES" \
+     --risks "assignment-of-income; non-grantor drafting; valuation" \
+     --conditions "complete gifts before LOI; estate-attorney non-grantor confirm; 709 appraisal" \
+     [--rationale "..."] [--matter <slug>] [--signoff] [--approve-final|--deny-final]
+"""
+import os, sys, json, datetime, re, hashlib, subprocess
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+from glaw_authority import require_human_authority
+
+HOME = os.environ.get("GLAW_HOME", os.path.expanduser("~/.glaw"))
+MATTERS = os.path.join(HOME, "matters")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SOURCE_ID_RE = re.compile(r"\bSRC-\d{4}\b")
+NEGATIVE_DECISION_RE = re.compile(r"\b(DENY|DENIED|REJECT|REJECTED|REFUSE|REFUSED|BLOCK|BLOCKED|DO NOT PROCEED|NOT READY|WITH[- ]?FIXES|FIXES REQUIRED|FIX REQUIRED)\b", re.I)
+APPROVAL_DECISION_RE = re.compile(r"\b(PROCEED|APPROVE|APPROVED|READY|FILE-READY)\b", re.I)
+DENIAL_DECISION_RE = re.compile(r"\b(DENY|DENIED|REJECT|REJECTED|REFUSE|REFUSED|DO NOT PROCEED)\b", re.I)
+FINAL_APPROVAL_MIN_SCORE = 90.0
+
+def now(): return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+def slugify(s): return re.sub(r"[^a-z0-9]+","-", s.lower()).strip("-")
+
+def active_slug():
+    p = os.path.join(HOME, ".active")
+    return open(p).read().strip() if os.path.exists(p) else ""
+
+def read_json(path, default):
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return default
+
+def sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def has_timeline_event(mdir, event):
+    path = os.path.join(mdir, "timeline.jsonl")
+    if not os.path.exists(path):
+        return False
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                if json.loads(line).get("event") == event:
+                    return True
+            except json.JSONDecodeError:
+                continue
+    return False
+
+def final_packet_ready(mdir):
+    packet = read_json(os.path.join(mdir, "final_packet.json"), {})
+    return packet.get("status") == "ready" and has_timeline_event(mdir, "final_packet_ready")
+
+def rebuild_final_packet(slug):
+    cmd = [os.path.join(ROOT, "bin", "glaw-final-packet"), "build", "--profile", "auto", "--matter", slug]
+    proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    return proc.returncode, (proc.stdout + proc.stderr).strip()
+
+def decision_hash(card):
+    payload = dict(card)
+    payload.pop("decision_hash", None)
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+def validate_final_decision(d):
+    missing = []
+    value = None
+    for key in ("score", "grade", "risks", "conditions", "rationale"):
+        if not str(d.get(key, "")).strip():
+            missing.append(f"--{key}")
+    score = str(d.get("score", "")).strip()
+    if score:
+        try:
+            value = float(score)
+        except ValueError:
+            missing.append("--score numeric 0-100")
+        else:
+            if value < 0 or value > 100:
+                missing.append("--score numeric 0-100")
+    if missing:
+        print("FINAL DECISION BLOCKED: final approve/deny requires a complete Chief decision card.")
+        print("Missing/invalid: " + ", ".join(missing))
+        print("Provide --score 0-100, --grade, --risks, --conditions, and --rationale.")
+        return 1
+    decision = str(d.get("decision", "")).strip()
+    if d.get("approve-final"):
+        if value is None or value < FINAL_APPROVAL_MIN_SCORE:
+            print(f"FINAL APPROVAL BLOCKED: --approve-final requires score >= {FINAL_APPROVAL_MIN_SCORE:.0f}.")
+            return 1
+        grade = str(d.get("grade", "")).strip().upper()
+        if not grade.startswith("A"):
+            print("FINAL APPROVAL BLOCKED: --approve-final requires an A-range Chief grade.")
+            return 1
+        if NEGATIVE_DECISION_RE.search(decision) or not APPROVAL_DECISION_RE.search(decision):
+            print("FINAL APPROVAL BLOCKED: --approve-final requires a proceed/approve decision, not a contradictory denial or fix posture.")
+            return 1
+    if d.get("deny-final") and not DENIAL_DECISION_RE.search(decision):
+        print("FINAL DENIAL BLOCKED: --deny-final requires a denial/rejection decision.")
+        return 1
+    return 0
+
+def validate_final_approval_source(d, final_packet):
+    source_ids = [item.get("id") for item in final_packet.get("source_evidence_manifest", []) if item.get("id")]
+    if not source_ids:
+        print("FINAL APPROVAL BLOCKED: final packet has no source evidence manifest.")
+        return 1
+    rationale = str(d.get("rationale", ""))
+    cited = [sid for sid in source_ids if sid in rationale]
+    syntactic = SOURCE_ID_RE.findall(rationale)
+    if not syntactic:
+        print("FINAL APPROVAL BLOCKED: Chief rationale must cite a source evidence id such as SRC-0001.")
+        return 1
+    stale = sorted(set(syntactic) - set(source_ids))
+    if stale:
+        print("FINAL APPROVAL BLOCKED: Chief rationale cites non-current final-packet source evidence id(s): " + ", ".join(stale))
+        print("Current source IDs: " + ", ".join(source_ids))
+        return 1
+    if not cited:
+        print("FINAL APPROVAL BLOCKED: Chief rationale cites no current final-packet source evidence id.")
+        print("Current source IDs: " + ", ".join(source_ids))
+        return 1
+    return 0
+
+def validate_nonblocking_red_flag_acknowledgment(d, final_packet):
+    flags = [
+        item for item in final_packet.get("nonblocking_red_flag_manifest", [])
+        if item.get("status") == "pass"
+    ]
+    if not flags:
+        return 0
+    acknowledgment_text = "\n".join([
+        str(d.get("risks", "")),
+        str(d.get("conditions", "")),
+    ])
+    missing = [
+        str(item.get("id", "")).strip()
+        for item in flags
+        if str(item.get("id", "")).strip() and str(item.get("id", "")).strip() not in acknowledgment_text
+    ]
+    if missing:
+        print("FINAL APPROVAL BLOCKED: Chief risks/conditions must acknowledge every open nonblocking red flag.")
+        print("Missing red flag ID(s): " + ", ".join(missing))
+        return 1
+    return 0
+
+def parse(argv):
+    d = {"chief":"","score":"","grade":"","decision":"","risks":"","conditions":"",
+         "rationale":"","matter":"","human-authority":"","role":"","signoff":False,"approve-final":False,"deny-final":False}
+    i=0
+    while i < len(argv):
+        a=argv[i].lstrip("-")
+        if a in ("signoff", "approve-final", "deny-final"): d[a]=True; i+=1
+        elif a in d: d[a]=argv[i+1]; i+=2
+        else: i+=1
+    return d
+
+def main():
+    if len(sys.argv)<2 or "-h" in sys.argv or "--help" in sys.argv:
+        print(__doc__); return 2
+    d = parse(sys.argv[1:])
+    slug = d["matter"] or active_slug()
+    if not slug:
+        print("No active matter. Run `glaw matter new \"<name>\"` first, or pass --matter <slug>.")
+        return 1
+    mdir = os.path.join(MATTERS, slug)
+    if not os.path.isdir(mdir):
+        print(f"No such matter: {slug} (under {MATTERS})"); return 1
+    if not d["chief"] or not d["decision"]:
+        print("Need at least --chief and --decision."); return 2
+    human_actor = ""
+    if d["signoff"]:
+        ok, result = require_human_authority("sign", actor=d.get("human-authority", ""), role=d.get("role", ""), context="Chief sign-off")
+        if not ok:
+            print(result)
+            return 1
+        human_actor = result
+
+    ts = now()
+    risks = [r.strip() for r in re.split(r"[;\n]", d["risks"]) if r.strip()]
+    conds = [c.strip() for c in re.split(r"[;\n]", d["conditions"]) if c.strip()]
+    if d["approve-final"] and d["deny-final"]:
+        print("Choose only one: --approve-final or --deny-final.")
+        return 2
+    if (d["approve-final"] or d["deny-final"]) and validate_final_decision(d) != 0:
+        return 1
+    if d["approve-final"]:
+        rc, output = rebuild_final_packet(slug)
+        if rc != 0:
+            print("FINAL APPROVAL BLOCKED: current final packet rebuild is not ready.")
+            if output:
+                print(output)
+            return 1
+    if d["approve-final"] and not final_packet_ready(mdir):
+        print("FINAL APPROVAL BLOCKED: final_packet.json is missing/not ready or final_packet_ready is absent.")
+        print("Run `glaw-final-packet build --profile auto` after clearing every gate, then retry.")
+        return 1
+    final_packet_path = os.path.join(mdir, "final_packet.json")
+    final_packet = read_json(final_packet_path, {}) if d["approve-final"] else {}
+    final_packet_sha256 = sha256_file(final_packet_path) if d["approve-final"] else ""
+    if d["approve-final"] and validate_final_approval_source(d, final_packet) != 0:
+        return 1
+    if d["approve-final"] and validate_nonblocking_red_flag_acknowledgment(d, final_packet) != 0:
+        return 1
+
+    card = {
+        "ts": ts, "chief": d["chief"],
+        "score": d["score"], "grade": d["grade"],
+        "decision": d["decision"], "signoff_required": d["signoff"],
+        "human_authority_actor": human_actor,
+        "final_gate": "approved" if d["approve-final"] else ("denied" if d["deny-final"] else "reviewed"),
+        "approved_packet_generated_at": final_packet.get("generated_at", "") if d["approve-final"] else "",
+        "approved_packet_sha256": final_packet_sha256,
+        "top_risks": risks, "conditions": conds, "rationale": d["rationale"],
+    }
+    card["decision_hash"] = decision_hash(card)
+
+    # 1) timeline event
+    with open(os.path.join(mdir,"timeline.jsonl"),"a") as f:
+        f.write(json.dumps({"ts":ts,"event":"chief_decision","chief":d["chief"],
+                            "grade":d["grade"],"score":d["score"],"decision":d["decision"]})+"\n")
+        if d["approve-final"]:
+            f.write(json.dumps({"ts":ts,"event":"chief_approved","chief":d["chief"],
+                                "grade":d["grade"],"score":d["score"],"decision":d["decision"],
+                                "approved_packet_generated_at": final_packet.get("generated_at", ""),
+                                "approved_packet_sha256": final_packet_sha256})+"\n")
+        if d["deny-final"]:
+            f.write(json.dumps({"ts":ts,"event":"chief_denied","chief":d["chief"],
+                                "grade":d["grade"],"score":d["score"],"decision":d["decision"],
+                                "risks":risks,"conditions":conds})+"\n")
+    # 2) decisions ledger
+    with open(os.path.join(mdir,"decisions.jsonl"),"a") as f:
+        f.write(json.dumps(card)+"\n")
+    # 3) markdown card
+    ddir = os.path.join(mdir,"decisions"); os.makedirs(ddir, exist_ok=True)
+    mdfile = os.path.join(ddir, f"{ts.replace(':','')}-{slugify(d['chief'])}.md")
+    with open(mdfile,"w") as f:
+        f.write(f"# Chief Decision Card\n\n")
+        f.write(f"- **Chief:** {d['chief']}\n- **Matter:** {slug}\n- **Date:** {ts}\n")
+        f.write(f"- **Position-Strength:** {d['score']}/100  (Grade {d['grade']})\n")
+        f.write(f"- **DECISION:** {d['decision']}\n")
+        if d["approve-final"]: f.write(f"- **FINAL GATE:** APPROVED (`chief_approved` logged)\n")
+        if d["approve-final"]: f.write(f"- **Approved packet generated_at:** {final_packet.get('generated_at', '')}\n")
+        if d["approve-final"]: f.write(f"- **Approved packet sha256:** `{final_packet_sha256}`\n")
+        if d["deny-final"]: f.write(f"- **FINAL GATE:** DENIED (`chief_denied` logged)\n")
+        if d["signoff"]: f.write(f"- **Human/attorney sign-off authorized by:** {human_actor}\n")
+        if risks: f.write("\n## Top surviving risks\n"+"".join(f"- {r}\n" for r in risks))
+        if conds: f.write("\n## Conditions / sign-off\n"+"".join(f"- [ ] {c}\n" for c in conds))
+        if d["rationale"]: f.write(f"\n## Rationale\n{d['rationale']}\n")
+        f.write("\n*Recorded by glaw-chief-decision. Final filing still requires human attorney/CPA authorization where applicable.*\n")
+
+    print(f"RECORDED chief decision for matter '{slug}'")
+    print(f"  timeline.jsonl + decisions.jsonl appended")
+    print(f"  card → {mdfile}")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

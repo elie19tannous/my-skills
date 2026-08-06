@@ -1,17 +1,32 @@
 ---
 name: gitlab-ci-patterns
-description: Build GitLab CI/CD pipelines with multi-stage workflows, caching, and distributed runners for scalable automation. Use when implementing GitLab CI/CD, optimizing pipeline performance, or setting up automated testing and deployment.
+description: "Comprehensive GitLab CI/CD pipeline patterns for automated testing, building, and deployment."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # GitLab CI Patterns
 
 Comprehensive GitLab CI/CD pipeline patterns for automated testing, building, and deployment.
 
+## Do not use this skill when
+
+- The task is unrelated to gitlab ci patterns
+- You need a different domain or tool outside this scope
+
+## Instructions
+
+- Clarify goals, constraints, and required inputs.
+- Apply relevant best practices and validate outcomes.
+- Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
+
 ## Purpose
 
 Create efficient GitLab CI pipelines with proper stage organization, caching, and deployment strategies.
 
-## When to Use
+## Use this skill when
 
 - Automate GitLab-based CI/CD
 - Implement multi-stage pipelines
@@ -62,7 +77,7 @@ test:
 
 deploy:
   stage: deploy
-  image: bitnami/kubectl:1.31
+  image: bitnami/kubectl:latest
   script:
     - kubectl apply -f k8s/
     - kubectl rollout status deployment/my-app
@@ -97,7 +112,7 @@ build-docker:
 
 ```yaml
 .deploy_template: &deploy_template
-  image: bitnami/kubectl:1.31
+  image: bitnami/kubectl:latest
   before_script:
     - kubectl config set-cluster k8s --server="$KUBE_URL" --insecure-skip-tls-verify=true
     - kubectl config set-credentials admin --token="$KUBE_TOKEN"
@@ -188,7 +203,7 @@ include:
 
 trivy-scan:
   stage: test
-  image: aquasec/trivy:0.58.0
+  image: aquasec/trivy:latest
   script:
     - trivy image --exit-code 1 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
   allow_failure: true
@@ -246,6 +261,10 @@ trigger-child:
     strategy: depend
 ```
 
+## Reference Files
+
+- `assets/gitlab-ci.yml.template` - Complete pipeline template
+- `references/pipeline-stages.md` - Stage organization patterns
 
 ## Best Practices
 
@@ -265,3 +284,8 @@ trigger-child:
 - `github-actions-templates` - For GitHub Actions
 - `deployment-pipeline-design` - For architecture
 - `secrets-management` - For secrets handling
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# glaw-cites — deterministic zero-dependency legal-citation extractor.
+# Logic in lib/bookkeeping/cites.py. Usage: glaw-cites <file|-> [--json]   (stdin via -)
+set -euo pipefail
+SCRIPT_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib/bookkeeping" && pwd)"
+GLAW_LIB="${GLAW:+$GLAW/lib/bookkeeping}"
+[ -n "${GLAW_LIB:-}" ] && [ -d "$GLAW_LIB" ] || GLAW_LIB="$SCRIPT_LIB"
+PY="$(command -v python3)"
+exec "$PY" "$GLAW_LIB/cites.py" "$@"

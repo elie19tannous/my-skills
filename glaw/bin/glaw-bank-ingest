@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# glaw-bank-ingest — GLAW Bookkeeping seat, zero-dependency in-repo runner.
+set -euo pipefail
+SCRIPT_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib/bookkeeping" && pwd)"
+GLAW_LIB="${GLAW:+$GLAW/lib/bookkeeping}"
+[ -n "${GLAW_LIB:-}" ] && [ -d "$GLAW_LIB" ] || GLAW_LIB="$SCRIPT_LIB"
+PY="$(command -v python3)"
+PYTHONPATH="$GLAW_LIB" exec "$PY" "$GLAW_LIB/runner.py" "$@"

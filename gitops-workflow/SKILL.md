@@ -1,289 +1,248 @@
 ---
 name: gitops-workflow
-description: Implement GitOps workflows with ArgoCD and Flux for automated, declarative Kubernetes deployments with continuous reconciliation. Use when implementing GitOps practices, automating Kubernetes deployments, or setting up declarative infrastructure management.
+description: >
+  Designs and operates GitOps-based deployment workflows where Git is the
+  single source of truth for desired state, reconciled into a cluster by
+  an operator such as Argo CD or Flux. Use when the user asks to "set up
+  GitOps," "use Argo CD / Flux," "manage Kubernetes deploys via Git,"
+  "structure a GitOps repo," "sync/reconcile drift," or "roll back a
+  deployment by reverting Git."
+license: Apache-2.0
+compatibility: "Claude Code, GitHub Copilot, OpenAI Codex, Cursor, Gemini CLI"
+metadata:
+  domain: devops
+  maturity: stable
 ---
 
 # GitOps Workflow
 
-Complete guide to implementing GitOps workflows with ArgoCD and Flux for automated Kubernetes deployments.
-
 ## Purpose
 
-Implement declarative, Git-based continuous delivery for Kubernetes using ArgoCD or Flux CD, following OpenGitOps principles.
+GitOps replaces "push-based" deployment (a pipeline runs `kubectl apply` or
+`helm upgrade` against a cluster) with a "pull-based" model where a
+reconciliation operator running inside the cluster continuously compares
+live state against the desired state declared in a Git repository, and
+converges toward it. This makes Git history the audit log and rollback
+mechanism for infrastructure and application state, eliminates
+credential sprawl (CI no longer needs cluster-admin), and detects/corrects
+configuration drift automatically. It matters operationally because it
+turns "what's actually running in prod" from a question you answer by
+`ssh`-ing in or querying the cluster into a question you answer by reading
+Git.
 
-## When to Use This Skill
+## When to use
 
-- Set up GitOps for Kubernetes clusters
-- Automate application deployments from Git
-- Implement progressive delivery strategies
-- Manage multi-cluster deployments
-- Configure automated sync policies
-- Set up secret management in GitOps
+- Introducing Kubernetes deployment automation for a new cluster or
+  migrating off imperative `kubectl apply` / `helm upgrade` pipelines.
+- Setting up Argo CD or Flux and deciding repo structure
+  (app-of-apps, mono-repo vs. multi-repo, per-environment overlays).
+- Diagnosing configuration drift (someone `kubectl edit`'d a resource
+  directly and it keeps getting reverted, or vice versa it silently stuck).
+- Implementing rollback-by-revert instead of ad hoc rollback scripts.
+- Deciding how secrets should be handled in a Git-as-source-of-truth model
+  (they can't live in plaintext in the repo).
 
-## OpenGitOps Principles
+## Prerequisites & environment
 
-1. **Declarative** - Entire system described declaratively
-2. **Versioned and Immutable** - Desired state stored in Git
-3. **Pulled Automatically** - Software agents pull desired state
-4. **Continuously Reconciled** - Agents reconcile actual vs desired state
+- A running Kubernetes cluster (or clusters) and a GitOps operator
+  installed: Argo CD ≥ 2.9 or Flux ≥ 2.x (Flux v1 is end-of-life and
+  should not be used for new setups).
+- A Git repository to act as the source of truth, separate in purpose
+  (though it can be the same physical repo) from the application source
+  repo — commonly called the "config repo" or "environments repo."
+  Multi-repo (app repo + config repo) is the common pattern to keep
+  application PRs from being polluted by generated manifests, and to keep
+  deploy permissions scoped separately from source-code permissions.
+- Kustomize ≥ 5.0 or Helm ≥ 3.x for templating environment-specific values,
+  since GitOps repos almost never hand-maintain a full manifest per
+  environment.
+- A secrets strategy decided before rollout: Sealed Secrets, SOPS, or an
+  external secrets operator pulling from a vault (AWS Secrets Manager,
+  HashiCorp Vault, Azure Key Vault) — plaintext Kubernetes `Secret` objects
+  must never be committed.
+- Cluster-side RBAC scoping so the GitOps operator's service account has
+  only the permissions it needs per namespace/environment, not blanket
+  cluster-admin.
 
-## ArgoCD Setup
+## Step-by-step guidance
 
-### 1. Installation
+1. **Choose repo topology.** For most teams: one app repo per service
+   (source + Dockerfile + CI) and one (or a few, per business unit)
+   environments/config repo containing Kubernetes manifests organized by
+   environment. Example layout:
+   ```
+   gitops-config/
+   ├── apps/
+   │   └── payments-api/
+   │       ├── base/
+   │       │   ├── deployment.yaml
+   │       │   ├── service.yaml
+   │       │   └── kustomization.yaml
+   │       └── overlays/
+   │           ├── dev/kustomization.yaml
+   │           ├── staging/kustomization.yaml
+   │           └── prod/kustomization.yaml
+   └── clusters/
+       ├── dev/apps.yaml        # Argo CD Application / Flux Kustomization pointers
+       ├── staging/apps.yaml
+       └── prod/apps.yaml
+   ```
 
-```bash
-# Create namespace
-kubectl create namespace argocd
+2. **Define the desired state declaratively with an overlay per
+   environment** (Kustomize example):
+   ```yaml
+   # apps/payments-api/overlays/prod/kustomization.yaml
+   resources:
+     - ../../base
+   images:
+     - name: payments-api
+       newName: ghcr.io/example/payments-api
+       newTag: "1.4.2"
+   patches:
+     - path: replica-count.yaml
+   ```
 
-# Install ArgoCD
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+3. **Register the app with the operator.** Argo CD `Application` example:
+   ```yaml
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: payments-api-prod
+     namespace: argocd
+   spec:
+     project: default
+     source:
+       repoURL: https://github.com/example/gitops-config.git
+       targetRevision: main
+       path: apps/payments-api/overlays/prod
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: payments-prod
+     syncPolicy:
+       automated:
+         prune: true
+         selfHeal: true
+       syncOptions:
+         - CreateNamespace=true
+   ```
+   Flux equivalent uses a `GitRepository` + `Kustomization` CR pair
+   pointing at the same overlay path.
 
-# Get admin password
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-```
+4. **Decide sync policy per environment deliberately.** `automated` +
+   `selfHeal: true` is appropriate for dev/staging (fast feedback, drift
+   auto-corrected). For production, many teams require manual sync
+   approval (`automated` disabled, or gated behind a promotion PR merge)
+   so a bad manifest doesn't roll out unattended — pair this with
+   [environment-promotion-strategy](../environment-promotion-strategy/SKILL.md).
 
-**Reference:** See `references/argocd-setup.md` for detailed setup
+5. **Wire CI to update the config repo, not the cluster.** The
+   application CI pipeline builds and pushes an image, then opens a PR (or
+   commits, depending on trust level) against the config repo bumping
+   `newTag` in the relevant overlay. The GitOps operator, not the CI
+   pipeline, performs the actual cluster apply. This is the core inversion
+   GitOps makes: CI produces artifacts and proposes state changes; the
+   in-cluster operator is the only thing with apply credentials.
 
-### 2. Repository Structure
+6. **Handle secrets out-of-band of plaintext Git.** With Sealed Secrets,
+   encrypt with the cluster's public key before committing:
+   ```bash
+   kubeseal --format yaml < secret.yaml > sealed-secret.yaml
+   git add sealed-secret.yaml   # safe to commit; only the controller can decrypt
+   ```
+   With an External Secrets Operator, commit only a reference
+   (`ExternalSecret` CR pointing at a vault path), never the value.
 
-```
-gitops-repo/
-├── apps/
-│   ├── production/
-│   │   ├── app1/
-│   │   │   ├── kustomization.yaml
-│   │   │   └── deployment.yaml
-│   │   └── app2/
-│   └── staging/
-├── infrastructure/
-│   ├── ingress-nginx/
-│   ├── cert-manager/
-│   └── monitoring/
-└── argocd/
-    ├── applications/
-    └── projects/
-```
+7. **Roll back by reverting Git, not by manual cluster surgery.**
+   ```bash
+   git revert <bad-commit-sha>
+   git push origin main
+   ```
+   The operator reconciles the cluster back to the prior state
+   automatically. Verify with `argocd app get payments-api-prod` or
+   `flux get kustomizations` that the sync completed and health is green.
 
-### 3. Create Application
+8. **Monitor for drift and unhealthy sync state**, not just "did the PR
+   merge." `argocd app diff <app>` / `flux diff kustomization` shows
+   whether live state matches desired state; alert on `OutOfSync` or
+   `Degraded` status persisting beyond a few reconciliation intervals.
 
-```yaml
-# argocd/applications/my-app.yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: my-app
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/org/gitops-repo
-    targetRevision: main
-    path: apps/production/my-app
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: production
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-```
+## Best practices
 
-### 4. App of Apps Pattern
+- Keep the config repo's history linear and meaningful — each commit
+  should represent one intentional desired-state change, since that
+  history *is* your deployment audit log and rollback mechanism.
+- Use an "app-of-apps" (Argo CD) or a top-level `Kustomization` (Flux)
+  pattern so bootstrapping a new cluster is "apply one root manifest,"
+  not "manually register N applications."
+- Scope the operator's cluster RBAC per environment/namespace rather than
+  granting one global service account cluster-admin — a compromised
+  config repo should not be able to affect every environment.
+- Never let the pipeline both build the image *and* apply it directly to
+  the cluster "for speed" — that reintroduces the push-based credential
+  sprawl GitOps exists to remove.
+- Pin `targetRevision` to a branch or, for stricter environments, a tag,
+  so you know exactly what commit(s) the operator is watching.
+- Treat `selfHeal`/auto-prune as powerful but sharp: `prune: true` will
+  delete cluster resources whose manifest was removed from Git — make
+  sure that's intended before enabling it broadly.
 
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: applications
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/org/gitops-repo
-    targetRevision: main
-    path: argocd/applications
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
-  syncPolicy:
-    automated: {}
-```
+## Common pitfalls
 
-## Flux CD Setup
+- **Symptom:** Someone runs `kubectl edit deployment` directly against a
+  cluster with `selfHeal: true`, and their change is silently reverted a
+  minute later with no explanation.
+  **Fix:** This is GitOps working as designed — communicate the policy
+  clearly (no direct `kubectl edit`/`apply` in GitOps-managed namespaces)
+  and make emergency changes via a fast-tracked Git commit instead, so the
+  change survives reconciliation and is auditable.
 
-### 1. Installation
+- **Symptom:** Application repo commits update manifests directly, and now
+  two sources of truth (app repo and config repo) disagree about what
+  version is deployed.
+  **Fix:** Keep manifest ownership single-sourced in the config repo;
+  application CI should only push images and open a version-bump PR/commit
+  against the config repo, never apply manifests itself.
 
-```bash
-# Install Flux CLI
-curl -s https://fluxcd.io/install.sh | sudo bash
+- **Symptom:** A plaintext `Secret` YAML was committed to the GitOps repo
+  before a secrets strategy was in place, and it's now in Git history even
+  after deletion.
+  **Fix:** Treat it as a leaked credential — rotate the underlying secret
+  immediately; simply deleting the file does not remove it from history.
+  Then adopt Sealed Secrets/SOPS/external-secrets before committing
+  anything else sensitive, and consider history rewriting only as a
+  last-resort cleanup (it invalidates all clones/forks).
 
-# Bootstrap Flux
-flux bootstrap github \
-  --owner=org \
-  --repository=gitops-repo \
-  --branch=main \
-  --path=clusters/production \
-  --personal
-```
+- **Symptom:** Production sync is `OutOfSync` for days and nobody noticed
+  until an incident.
+  **Fix:** Alert on sync/health status directly from the operator
+  (Argo CD notifications, Flux alerts to Slack/PagerDuty) rather than
+  relying on someone periodically checking the UI.
 
-### 2. Create GitRepository
+## Worked example
 
-```yaml
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: my-app
-  namespace: flux-system
-spec:
-  interval: 1m
-  url: https://github.com/org/my-app
-  ref:
-    branch: main
-```
+**Scenario:** Promote `payments-api` version `1.4.2` from staging to
+production using GitOps, with production requiring manual sync approval.
 
-### 3. Create Kustomization
+1. CI on the app repo builds and pushes
+   `ghcr.io/example/payments-api:1.4.2`, then opens a PR against
+   `gitops-config` changing `apps/payments-api/overlays/staging/kustomization.yaml`'s
+   `newTag` to `1.4.2`.
+2. The PR merges; Argo CD (`automated: {prune: true, selfHeal: true}` on
+   staging) reconciles staging to `1.4.2` within its poll interval.
+3. After staging soak/verification, a second PR bumps
+   `overlays/prod/kustomization.yaml`'s `newTag` to `1.4.2`.
+4. Because prod's `Application` has `automated` sync disabled, the change
+   sits `OutOfSync` until an operator runs
+   `argocd app sync payments-api-prod` (or CI triggers it via
+   `argocd app sync` in a manual-approval job) — giving a deliberate,
+   auditable go/no-go moment before production actually changes.
+5. If `1.4.2` misbehaves in prod, the fix is
+   `git revert <prod-bump-commit> && git push`, followed by an
+   (auto or manual) sync back to `1.4.1` — no bespoke rollback script
+   needed.
 
-```yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: my-app
-  namespace: flux-system
-spec:
-  interval: 5m
-  path: ./deploy
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: my-app
-```
+## Cross-references
 
-## Sync Policies
-
-### Auto-Sync Configuration
-
-**ArgoCD:**
-
-```yaml
-syncPolicy:
-  automated:
-    prune: true # Delete resources not in Git
-    selfHeal: true # Reconcile manual changes
-    allowEmpty: false
-  retry:
-    limit: 5
-    backoff:
-      duration: 5s
-      factor: 2
-      maxDuration: 3m
-```
-
-**Flux:**
-
-```yaml
-spec:
-  interval: 1m
-  prune: true
-  wait: true
-  timeout: 5m
-```
-
-**Reference:** See `references/sync-policies.md`
-
-## Progressive Delivery
-
-### Canary Deployment with ArgoCD Rollouts
-
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Rollout
-metadata:
-  name: my-app
-spec:
-  replicas: 5
-  strategy:
-    canary:
-      steps:
-        - setWeight: 20
-        - pause: { duration: 1m }
-        - setWeight: 50
-        - pause: { duration: 2m }
-        - setWeight: 100
-```
-
-### Blue-Green Deployment
-
-```yaml
-strategy:
-  blueGreen:
-    activeService: my-app
-    previewService: my-app-preview
-    autoPromotionEnabled: false
-```
-
-## Secret Management
-
-### External Secrets Operator
-
-```yaml
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-metadata:
-  name: db-credentials
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: aws-secrets-manager
-    kind: SecretStore
-  target:
-    name: db-credentials
-  data:
-    - secretKey: password
-      remoteRef:
-        key: prod/db/password
-```
-
-### Sealed Secrets
-
-```bash
-# Encrypt secret
-kubeseal --format yaml < secret.yaml > sealed-secret.yaml
-
-# Commit sealed-secret.yaml to Git
-```
-
-## Best Practices
-
-1. **Use separate repos or branches** for different environments
-2. **Implement RBAC** for Git repositories
-3. **Enable notifications** for sync failures
-4. **Use health checks** for custom resources
-5. **Implement approval gates** for production
-6. **Keep secrets out of Git** (use External Secrets)
-7. **Use App of Apps pattern** for organization
-8. **Tag releases** for easy rollback
-9. **Monitor sync status** with alerts
-10. **Test changes** in staging first
-
-## Troubleshooting
-
-**Sync failures:**
-
-```bash
-argocd app get my-app
-argocd app sync my-app --prune
-```
-
-**Out of sync status:**
-
-```bash
-argocd app diff my-app
-argocd app sync my-app --force
-```
-
-## Related Skills
-
-- `k8s-manifest-generator` - For creating manifests
-- `helm-chart-scaffolding` - For packaging applications
+- [ci-cd-pipeline-design](../ci-cd-pipeline-design/SKILL.md)
+- [environment-promotion-strategy](../environment-promotion-strategy/SKILL.md)
+- [infrastructure-as-code-terraform](../infrastructure-as-code-terraform/SKILL.md)

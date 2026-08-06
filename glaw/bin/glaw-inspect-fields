@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# glaw-inspect-fields — dump exact AcroForm field names + checkbox on-states from an IRS PDF.
+# Shared filing-seat helper (single source of truth = credit-strategy). Usage:
+#   glaw-inspect-fields <form.pdf> [out.json]
+set -euo pipefail
+ROOT="${GLAW:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+INSPECT="$ROOT/seats/glaw-credit-strategy/bin/inspect_fields.py"
+[[ -f "$INSPECT" ]] || { echo "ERROR: inspect_fields.py not found at $INSPECT" >&2; exit 2; }
+exec python3 "$INSPECT" "$@"

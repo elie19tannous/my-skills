@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# glaw-export — styled, printable financial report (HTML) from the ledger.
+# Optional --gsheet writes the trial balance to a local CSV.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_LIB="$(cd "$SCRIPT_DIR/../lib/bookkeeping" && pwd)"
+GLAW_LIB="${GLAW:+$GLAW/lib/bookkeeping}"
+[ -n "${GLAW_LIB:-}" ] && [ -d "$GLAW_LIB" ] || GLAW_LIB="$SCRIPT_LIB"
+PY="$(command -v python3)"
+exec "$PY" "$GLAW_LIB/export_report.py" "$@"

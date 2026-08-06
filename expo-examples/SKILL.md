@@ -1,20 +1,12 @@
 ---
 name: expo-examples
-description: Expo's official example projects — the expo/examples repo of ~70 `with-*` integrations (Stripe, Clerk, Supabase, OpenAI, maps, Reanimated, SQLite, Skia, NativeWind, and more). Use when integrating a third-party library or service into an existing Expo app and you want the canonical,...
-risk: unknown
-source: https://github.com/expo/skills/tree/main/plugins/expo/skills/expo-examples
-source_repo: expo/skills
-source_type: official
-date_added: 2026-07-01
+description: Framework (OSS). Expo's official example projects - the expo/examples repo of ~70 `with-*` integrations (Stripe, Clerk, Supabase, OpenAI, maps, Reanimated, SQLite, Skia, NativeWind, and more). Use when integrating a third-party library or service into an existing Expo app and you want the canonical, version-matched pattern to adapt, or when scaffolding a new project from one with `npx create-expo --example`.
+allowed-tools: "Read,Bash(gh api:*),Bash(git clone:*),Bash(npx create-expo:*),Bash(npx degit:*),Bash(bun create:*)"
+version: 1.0.0
 license: MIT
-license_source: https://github.com/expo/skills/blob/main/LICENSE
 ---
 
 # Expo Examples
-## When to Use
-
-Use this skill when you need expo's official example projects — the expo/examples repo of ~70 `with-*` integrations (Stripe, Clerk, Supabase, OpenAI, maps, Reanimated, SQLite, Skia, NativeWind, and more). Use when integrating a third-party library or service into an existing Expo app and you want the canonical,...
-
 
 [expo/examples](https://github.com/expo/examples) is Expo's official library of ~70 **integration examples** — directories named `with-<library>` (e.g. `with-stripe`, `with-maps`), each built around **one** library or service. These are not full apps: they're **managed** projects (no `ios/`/`android/` dirs — native setup is via config plugins), and the typical one is a **single screen of ~100–200 lines**. Mine them for the canonical integration *pattern* — the dependency set, `app.json` config plugins, and minimal wiring Expo maintains against the current SDK — and adapt that into the user's app. Don't expect to lift an application architecture from them.
 
@@ -96,16 +88,20 @@ When the user already has an app, **add only what the example introduces; never 
 ## Related skills
 
 - Tailwind / NativeWind styling → `expo-tailwind-setup`
-- Native UI components → `building-native-ui`
+- Native UI components (@expo/ui package) → `expo-ui`
+- Styling and native-feeling screens → `expo-native-ui`
+- Navigation and routing → `expo-router`
 - Authoring a native module → `expo-module`
-- Upgrade the SDK before adopting a latest-SDK example → `upgrading-expo`
+- Upgrade the SDK before adopting a latest-SDK example → `expo-upgrade`
 
 ## References
 
 - `./references/catalog.md` — categorized snapshot of the example library for fast triage.
 
-## Limitations
-
-- Use this skill only when the task clearly matches its upstream product or API scope.
-- Verify commands, API behavior, pricing, quotas, credentials, and deployment effects against current official documentation before making changes.
-- Do not treat generated examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.
+## Submitting Feedback
+If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
+```bash
+npx --yes submit-expo-feedback@latest --category skills --subject "expo-examples" "<actionable feedback>"
+```
+Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
+If an AI agent repeatedly failed or the user had to take over an Expo task, load the expo-skill-feedback skill and follow its eval-candidate flow instead of reusing the command above.

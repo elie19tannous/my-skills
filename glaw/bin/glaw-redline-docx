@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""glaw-redline-docx — apply GLAW findings to a Word file in zero-dependency mode.
+
+Creates:
+  • <out>.tracked.docx  — a simple replacement DOCX, without Word revision markup
+  • <out>.redlines.json — normalized replacement operations
+
+Findings = the same array glaw-redline uses: [{id, quote, severity, issue, suggestion}].
+Each becomes a REPLACE (quote -> suggestion). Smart/straight quotes are
+auto-reconciled so clauses actually match the .docx text.
+
+Usage:
+  glaw-redline-docx <contract.docx> <findings.json> [-o <out-prefix>] [--author NAME] [--title T]
+"""
+import sys, os, json, zipfile, html
+
+def _norm(s):  # 1-char-for-1-char so indices/lengths are preserved
+    return (s.replace("’", "'").replace("‘", "'")
+             .replace("“", '"').replace("”", '"').replace("–", "-").replace("—", "-"))
+
+def docx_text(path):
+    from docx import Document
+    return "\n".join(p.text for p in Document(path).paragraphs)
+
+def real_substring(doc, quote):
+    """Find quote in doc ignoring smart-vs-straight punctuation; return the REAL doc substring."""
+    nd, nq = _norm(doc), _norm(quote)
+    i = nd.find(nq)
+    return doc[i:i + len(quote)] if i >= 0 else None
+
+def apply_replacements(src, dst, replacements):
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            payload = zin.read(item.filename)
+            if item.filename == "word/document.xml":
+                xml = payload.decode("utf-8")
+                flat = xml
+                for r in replacements:
+                    old = html.escape(r["old"])
+                    new = html.escape(r["new"])
+                    flat = flat.replace(old, new)
+                payload = flat.encode("utf-8")
+            zout.writestr(item, payload)
+
+def main():
+    a = sys.argv[1:]
+    if len(a) < 2:
+        print(__doc__); sys.exit(1)
+    docx, findings_p = a[0], a[1]
+    out = a[a.index("-o") + 1] if "-o" in a else os.path.splitext(docx)[0]
+    author = a[a.index("--author") + 1] if "--author" in a else "GLAW (attorney review required)"
+    title = a[a.index("--title") + 1] if "--title" in a else os.path.basename(docx)
+
+    findings = json.load(open(findings_p))
+    text = docx_text(docx)
+    redlines, missing = [], []
+    for f in findings:
+        q = f.get("quote", ""); new = f.get("suggestion") or f.get("rewrite") or ""
+        if not q or not new:
+            continue
+        old = real_substring(text, q)
+        if not old:
+            missing.append(f.get("id", q[:30])); continue
+        redlines.append({"type": "replace", "old": old, "new": new,
+                         "section": f.get("id", ""), "tier": f.get("severity", "important"),
+                         "rationale": f.get("issue", "")})
+    rl_json = out + ".redlines.json"
+    json.dump(redlines, open(rl_json, "w"), indent=2)
+    print(f"bridged {len(redlines)}/{len(findings)} findings -> tracked changes"
+          + (f"  (⚠ clause text not located: {', '.join(missing)})" if missing else ""))
+    if not redlines:
+        print("  nothing to apply (no clause text matched the .docx)."); sys.exit(2)
+
+    tracked = out + ".tracked.docx"
+    apply_replacements(docx, tracked, redlines)
+    print("zero-dependency mode: wrote simple replacement DOCX; PDF/tracked-revision rendering is unavailable")
+    for p in (tracked, rl_json):
+        if os.path.exists(p):
+            print(f"  {os.path.basename(p)}  ({os.path.getsize(p)//1024}KB)")
+
+if __name__ == "__main__":
+    main()

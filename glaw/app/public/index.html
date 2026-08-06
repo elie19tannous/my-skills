@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E2%9A%96%3C/text%3E%3C/svg%3E">
+<title>GLAW Intake · One interview, the right department</title>
+<meta name="description" content="GLAW's routing interview classifies your legal matter, routes it to the owning department, and prepares the structured intake package.">
+<link rel="stylesheet" href="/tokens.css">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:15.5px;line-height:1.55;
+    -webkit-font-smoothing:antialiased}
+  code,.mono{font-family:"SF Mono",Menlo,Consolas,monospace}
+  a{color:var(--directive)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--hairline)}
+  .navin{display:flex;align-items:center;justify-content:space-between;height:64px;gap:20px}
+  .wordmark{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px;
+    color:var(--ink);text-decoration:none}
+  .wordmark span{color:var(--directive)}
+  .navlinks{display:flex;gap:22px;align-items:center}
+  .navlinks a{font-size:13px;color:var(--muted);text-decoration:none;letter-spacing:.02em}
+  .navlinks a:hover,.navlinks a:focus-visible{color:var(--directive)}
+  .cta{display:inline-block;background:var(--directive);color:var(--directive-ink);
+    font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    padding:10px 20px;border-radius:4px;text-decoration:none;border:1px solid var(--directive)}
+  .cta:hover,.cta:focus-visible{filter:brightness(1.08)}
+  .cta:active{transform:translateY(1px)}
+  .cta.ghost{background:transparent;color:var(--directive)}
+  .navlinks a{padding:8px 2px}
+  @media(max-width:760px){.navlinks a:not(.cta):not(.keep){display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:56px;
+    align-items:center;padding:72px 0 80px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr;gap:36px;padding:48px 0 56px}}
+  h1{margin:0 0 16px;font-size:clamp(34px,4.6vw,54px);font-weight:700;line-height:1.05;
+    letter-spacing:-.01em;text-wrap:balance}
+  .hero p{margin:0 0 26px;font-size:17px;color:var(--muted);max-width:44ch}
+  .herocta{display:flex;gap:12px;flex-wrap:wrap}
+  @media (prefers-reduced-motion: no-preference){
+    .hero>*{animation:rise .5s cubic-bezier(.16,1,.3,1) both}
+    .hero>:nth-child(2){animation-delay:.08s}
+    @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  }
+
+  /* live router widget (real component, links into /interview) */
+  .router{background:var(--card);border:1px solid var(--hairline);border-radius:6px;
+    box-shadow:var(--shadow);overflow:hidden}
+  .router-head{padding:13px 18px;border-bottom:1px solid var(--hairline);
+    font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .router a{display:flex;justify-content:space-between;align-items:center;gap:14px;
+    padding:11px 18px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--hairline);
+    font-size:14px;transition:background .15s ease}
+  .router a:last-child{border-bottom:0}
+  .router a:hover,.router a:focus-visible{background:var(--directive-soft)}
+  .router a b{font-weight:600}
+  .router a small{color:var(--muted);font-size:12px;text-align:right;flex-shrink:0}
+  .router a:hover small{color:var(--directive)}
+
+  /* ---------- sections ---------- */
+  section{padding:72px 0}
+  section+section{border-top:1px solid var(--hairline)}
+  h2{margin:0 0 10px;font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+  .sectionlede{margin:0 0 40px;color:var(--muted);max-width:62ch}
+
+  /* pipeline rail */
+  .rail{display:flex;gap:0;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
+  .rail .stage{scroll-snap-align:start}
+  @media(max-width:760px){.rail{display:grid;grid-template-columns:1fr 1fr;overflow:visible}}
+  .rail .stage{flex:1 0 118px;position:relative;padding:16px 14px 14px;border-top:3px solid var(--hairline)}
+  .rail .stage.you{border-top-color:var(--directive)}
+  .rail .stage .no{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .rail .stage b{display:block;font-size:14.5px;margin:2px 0}
+  .rail .stage span{font-size:12px;color:var(--muted)}
+  .rail .stage.you .no{color:var(--directive);font-weight:700}
+
+  /* steps (vertical) */
+  .steps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+  @media(max-width:860px){.steps{grid-template-columns:1fr}}
+  .steplist{display:flex;flex-direction:column}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;padding:20px 0;border-bottom:1px solid var(--hairline)}
+  .step:last-child{border-bottom:0}
+  .step .n{width:34px;height:34px;border:2px solid var(--directive);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--directive);
+    font-size:14px;font-variant-numeric:tabular-nums}
+  .step h3{margin:4px 0 4px;font-size:16.5px}
+  .step p{margin:0;font-size:14px;color:var(--muted);max-width:52ch}
+  .pkg{background:var(--mono-bg);border:1px solid var(--hairline);border-radius:6px;
+    padding:16px 18px;font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre}
+  .pkg .c{color:var(--muted)}
+  .pkg .k{color:var(--directive)}
+
+  /* departments grid */
+  .depts{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;grid-auto-flow:dense}
+  .dept{grid-column:span 3;background:var(--card);border:1px solid var(--hairline);border-radius:6px;
+    padding:16px 17px;text-decoration:none;color:var(--ink);display:block;transition:border-color .15s ease}
+  .dept:hover,.dept:focus-visible{border-color:var(--directive)}
+  .dept.wide{grid-column:span 6}
+  .dept.tint{background:var(--directive-soft);border-color:var(--directive)}
+  .dept.tint:hover,.dept.tint:focus-visible{background:var(--card)}
+  .dept.tintg{background:var(--clear-soft)}
+  .dept b{display:block;font-size:15px;margin-bottom:3px;text-wrap:balance}
+  .dept span{font-size:12.5px;color:var(--muted)}
+  @media(max-width:980px){.dept,.dept.wide{grid-column:span 6}}
+  @media(max-width:640px){.dept,.dept.wide{grid-column:span 12}}
+  .deptfoot{margin-top:18px;font-size:13.5px;color:var(--muted)}
+
+  /* gates band */
+  .gates{background:var(--card);border-top:1px solid var(--hairline)}
+  .gatesin{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:start}
+  @media(max-width:860px){.gatesin{grid-template-columns:1fr;gap:28px}}
+  .gatelist{display:flex;flex-direction:column;gap:0}
+  .gate{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--hairline);align-items:baseline}
+  .gate:last-child{border-bottom:0}
+  .gate .m{color:var(--gate);font-weight:700;font-size:13px}
+  .gate div b{font-size:14.5px}
+  .gate div span{display:block;font-size:13px;color:var(--muted)}
+  .stamp{display:inline-block;border:2px solid var(--gate);color:var(--gate);
+    font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    padding:3px 10px;border-radius:3px;transform:rotate(-2deg);margin-bottom:14px}
+
+  /* api section */
+  .api{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:start}
+  @media(max-width:860px){.api{grid-template-columns:1fr;gap:28px}}
+  .endpoint{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:10px 0;
+    border-bottom:1px solid var(--hairline);font-size:13.5px;align-items:baseline}
+  .endpoint:last-child{border-bottom:0}
+  .endpoint .verb{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px;font-weight:700;color:var(--directive)}
+  .endpoint code{font-size:12.5px}
+  .endpoint span{display:block;color:var(--muted);font-size:12.5px}
+
+  /* final cta */
+  .final{background:var(--directive)}
+  .finalin{padding:64px 0;text-align:center}
+  .final h2{color:#fff}
+  .final p{color:rgba(255,255,255,.75);max-width:52ch;margin:8px auto 28px}
+  .final .cta{background:#fff;color:#1B4796;border-color:#fff}
+  .final .cta:hover,.final .cta:focus-visible{filter:brightness(.92)}
+  @media (prefers-color-scheme: dark){
+    .final{background:var(--directive-soft)}
+    .final h2{color:var(--ink)}
+    .final p{color:var(--muted)}
+    .final .cta{background:var(--directive);color:var(--directive-ink);border-color:var(--directive)}
+  }
+
+  footer{padding:36px 0 56px;font-size:12.5px;color:var(--muted)}
+  footer .upl{border-left:4px solid var(--gate);background:var(--gate-soft);padding:12px 16px;
+    border-radius:0 6px 6px 0;margin-bottom:20px;color:var(--ink)}
+  footer .row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<a class="skip" href="#pipeline">Skip to content</a>
+
+<nav aria-label="Main">
+  <div class="wrap navin">
+    <a class="wordmark" href="/">GLAW <span>Intake</span></a>
+    <div class="navlinks">
+      <a href="#how">How it works</a>
+      <a href="#departments">Departments</a>
+      <a href="#gates">Gates</a>
+      <a class="keep" href="/atlas">Atlas</a>
+      <a href="#api">API</a>
+      <a class="cta" href="/interview">Start intake</a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div>
+    <h1>One interview. The right department.</h1>
+    <p>The routing interview classifies your matter, assigns the owning legal seats across 14 divisions, and prepares the structured intake package.</p>
+    <div class="herocta">
+      <a class="cta" href="/interview">Start intake</a>
+      <a class="cta ghost" href="/atlas">View the workflow atlas</a>
+    </div>
+  </div>
+  <nav class="router" aria-label="Route your matter">
+    <div class="router-head">Where does your matter go?</div>
+    <a href="/interview?track=litigation"><b>Sue or defend a claim</b><small>Litigation</small></a>
+    <a href="/interview?track=corp-build"><b>Form a company or fund</b><small>Corporate</small></a>
+    <a href="/interview?track=tax"><b>IRS notice, filing, or Tax Court</b><small>Tax &amp; IRS</small></a>
+    <a href="/interview?track=accounting-tax"><b>Rebuild or keep the books</b><small>Accounting</small></a>
+    <a href="/interview?track=investigation"><b>Prove fraud or theft</b><small>Investigations</small></a>
+    <a href="/interview?track=contract-review"><b>Review inbound paper</b><small>Contracts</small></a>
+    <a href="/interview?track=qualified-plan"><b>Audit a retirement plan</b><small>Qualified plans</small></a>
+    <a href="/interview?track=hybrid"><b>Something that spans several</b><small>Managing Partner</small></a>
+  </nav>
+</header>
+
+<section id="pipeline">
+  <div class="wrap">
+    <h2>Intake is stage one of a gated pipeline.</h2>
+    <p class="sectionlede">Every matter walks the same eight stages. Nothing reaches filing until research verifies every citation and the firm's own adversary fails to break the position.</p>
+    <div class="rail" role="list" tabindex="0" aria-label="The eight pipeline stages">
+      <div class="stage you" role="listitem"><span class="no">1</span><b>Intake</b><span>charter, routing, deadlines</span></div>
+      <div class="stage" role="listitem"><span class="no">2</span><b>Strategy</b><span>case theory or deal thesis</span></div>
+      <div class="stage" role="listitem"><span class="no">3</span><b>Structure</b><span>entities, parties, cap table</span></div>
+      <div class="stage" role="listitem"><span class="no">4</span><b>Draft</b><span>the actual documents</span></div>
+      <div class="stage" role="listitem"><span class="no">5</span><b>Adversarial</b><span>RED attack, BLUE rebuild</span></div>
+      <div class="stage" role="listitem"><span class="no">6</span><b>File</b><span>signature-ready packet</span></div>
+      <div class="stage" role="listitem"><span class="no">7</span><b>Docket</b><span>every deadline calendared</span></div>
+      <div class="stage" role="listitem"><span class="no">8</span><b>Retro</b><span>close-out and firm memory</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap steps">
+    <div>
+      <h2>How the routing interview works</h2>
+      <p class="sectionlede">Four screens. At the end you get the routed department, the receiving seats, the deadlines to docket, and a package the firm's CLI runs verbatim.</p>
+      <div class="steplist">
+        <div class="step"><span class="n">1</span><div><h3>Classify the track</h3><p>Eight tracks. The track selects the review council and the government adversary your work will be tested against.</p></div></div>
+        <div class="step"><span class="n">2</span><div><h3>Capture the charter</h3><p>Parties, jurisdiction, goal, facts, documents on hand. Hard dates are docketed the moment they surface.</p></div></div>
+        <div class="step"><span class="n">3</span><div><h3>Refine the routing</h3><p>Track-specific fields plus refinements: an insurance denial pulls in coverage counsel, an offering pulls in the securities bench.</p></div></div>
+        <div class="step"><span class="n">4</span><div><h3>Get the package</h3><p>Division, seats, docket list, and the runnable intake script. Submit it to the firm or run it yourself.</p></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="pkg" role="figure" tabindex="0" aria-label="Example intake package"><span class="c"># the package the interview generates</span>
+bin/glaw matter new <span class="k">'Smith v. Jones, nonpayment'</span>
+bin/glaw-intake set workflow_track <span class="k">litigation</span>
+bin/glaw-intake set parties <span class="k">'Smith LLC; Jones Corp'</span>
+bin/glaw-intake set jurisdiction <span class="k">'Florida; federal'</span>
+bin/glaw-intake set goal <span class="k">'judgment and collection'</span>
+bin/glaw docket add <span class="k">2026-09-01</span> <span class="k">'SOL: breach claim'</span>
+<span class="c"># conflicts gate, then a named reviewer signs</span>
+bin/glaw-intake complete --by <span class="k">'reviewing attorney'</span>
+bin/glaw stage strategy</div>
+    </div>
+  </div>
+</section>
+
+<section id="departments">
+  <div class="wrap">
+    <h2>Fourteen divisions. No gaps.</h2>
+    <p class="sectionlede">Every domain maps to a seat in the firm roster, over 180 specialist seats in total. The interview routes you to the owning division; the atlas shows each division's full intake flow.</p>
+    <div class="depts">
+      <a class="dept wide tint" href="/atlas"><b>Corporate &amp; Transactional</b><span>Entity architecture, governance, contracts, IP, employment, real estate</span></a>
+      <a class="dept" href="/atlas"><b>Securities, Funds &amp; Capital Markets</b><span>Fund formation, Reg D, SEC filings</span></a>
+      <a class="dept" href="/atlas"><b>Tax &amp; IRS</b><span>Planning, controversy, Tax Court</span></a>
+      <a class="dept" href="/atlas"><b>Accounting &amp; Finance</b><span>Books of record, close, audit</span></a>
+      <a class="dept" href="/atlas"><b>Litigation &amp; Dispute Resolution</b><span>Trial, recovery, appeals, coverage</span></a>
+      <a class="dept tintg" href="/atlas"><b>Investigations &amp; White-Collar</b><span>Fraud casework, follow the money</span></a>
+      <a class="dept" href="/atlas"><b>Intelligence Super-Structure</b><span>Four bureaus, one fusion command</span></a>
+      <a class="dept" href="/atlas"><b>SEC Enforcement</b><span>Market abuse, insider, Wells</span></a>
+      <a class="dept wide" href="/atlas"><b>Regulatory, Licensing &amp; Compliance</b><span>AML and sanctions, licensing and permits, customs, privacy</span></a>
+      <a class="dept" href="/atlas"><b>Private Client &amp; Cross-Border</b><span>Trusts, asset protection, immigration</span></a>
+      <a class="dept" href="/atlas"><b>Family &amp; Domestic Relations</b><span>Divorce, custody, support</span></a>
+      <a class="dept" href="/atlas"><b>Public Law &amp; Governance</b><span>Constitutional, legislative, agency</span></a>
+      <a class="dept" href="/atlas"><b>Litigation Support</b><span>Research, timelines, forensics</span></a>
+      <a class="dept" href="/atlas"><b>Legal Writing &amp; Production</b><span>House standard, every deliverable</span></a>
+    </div>
+    <p class="deptfoot">Each tile opens the workflow atlas: the division's capture list, machine fields, receiving seats, and what gets docketed on day one.</p>
+  </div>
+</section>
+
+<section id="gates" class="gates">
+  <div class="wrap gatesin">
+    <div>
+      <span class="stamp">Hard gates</span>
+      <h2>Nothing files on trust alone.</h2>
+      <p class="sectionlede">Nine gates stand between intake and a filed document. They are enforced in code: the pipeline refuses to advance until each gate logs its clearance event.</p>
+    </div>
+    <div class="gatelist">
+      <div class="gate"><span class="m">01</span><div><b>Structured intake complete</b><span>every required field, a named reviewer, no placeholders</span></div></div>
+      <div class="gate"><span class="m">02</span><div><b>Conflicts cleared</b><span>engagement letter drafted, ethics check logged before any substantive work</span></div></div>
+      <div class="gate"><span class="m">03</span><div><b>Citations verified</b><span>every authority checked by legal research; unverifiable positions do not file</span></div></div>
+      <div class="gate"><span class="m">04</span><div><b>Adversarial survival</b><span>the firm's own RED team attacks the position; only survivors advance</span></div></div>
+      <div class="gate"><span class="m">05</span><div><b>Red flags resolved</b><span>open flags route back to the owning department until cleared or carried explicitly</span></div></div>
+      <div class="gate"><span class="m">06</span><div><b>Final packet verified</b><span>rebuilt against current matter files, hash-recorded</span></div></div>
+      <div class="gate"><span class="m">07</span><div><b>Chief approval</b><span>the Council logs the file-readiness decision with score and conditions</span></div></div>
+      <div class="gate"><span class="m">08</span><div><b>UPL disclaimer</b><span>on every external deliverable, without exception</span></div></div>
+      <div class="gate"><span class="m">09</span><div><b>Docket complete</b><span>every deadline calendared, or no-deadlines recorded with a rationale</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="api">
+  <div class="wrap api">
+    <div>
+      <h2>Built for the firm's machinery</h2>
+      <p class="sectionlede">Every submission is stored and retrievable. The generated package runs verbatim on the GLAW CLI, so a matter opened here is a matter the firm can work immediately.</p>
+    </div>
+    <div>
+      <div class="endpoint"><span class="verb">POST</span><div><code>/api/intake</code><span>store a routed submission; returns its intake id</span></div></div>
+      <div class="endpoint"><span class="verb">GET</span><div><code>/api/intake/:id</code><span>retrieve one submission as JSON</span></div></div>
+      <div class="endpoint"><span class="verb">GET</span><div><code>/api/intakes</code><span>admin listing, bearer-token gated</span></div></div>
+      <div class="endpoint"><span class="verb">GET</span><div><code>/atlas</code><span>the full intake workflow atlas, every division</span></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="final">
+  <div class="wrap finalin">
+    <h2>Route your matter now.</h2>
+    <p>Four screens, no account, and the package is yours whether you submit it or run it yourself.</p>
+    <a class="cta" href="/interview">Start intake</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="upl"><b>Not legal advice.</b> GLAW produces attorney work-product drafts for a licensed attorney to review, sign, and file. Using this site does not create an attorney-client relationship. Do not submit privileged or confidential information through this public form.</div>
+    <div class="row">
+      <span>GLAW · Virtual Corporate Law Firm</span>
+      <span><a href="/interview">Intake</a> · <a href="/atlas">Atlas</a> · <a href="#gates">Gates</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

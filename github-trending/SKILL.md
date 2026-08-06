@@ -1,298 +1,114 @@
 ---
 name: github-trending
-description: Fetch and display GitHub trending repositories and developers. Use when building dashboards showing trending repos, discovering popular projects, or tracking GitHub trends. Triggers on GitHub trending, trending repos, popular repositories, GitHub discover.
+description: GitHub Trending 探索与分析。用于发现热门开源项目、技术趋势、开发者偏好，帮助理解技术社区的兴趣走向。使用场景包括“看看今天 GitHub 什么火了”、“Rust 最近热门项目”、“AI 领域趋势日报”、“这个方向有没有值得关注的开源项目”、“帮我做个 GitHub trending 分析”。
 ---
 
-# GitHub Trending Data
+# GitHub Trending 探索
 
-Access GitHub trending repositories and developers data.
+**2026 版核心认知**：GitHub Trending 已是严重被 hype 和 AI slop 污染的榜单（Karpathy 等反复确认）。**本 skill 的唯一价值是「结构化数据 + 严格过滤 + 写出真实 angle」**，而不是再输出一份 list。
 
-## Important Note
+**职责边界**（严格遵守）：
+- 只负责**发现 + 趋势分析 + 日报/洞察报告**
+- **不负责**把结果加工成公众号/小红书/X 帖（用 `/scout-to-article`）
+- **不负责**多 AI 深度竞品/社区反应调研（用 `/multi-ai-research`）
 
-**GitHub does NOT provide an official trending API.** The trending page at `github.com/trending` must be scraped directly or use the GitHub Search API as an alternative.
+---
 
-## Approach 1: Direct Web Scraping (Recommended)
+## 何时触发（推荐触发词）
 
-Scrape `github.com/trending` directly using Cheerio:
+- 探索今日/本周热门
+- “Rust / Python / Go 最近有什么好项目”
+- “AI / Agent / LLM 领域现在 trending 什么”
+- “帮我看看 GitHub trending，有没有类似 X 的项目”
+- “最近什么技术在快速增长，值得关注”
+- “做个 GitHub trending 日报 / 周报”
+- 想过滤 hype、要真实增长信号时
 
-```typescript
-import * as cheerio from 'cheerio';
+**不适合**：纯快速事实查询（直接让 Claude 回答即可）。
 
-interface TrendingRepo {
-  owner: string;
-  name: string;
-  fullName: string;
-  url: string;
-  description: string;
-  language: string;
-  languageColor: string;
-  stars: number;
-  forks: number;
-  starsToday: number;
-}
+---
 
-async function scrapeTrending(options: {
-  language?: string;
-  since?: 'daily' | 'weekly' | 'monthly';
-} = {}): Promise<TrendingRepo[]> {
-  // Build URL: github.com/trending or github.com/trending/typescript?since=weekly
-  let url = 'https://github.com/trending';
-  if (options.language) {
-    url += `/${encodeURIComponent(options.language)}`;
-  }
-  if (options.since) {
-    url += `?since=${options.since}`;
-  }
+## 完整工作流（必须按顺序，不要跳步）
 
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; TrendingBot/1.0)',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch trending: ${response.status}`);
-  }
+1. **拿干净数据（优先用脚本）**
+   ```bash
+   # 在 skill 目录执行；如果 skill 已安装到 ~/.claude/skills，也可以换成对应安装路径
+   cd /path/to/spellbook/skills/github-trending
 
-  const html = await response.text();
-  const $ = cheerio.load(html);
-  const repos: TrendingRepo[] = [];
+   # 今日总榜 TOP 8
+   python3 scripts/fetch_trending.py --since daily --limit 8
 
-  // Each trending repo is in an article.Box-row element
-  $('article.Box-row').each((_, element) => {
-    const $el = $(element);
-    
-    // Get repo link (e.g., /owner/repo)
-    const repoLink = $el.find('h2 a').attr('href')?.trim() || '';
-    const [, owner, name] = repoLink.split('/');
-    
-    // Get description
-    const description = $el.find('p.col-9').text().trim();
-    
-    // Get language
-    const language = $el.find('[itemprop="programmingLanguage"]').text().trim();
-    
-    // Get language color from the colored dot
-    const langColorStyle = $el.find('.repo-language-color').attr('style') || '';
-    const langColorMatch = langColorStyle.match(/background-color:\s*([^;]+)/);
-    const languageColor = langColorMatch ? langColorMatch[1].trim() : '';
-    
-    // Get stars (total)
-    const starsText = $el.find('a[href$="/stargazers"]').text().trim();
-    const stars = parseNumber(starsText);
-    
-    // Get forks
-    const forksText = $el.find('a[href$="/forks"]').text().trim();
-    const forks = parseNumber(forksText);
-    
-    // Get stars today/this week/this month
-    const starsTodayText = $el.find('.float-sm-right, .d-inline-block.float-sm-right').text().trim();
-    const starsToday = parseNumber(starsTodayText);
+   # Rust 周榜
+   python3 scripts/fetch_trending.py --since weekly --language Rust --limit 6
 
-    if (owner && name) {
-      repos.push({
-        owner,
-        name,
-        fullName: `${owner}/${name}`,
-        url: `https://github.com${repoLink}`,
-        description,
-        language,
-        languageColor,
-        stars,
-        forks,
-        starsToday,
-      });
-    }
-  });
+   # 开发者榜
+   python3 scripts/fetch_trending.py --developers --since daily --limit 10
+   ```
+   脚本输出结构化 JSON，**绝不直接 WebFetch 原始 HTML**。
 
-  return repos;
-}
+2. **筛 TOP N + 过滤 hype**
+   - 默认 5-8 个
+   - 优先选 **stars_today 有真实增量 + forks 跟上 + 不是纯 awesome-list** 的
+   - 参考 `reference/extended.md` 中的「Hype 红旗」快速排除
 
-function parseNumber(text: string): number {
-  const clean = text.replace(/,/g, '').trim();
-  if (clean.includes('k')) {
-    return Math.round(parseFloat(clean) * 1000);
-  }
-  return parseInt(clean) || 0;
-}
+3. **必要时轻度 enrich**
+   - 只对最终入榜的 2-3 个项目，必要时再用 WebFetch 看 README 头部或 Releases
+   - 不要一上来就读全量 README
+
+4. **套模板 + 必写 Angle**
+   - 用参考模板组织
+   - **最后必须有独立一段「今日观察 / Angle」**，这是产出价值所在
+
+5. **输出 + 归档（可选）**
+   - 普通用户：直接给 Markdown 日报
+   - 想后续发文：把 JSON + angle 结构喂给下游 skill
+
+---
+
+## 脚本安装与依赖
+
+首次使用执行：
+```bash
+python3 -m pip install -r requirements.txt
 ```
 
-## Approach 2: GitHub Search API (Official Alternative)
-
-Use GitHub's Search API to find recently created repos with high stars:
-
-```typescript
-interface GitHubSearchResult {
-  total_count: number;
-  items: GitHubRepo[];
-}
-
-interface GitHubRepo {
-  full_name: string;
-  html_url: string;
-  description: string;
-  language: string;
-  stargazers_count: number;
-  forks_count: number;
-  created_at: string;
-}
-
-async function getTrendingViaSearch(options: {
-  language?: string;
-  days?: number;
-  minStars?: number;
-} = {}): Promise<GitHubRepo[]> {
-  const days = options.days || 7;
-  const minStars = options.minStars || 100;
-  
-  // Calculate date N days ago
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  const since = date.toISOString().split('T')[0];
-
-  // Build search query
-  const queryParts = [
-    `created:>${since}`,
-    `stars:>=${minStars}`,
-  ];
-  if (options.language) {
-    queryParts.push(`language:${options.language}`);
-  }
-  const query = queryParts.join(' ');
-
-  const response = await fetch(
-    `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=25`,
-    {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`, // Optional but recommended
-        'User-Agent': 'TrendingApp/1.0',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status}`);
-  }
-
-  const data: GitHubSearchResult = await response.json();
-  return data.items;
-}
+如果没有 `requirements.txt`，手动安装：
+```bash
+python3 -m pip install requests beautifulsoup4 lxml
 ```
 
-**Note:** The Search API has rate limits (10 requests/minute unauthenticated, 30/minute with token).
+脚本位置：`scripts/fetch_trending.py`（相对本 skill 目录）。
 
-## Next.js API Route (Server-Side Scraping)
+支持参数见脚本 `--help`。所有错误都会以清晰 JSON 返回，绝不静默失败。
 
-```typescript
-// app/api/trending/route.ts
-import { NextRequest } from 'next/server';
-import * as cheerio from 'cheerio';
+---
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const language = searchParams.get('language') || '';
-  const since = searchParams.get('since') || 'daily';
+## 输出硬性要求
 
-  try {
-    let url = 'https://github.com/trending';
-    if (language) url += `/${encodeURIComponent(language)}`;
-    url += `?since=${since}`;
+**日报结尾必须包含「Angle」段**，否则视为不合格输出。
 
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    });
+好 Angle 特征：
+- 指出 1-2 个跨项目模式（技术演进、社区偏好、 hype 信号）
+- 给出可行动建议（“这个方向值得跟进，但优先看 fork 增长”）
+- 基于**今日真实数据**，不复述旧知识
 
-    const html = await response.text();
-    const repos = parseGitHubTrending(html);
-    
-    return Response.json(repos);
-  } catch (error) {
-    console.error('Trending scrape failed:', error);
-    return Response.json(
-      { error: 'Failed to fetch trending repos' },
-      { status: 500 }
-    );
-  }
-}
+---
 
-function parseGitHubTrending(html: string) {
-  const $ = cheerio.load(html);
-  const repos: any[] = [];
+## 进阶场景
 
-  $('article.Box-row').each((_, el) => {
-    const $el = $(el);
-    const repoLink = $el.find('h2 a').attr('href') || '';
-    const [, owner, name] = repoLink.split('/');
-    
-    repos.push({
-      owner,
-      name,
-      fullName: `${owner}/${name}`,
-      url: `https://github.com${repoLink}`,
-      description: $el.find('p.col-9').text().trim(),
-      language: $el.find('[itemprop="programmingLanguage"]').text().trim(),
-      stars: parseNumber($el.find('a[href$="/stargazers"]').text()),
-      forks: parseNumber($el.find('a[href$="/forks"]').text()),
-      starsToday: parseNumber($el.find('.float-sm-right').text()),
-    });
-  });
+- **领域深度报告**：先用脚本按 language 拉月榜，再结合 `reference/extended.md` 里的评估框架写对比表。
+- **长期跟踪**：用 `/loop` 技能每天定时跑脚本 + 分析，输出到固定目录。
+- **想知道社区真实反应**：对重点项目再调用 `/multi-ai-research`。
+- **想发内容**：把结构化结果 + angle 交给 `scout-to-article`。
 
-  return repos;
-}
+---
 
-function parseNumber(text: string): number {
-  const clean = text.replace(/,/g, '').trim();
-  if (clean.includes('k')) return Math.round(parseFloat(clean) * 1000);
-  return parseInt(clean) || 0;
-}
-```
+## Extended Reference
 
-## React Hook
+所有详细框架（数据源、评估维度、hype 识别、趋势分类、好/坏 Angle 示例、scraper 维护提示、2026 社区共识）已移至 [`reference/extended.md`](reference/extended.md)。
 
-```tsx
-import { useState, useEffect } from 'react';
+日常触发时**不需要**读它。只有你要定制模板、维护脚本、或做高精度分析时再加载。
 
-function useTrending(options: { language?: string; since?: string } = {}) {
-  const [repos, setRepos] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+---
 
-  useEffect(() => {
-    async function fetchTrending() {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (options.language) params.set('language', options.language);
-        if (options.since) params.set('since', options.since);
-
-        const response = await fetch(`/api/trending?${params}`);
-        if (!response.ok) throw new Error('Failed to fetch');
-        setRepos(await response.json());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchTrending();
-  }, [options.language, options.since]);
-
-  return { repos, isLoading, error };
-}
-```
-
-## Important Considerations
-
-1. **No Official API**: GitHub's trending page has no official API - scraping is the only option
-2. **Rate Limiting**: Respect GitHub's servers - cache aggressively
-3. **HTML Structure Changes**: GitHub may change their HTML - monitor for breakages
-4. **User-Agent**: Always include a User-Agent header
-5. **Server-Side Only**: Do scraping server-side to avoid CORS issues
-
-## Resources
-
-- **GitHub Trending Page**: https://github.com/trending
-- **GitHub Search API**: https://docs.github.com/en/rest/search
+**更新记录**：2026-05 完整重构（引入可靠 scraper 层 + 严格 pipeline + 拆分 reference + 移除所有硬编码日期/旧趋势列表）。数据永远以脚本实时输出为准。

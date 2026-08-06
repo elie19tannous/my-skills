@@ -1,0 +1,1002 @@
+#!/usr/bin/env python3
+"""Build the GLAW final packet manifest and gate final readiness."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from glaw_profiles import (
+    ADVERSARIAL_PROFILES,
+    COUNCIL_PROFILES,
+    GOVERNMENT_ADVERSARY_LENSES,
+    REVIEWER_SKILL_MAP,
+    TRACKS,
+    profile_for_track,
+)
+from glaw_accounting_control import accounting_control_manifest
+
+
+REQUIRED_INTAKE = (
+    "matter_name",
+    "workflow_track",
+    "client_names",
+    "parties",
+    "jurisdiction",
+    "goal",
+    "source_documents",
+    "deadlines",
+    "facts_timeline",
+    "open_questions",
+    "conflicts_parties",
+    "authorized_scope",
+)
+GENERIC_INTAKE_REVIEWER_RE = re.compile(
+    r"^\s*(?:intake\s+)?(?:reviewer|operator|user|clerk|agent|professional|counsel)\s*$"
+    r"|^\s*(?:tbd|todo|n/?a|unknown|pending)\s*$",
+    re.IGNORECASE,
+)
+BRACKET_PLACEHOLDER_RE = re.compile(r"\[[^\]]+\]")
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def home() -> Path:
+    return Path(os.environ.get("GLAW_HOME", str(Path.home() / ".glaw")))
+
+
+def active_slug() -> str:
+    p = home() / ".active"
+    return p.read_text(encoding="utf-8").strip() if p.exists() else ""
+
+
+def matter_dir(slug: str | None) -> Path:
+    s = slug or active_slug()
+    if not s:
+        raise SystemExit("ERROR: no active matter. Run `glaw matter new \"<name>\"` first.")
+    d = home() / "matters" / s
+    if not d.is_dir():
+        raise SystemExit(f"ERROR: matter not found: {s}")
+    return d
+
+
+def read_json(path: Path, default):
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return default
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def timeline(d: Path, event: str, **extra: object) -> None:
+    with (d / "timeline.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts": now(), "event": event, **extra}) + "\n")
+
+
+def workflow_profile(intake: dict) -> str:
+    track = intake.get("universal", {}).get("workflow_track") or intake.get("workflow_track")
+    return profile_for_track(track)
+
+
+def intake_reviewer_blocker(value: str) -> str:
+    text = str(value or "").strip()
+    alpha_words = re.findall(r"[A-Za-z][A-Za-z.'-]+", text)
+    if not text:
+        return "review.completed_by required"
+    if BRACKET_PLACEHOLDER_RE.search(text):
+        return "review.completed_by must name an accountable intake reviewer, not a placeholder"
+    if GENERIC_INTAKE_REVIEWER_RE.match(text):
+        return "review.completed_by must name an accountable intake reviewer, not a generic role"
+    if len(alpha_words) < 2:
+        return "review.completed_by must include a named accountable reviewer"
+    return ""
+
+
+def intake_missing_fields(intake: dict) -> list[str]:
+    universal = intake.get("universal", {})
+    missing = []
+    if intake.get("status") != "complete":
+        missing.append("status=complete")
+    for key in REQUIRED_INTAKE:
+        val = universal.get(key)
+        if val in ("", None, [], {}):
+            missing.append(f"universal.{key}")
+    track = universal.get("workflow_track") or intake.get("workflow_track")
+    if track not in TRACKS:
+        missing.append("universal.workflow_track(valid)")
+    for key in TRACKS.get(track, ()):
+        val = intake.get("track_specific", {}).get(key)
+        if val in ("", None, [], {}):
+            missing.append(f"track_specific.{key}")
+    reviewer_blocker = intake_reviewer_blocker(intake.get("review", {}).get("completed_by", ""))
+    if reviewer_blocker:
+        missing.append(reviewer_blocker)
+    return missing
+
+
+def has_event(rows: list[dict], event: str) -> bool:
+    return any(row.get("event") == event for row in rows)
+
+
+def latest_by(rows: list[dict], key: str) -> dict[str, dict]:
+    latest = {}
+    for row in rows:
+        latest[str(row.get(key, ""))] = row
+    return latest
+
+
+def skill_name(path: Path) -> str:
+    in_frontmatter = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip() == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+                continue
+            break
+        if in_frontmatter and line.startswith("name:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
+def skill_path_for(root: Path, command: str) -> Path | None:
+    matches = []
+    for path in root.rglob("SKILL.md"):
+        if ".git" in path.parts:
+            continue
+        if skill_name(path) == command:
+            matches.append(path)
+    if not matches:
+        return None
+    return sorted(matches, key=lambda p: ("seats" in p.relative_to(root).parts, str(p.relative_to(root))))[0]
+
+
+def reviewer_identity_manifest(profile: str, root: Path) -> list[dict]:
+    required = [("citation", "legal-research")]
+    required.extend(("council", name) for name in COUNCIL_PROFILES.get(profile, ()))
+    required.extend(("adversarial", name) for name in ADVERSARIAL_PROFILES.get(profile, ()))
+    rows = []
+    for kind, name in required:
+        command = REVIEWER_SKILL_MAP.get(name, "")
+        missing = []
+        path = skill_path_for(root, command) if command else None
+        text = path.read_text(encoding="utf-8", errors="replace") if path else ""
+        if not command:
+            missing.append("reviewer skill mapping")
+        if not path:
+            missing.append("skill file")
+        if "Identity:" not in text:
+            missing.append("Identity:")
+        if "Soul:" not in text:
+            missing.append("Soul:")
+        if "Report voice:" not in text:
+            missing.append("Report voice:")
+        rows.append({
+            "kind": kind,
+            "name": name,
+            "skill": command,
+            "path": str(path.relative_to(root)) if path else "",
+            "sha256": sha256_file(path) if path else "",
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+        })
+    return rows
+
+
+def blocking_red_flags(rows: list[dict]) -> list[dict]:
+    return [
+        row for row in rows
+        if row.get("status", "open") != "resolved"
+        and str(row.get("severity", "")).lower() in {"critical", "high"}
+    ]
+
+
+TEXT_DELIVERABLE_EXTS = {".md", ".html", ".htm", ".txt"}
+TEXT_DELIVERABLE_SKIP_NAMES = {
+    "matter.md",
+    "index.md",
+    "final_packet.md",
+}
+TEXT_DELIVERABLE_SKIP_PARTS = {
+    "citation_corpus",
+    "_published",
+    "_extracted",
+    "decisions",
+    "evidence",
+    "source_documents",
+    "sources",
+    "workpapers",
+}
+SOURCE_EVIDENCE_PARTS = {
+    "evidence",
+    "source_documents",
+    "sources",
+}
+SOURCE_ID_RE = re.compile(r"\bSRC-\d{4}\b")
+ACCOUNTING_CONTROL_PROFILES = {"accounting", "accounting-tax", "tax", "sec-reporting"}
+REQUIRED_GATE_ARTIFACTS = (
+    "intake.json",
+    "ethics.json",
+    "citation_corpus.jsonl",
+    "citations.jsonl",
+    "groundedness.json",
+    "council.jsonl",
+    "adversarial.jsonl",
+)
+OPTIONAL_GATE_ARTIFACTS = (
+    "red_flags.jsonl",
+    "accounting_control.json",
+)
+REPORT_REQUIRED_MARKERS = (
+    "Owner:",
+    "Report voice:",
+    "Findings:",
+    "Evidence:",
+    "Red flags:",
+    "Sign-off conditions:",
+)
+UNRESOLVED_PLACEHOLDER_RE = re.compile(r"\[(?:[A-Z][A-Z0-9 _./:-]{1,}|VERIFY|TODO|TBD)[^\]]*\]")
+UNRESOLVED_REVIEW_RE = re.compile(r"\bREVIEW\s*:", re.IGNORECASE)
+
+
+def is_external_text_deliverable(path: Path, root: Path) -> bool:
+    if path.suffix.lower() not in TEXT_DELIVERABLE_EXTS:
+        return False
+    if path.name in TEXT_DELIVERABLE_SKIP_NAMES:
+        return False
+    rel_parts = set(path.relative_to(root).parts)
+    return not bool(rel_parts & TEXT_DELIVERABLE_SKIP_PARTS)
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def is_source_evidence(path: Path, root: Path) -> bool:
+    if not path.is_file():
+        return False
+    rel_parts = set(path.relative_to(root).parts)
+    return bool(rel_parts & SOURCE_EVIDENCE_PARTS)
+
+
+def source_evidence_manifest(paths: list[Path], root: Path) -> list[dict]:
+    return [
+        {
+            "id": f"SRC-{idx:04d}",
+            "path": str(path.relative_to(root)),
+            "sha256": sha256_file(path),
+            "size_bytes": path.stat().st_size,
+        }
+        for idx, path in enumerate(sorted(paths), start=1)
+    ]
+
+
+def report_quality(path: Path, root: Path, source_manifest: list[dict]) -> dict:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    missing = [marker for marker in REPORT_REQUIRED_MARKERS if marker.lower() not in text.lower()]
+    placeholders = sorted(set(UNRESOLVED_PLACEHOLDER_RE.findall(text)))
+    review_markers = sorted(set(UNRESOLVED_REVIEW_RE.findall(text)))
+    source_ids = [item["id"] for item in source_manifest]
+    cited_sources = [sid for sid in source_ids if sid in text]
+    referenced_sources = sorted(set(SOURCE_ID_RE.findall(text)))
+    stale_sources = sorted(set(referenced_sources) - set(source_ids))
+    if not source_ids:
+        missing.append("source evidence manifest")
+    elif not cited_sources:
+        missing.append("source evidence id (SRC-####)")
+    elif stale_sources:
+        missing.append("non-current source evidence id")
+    if placeholders:
+        missing.append("unresolved placeholders")
+    if review_markers:
+        missing.append("unresolved REVIEW markers")
+    return {
+        "path": str(path.relative_to(root)),
+        "status": "pass" if not missing else "fail",
+        "missing_markers": missing,
+        "cited_source_ids": cited_sources,
+        "unresolved_placeholders": placeholders,
+        "unresolved_review_markers": review_markers,
+    }
+
+
+def review_evidence_manifest(
+    council_rows: list[dict],
+    adversarial_rows: list[dict],
+    profile: str,
+    source_manifest: list[dict],
+) -> list[dict]:
+    source_ids = [item["id"] for item in source_manifest]
+    rows = []
+    latest_council = latest_by(council_rows, "role")
+    for role in COUNCIL_PROFILES.get(profile, ()):
+        row = latest_council.get(role, {})
+        evidence = str(row.get("evidence", ""))
+        notes = str(row.get("notes", ""))
+        cited = [sid for sid in source_ids if sid in evidence]
+        referenced = sorted(set(SOURCE_ID_RE.findall(evidence)))
+        stale = sorted(set(referenced) - set(source_ids))
+        missing = []
+        if not row:
+            missing.append("review row")
+        if not evidence.strip():
+            missing.append("evidence")
+        if not cited:
+            missing.append("source evidence id (SRC-####)")
+        elif stale:
+            missing.append("non-current source evidence id")
+        if not notes.strip():
+            missing.append("notes/conclusion")
+        rows.append({
+            "kind": "council",
+            "name": role,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "cited_source_ids": cited,
+        })
+    latest_adversarial = latest_by(adversarial_rows, "lens")
+    for lens in ADVERSARIAL_PROFILES.get(profile, ()):
+        row = latest_adversarial.get(lens, {})
+        evidence = str(row.get("evidence", ""))
+        attack = str(row.get("attack", ""))
+        cited = [sid for sid in source_ids if sid in evidence]
+        attack_cited = [sid for sid in source_ids if sid in attack]
+        referenced = sorted(set(SOURCE_ID_RE.findall(evidence)))
+        attack_referenced = sorted(set(SOURCE_ID_RE.findall(attack)))
+        stale = sorted(set(referenced) - set(source_ids))
+        attack_stale = sorted(set(attack_referenced) - set(source_ids))
+        missing = []
+        if not row:
+            missing.append("review row")
+        if not evidence.strip():
+            missing.append("evidence")
+        if not cited:
+            missing.append("source evidence id (SRC-####)")
+        elif stale:
+            missing.append("non-current source evidence id")
+        if not attack.strip():
+            missing.append("attack/challenge")
+        if not attack_cited:
+            missing.append("attack source evidence id (SRC-####)")
+        elif attack_stale:
+            missing.append("non-current attack source evidence id")
+        rows.append({
+            "kind": "adversarial",
+            "name": lens,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "cited_source_ids": cited,
+            "attack_cited_source_ids": attack_cited,
+        })
+    return rows
+
+
+def government_adversary_manifest(senior_review_evidence_manifest: list[dict]) -> list[dict]:
+    rows = []
+    for item in senior_review_evidence_manifest:
+        if item.get("kind") != "adversarial":
+            continue
+        lens = str(item.get("name", ""))
+        if lens not in GOVERNMENT_ADVERSARY_LENSES:
+            continue
+        rows.append(
+            {
+                "lens": lens,
+                "status": item.get("status", "fail"),
+                "missing": item.get("missing", []),
+                "evidence_cited_source_ids": item.get("cited_source_ids", []),
+                "attack_cited_source_ids": item.get("attack_cited_source_ids", []),
+            }
+        )
+    return rows
+
+
+def red_flag_resolution_manifest(red_flags: list[dict], source_manifest: list[dict]) -> list[dict]:
+    source_ids = [item["id"] for item in source_manifest]
+    rows = []
+    for flag in red_flags:
+        severity = str(flag.get("severity", "")).lower()
+        if severity not in {"critical", "high"}:
+            continue
+        if flag.get("status", "open") != "resolved":
+            continue
+        evidence = str(flag.get("resolution_evidence", ""))
+        cited = [sid for sid in source_ids if sid in evidence]
+        syntactic = sorted(set(SOURCE_ID_RE.findall(evidence)))
+        missing = []
+        if not evidence.strip():
+            missing.append("resolution evidence")
+        if not syntactic:
+            missing.append("source evidence id (SRC-####)")
+        elif not cited:
+            missing.append("current source evidence id")
+        elif sorted(set(syntactic) - set(source_ids)):
+            missing.append("non-current source evidence id")
+        rows.append({
+            "id": flag.get("id", ""),
+            "severity": severity,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "cited_source_ids": cited,
+            "referenced_source_ids": syntactic,
+        })
+    return rows
+
+
+def nonblocking_red_flag_manifest(red_flags: list[dict], source_manifest: list[dict]) -> list[dict]:
+    source_ids = [item["id"] for item in source_manifest]
+    rows = []
+    for flag in red_flags:
+        severity = str(flag.get("severity", "")).lower()
+        if severity in {"critical", "high"}:
+            continue
+        if flag.get("status", "open") == "resolved":
+            continue
+        source = str(flag.get("source", ""))
+        cited = [sid for sid in source_ids if sid in source]
+        syntactic = sorted(set(SOURCE_ID_RE.findall(source)))
+        missing = []
+        if not severity:
+            missing.append("severity")
+        if not str(flag.get("finding", "")).strip():
+            missing.append("finding")
+        if not str(flag.get("owner", "")).strip():
+            missing.append("owner")
+        if not str(flag.get("required_fix", "")).strip():
+            missing.append("required_fix")
+        if not source.strip():
+            missing.append("source")
+        if not syntactic:
+            missing.append("source evidence id (SRC-####)")
+        elif not cited:
+            missing.append("current source evidence id")
+        elif sorted(set(syntactic) - set(source_ids)):
+            missing.append("non-current source evidence id")
+        rows.append({
+            "id": flag.get("id", ""),
+            "severity": severity,
+            "status": "pass" if not missing else "fail",
+            "missing": missing,
+            "owner": flag.get("owner", ""),
+            "required_fix": flag.get("required_fix", ""),
+            "finding": flag.get("finding", ""),
+            "cited_source_ids": cited,
+            "referenced_source_ids": syntactic,
+        })
+    return rows
+
+
+def _boolish(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "pass", "passed", "ok"}
+
+
+def _zeroish(value) -> bool:
+    try:
+        return float(str(value).strip()) == 0.0
+    except ValueError:
+        return False
+
+
+def _int_value(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return -1
+
+
+def _artifact_hash(path_text: str, d: Path, label: str, missing: list[str]) -> dict:
+    if not path_text.strip():
+        missing.append(f"{label}.artifact")
+        return {"label": label, "path": path_text, "sha256": "", "size_bytes": 0}
+    path = (d / path_text).resolve()
+    try:
+        rel_path = str(path.relative_to(d.resolve()))
+    except ValueError:
+        missing.append(f"{label}.artifact inside matter")
+        return {"label": label, "path": path_text, "sha256": "", "size_bytes": 0}
+    if not path.is_file():
+        missing.append(f"{label}.artifact exists")
+        return {"label": label, "path": rel_path, "sha256": "", "size_bytes": 0}
+    size = path.stat().st_size
+    if size <= 0:
+        missing.append(f"{label}.artifact nonempty")
+    return {"label": label, "path": rel_path, "sha256": sha256_file(path), "size_bytes": size}
+
+
+COMPLIANCE_ROW_ROUTES = {
+    "ethics-upl": (
+        "bin/glaw-ethics status",
+        "clear conflicts, engagement, and UPL footer evidence",
+    ),
+    "citation-grounding": (
+        "bin/glaw-citation-gate status",
+        "verify citations against the captured source corpus",
+    ),
+    "government-adversary": (
+        "bin/glaw-adversarial status --profile auto",
+        "record surviving government/regulatory/litigation adversary attacks",
+    ),
+    "senior-review-source-support": (
+        "bin/glaw-council status --profile auto",
+        "obtain source-backed senior reviewer approval notes",
+    ),
+    "red-flag-accountability": (
+        "bin/glaw-red-flags status",
+        "resolve blocking red flags and account for nonblocking flags",
+    ),
+    "source-evidence-chain": (
+        "bin/glaw-final-packet build --profile auto",
+        "refresh the source evidence manifest from current matter files",
+    ),
+    "professional-report-quality": (
+        "bin/glaw-upl-check",
+        "fix external reports so they carry owner, voice, findings, evidence, red flags, sign-off conditions, sources, and no placeholders",
+    ),
+    "reviewer-identity": (
+        "bin/glaw-doctor",
+        "repair reviewer skill mapping or identity markers",
+    ),
+    "accounting-control": (
+        "bin/glaw-accounting-control",
+        "run books-doctor, bank reconciliation, ledger, tax tie-out, and SEC audit tie-out controls",
+    ),
+    "accounting-control-not-required": (
+        "",
+        "no accounting control required for this profile",
+    ),
+}
+
+
+def _compliance_row(row_id: str, owner: str, ok: bool, missing: list[str]) -> dict:
+    next_command, required_fix = COMPLIANCE_ROW_ROUTES.get(
+        row_id,
+        ("bin/glaw-final-packet build --profile auto", "refresh the final packet compliance manifest"),
+    )
+    return {
+        "id": row_id,
+        "owner": owner,
+        "status": "pass" if ok else "fail",
+        "missing": missing,
+        "next_command": next_command,
+        "required_fix": required_fix,
+    }
+
+
+def compliance_manifest(
+    profile: str,
+    gates: dict[str, bool],
+    *,
+    accounting_control: dict,
+    government_adversary_rows: list[dict],
+    source_manifest: list[dict],
+    senior_review_evidence_manifest: list[dict],
+    red_flag_resolution_evidence_manifest: list[dict],
+    nonblocking_red_flags: list[dict],
+    reviewer_identity: list[dict],
+    report_quality_manifest: list[dict],
+) -> list[dict]:
+    accounting_required = accounting_control.get("required") is True
+    return [
+        _compliance_row(
+            "ethics-upl",
+            "glaw-ethics-conflicts",
+            gates.get("conflicts_cleared", False)
+            and gates.get("ethics_gate_complete", False)
+            and gates.get("upl_footer_clear", False),
+            [
+                name
+                for name in ("conflicts_cleared", "ethics_gate_complete", "upl_footer_clear")
+                if not gates.get(name, False)
+            ],
+        ),
+        _compliance_row(
+            "citation-grounding",
+            "glaw-legal-research",
+            gates.get("citations_verified", False) and gates.get("citation_gate_complete", False),
+            [
+                name
+                for name in ("citations_verified", "citation_gate_complete")
+                if not gates.get(name, False)
+            ],
+        ),
+        _compliance_row(
+            "government-adversary",
+            "glaw-adversarial",
+            bool(government_adversary_rows)
+            and all(item.get("status") == "pass" for item in government_adversary_rows),
+            ["government_adversary_manifest"] if not government_adversary_rows else [
+                f"{item.get('lens')}:{','.join(item.get('missing') or [])}"
+                for item in government_adversary_rows
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "senior-review-source-support",
+            "glaw-council",
+            bool(senior_review_evidence_manifest)
+            and all(item.get("status") == "pass" for item in senior_review_evidence_manifest),
+            ["senior_review_evidence_manifest"] if not senior_review_evidence_manifest else [
+                f"{item.get('kind')}:{item.get('name')}:{','.join(item.get('missing') or [])}"
+                for item in senior_review_evidence_manifest
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "red-flag-accountability",
+            "glaw-red-flags",
+            gates.get("red_flags_clear", False)
+            and all(item.get("status") == "pass" for item in red_flag_resolution_evidence_manifest)
+            and all(item.get("status") == "pass" for item in nonblocking_red_flags),
+            [
+                name
+                for name in (
+                    "red_flags_clear",
+                    "red_flag_resolution_evidence_clear",
+                    "nonblocking_red_flags_accounted_clear",
+                )
+                if not gates.get(name, False)
+            ],
+        ),
+        _compliance_row(
+            "source-evidence-chain",
+            "glaw-final-packet",
+            bool(source_manifest)
+            and gates.get("source_evidence_manifest_clear", False),
+            ["source_evidence_manifest"] if not source_manifest else [
+                item.get("path", "")
+                for item in source_manifest
+                if int(item.get("size_bytes", 0)) <= 0
+            ],
+        ),
+        _compliance_row(
+            "professional-report-quality",
+            "glaw-legal-writing",
+            bool(report_quality_manifest)
+            and all(item.get("status") == "pass" for item in report_quality_manifest),
+            ["report_quality_manifest"] if not report_quality_manifest else [
+                f"{item.get('path')}:{','.join(item.get('missing_markers') or [])}"
+                for item in report_quality_manifest
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "reviewer-identity",
+            "glaw-final-packet",
+            bool(reviewer_identity)
+            and all(item.get("status") == "pass" for item in reviewer_identity),
+            ["reviewer_identity_manifest"] if not reviewer_identity else [
+                f"{item.get('kind')}:{item.get('name')}:{','.join(item.get('missing') or [])}"
+                for item in reviewer_identity
+                if item.get("status") != "pass"
+            ],
+        ),
+        _compliance_row(
+            "accounting-control" if accounting_required else "accounting-control-not-required",
+            "glaw-accounting",
+            accounting_control.get("status") in {"pass", "not_required"},
+            list(accounting_control.get("missing") or []),
+        ),
+    ]
+
+
+def run_check(cmd: list[str], cwd: Path) -> tuple[int, str]:
+    proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
+    return proc.returncode, (proc.stdout + proc.stderr).strip()
+
+
+def render_md(packet: dict) -> str:
+    lines = [
+        "# GLAW Final Packet",
+        "",
+        f"- Matter: {packet['matter_slug']}",
+        f"- Generated: {packet['generated_at']}",
+        f"- Workflow profile: {packet['workflow_profile']}",
+        f"- Gate status: {packet['status']}",
+        "",
+        "## Required Gates",
+    ]
+    for gate, ok in packet["gates"].items():
+        lines.append(f"- [{'x' if ok else ' '}] {gate}")
+    lines.extend(["", "## Blocking Red Flags"])
+    if packet["blocking_red_flags"]:
+        for flag in packet["blocking_red_flags"]:
+            lines.append(f"- {flag.get('id')}: {flag.get('severity')} - {flag.get('finding')}")
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Red Flag Resolution Evidence"])
+    resolved_flags = packet.get("red_flag_resolution_evidence_manifest", [])
+    if resolved_flags:
+        for item in resolved_flags:
+            mark = "x" if item.get("status") == "pass" else " "
+            missing = item.get("missing") or []
+            suffix = "" if not missing else f" — missing {', '.join(missing)}"
+            lines.append(f"- [{mark}] {item.get('id')} ({item.get('severity')}){suffix}")
+    else:
+        lines.append("- no resolved critical/high red flags")
+    lines.extend(["", "## Open Nonblocking Red Flags"])
+    nonblocking_flags = packet.get("nonblocking_red_flag_manifest", [])
+    if nonblocking_flags:
+        for item in nonblocking_flags:
+            mark = "x" if item.get("status") == "pass" else " "
+            missing = item.get("missing") or []
+            suffix = "" if not missing else f" — missing {', '.join(missing)}"
+            lines.append(f"- [{mark}] {item.get('id')} ({item.get('severity')}) owner={item.get('owner')}{suffix}")
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Council Reviews"])
+    for row in packet["council_reviews"]:
+        lines.append(f"- {row.get('profile')} / {row.get('role')}: {row.get('decision')}")
+    lines.extend(["", "## Government Adversary Reviews"])
+    government_rows = packet.get("government_adversary_manifest", [])
+    if government_rows:
+        for item in government_rows:
+            mark = "x" if item.get("status") == "pass" else " "
+            missing = item.get("missing") or []
+            suffix = "" if not missing else f" — missing {', '.join(missing)}"
+            lines.append(
+                f"- [{mark}] {item.get('lens')} evidence={','.join(item.get('evidence_cited_source_ids') or [])} "
+                f"attack={','.join(item.get('attack_cited_source_ids') or [])}{suffix}"
+            )
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Reviewer Identity Manifest"])
+    for item in packet.get("reviewer_identity_manifest", []):
+        mark = "x" if item.get("status") == "pass" else " "
+        suffix = "" if item.get("status") == "pass" else f" — missing {', '.join(item.get('missing') or [])}"
+        lines.append(f"- [{mark}] {item.get('kind')}:{item.get('name')} -> {item.get('skill')}{suffix}")
+    lines.extend(["", "## Deliverables"])
+    if packet["deliverables"]:
+        for item in packet["deliverables"]:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- none recorded")
+    lines.extend(["", "## Professional Report Quality"])
+    for item in packet.get("report_quality_manifest", []):
+        mark = "x" if item.get("status") == "pass" else " "
+        missing = item.get("missing_markers") or []
+        suffix = "" if not missing else f" — missing {', '.join(missing)}"
+        lines.append(f"- [{mark}] {item.get('path')}{suffix}")
+    ac = packet.get("accounting_control_manifest", {})
+    if ac.get("required"):
+        mark = "x" if ac.get("status") == "pass" else " "
+        missing = ac.get("missing") or []
+        suffix = "" if not missing else f" — missing {', '.join(missing)}"
+        lines.extend(["", "## Accounting Control"])
+        lines.append(f"- [{mark}] accounting_control.json{suffix}")
+    lines.extend(["", "## Compliance Manifest"])
+    for item in packet.get("compliance_manifest", []):
+        mark = "x" if item.get("status") == "pass" else " "
+        missing = item.get("missing") or []
+        suffix = "" if not missing else f" — missing {', '.join(missing)}"
+        route = item.get("next_command") or "n/a"
+        fix = item.get("required_fix") or "review with compliance"
+        lines.append(f"- [{mark}] {item.get('id')} owner={item.get('owner')} next={route}{suffix}")
+        lines.append(f"  - Required fix: {fix}")
+    lines.append("")
+    lines.append("Attorney/CPA work-product. Human licensed signoff remains required where applicable.")
+    return "\n".join(lines) + "\n"
+
+
+def cmd_build(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    root = Path(__file__).resolve().parents[1]
+    intake = read_json(d / "intake.json", {})
+    intake_missing = intake_missing_fields(intake)
+    derived_profile = workflow_profile(intake)
+    profile = args.profile if args.profile != "auto" else derived_profile
+    if profile not in COUNCIL_PROFILES or profile not in ADVERSARIAL_PROFILES:
+        raise SystemExit(f"ERROR: unknown workflow profile: {profile}")
+    if args.profile != "auto" and profile != derived_profile:
+        raise SystemExit(
+            "ERROR: final packet profile must match intake workflow profile "
+            f"({derived_profile}); got {profile}"
+        )
+    timeline_rows = read_jsonl(d / "timeline.jsonl")
+    red_flags = read_jsonl(d / "red_flags.jsonl")
+    council = [r for r in read_jsonl(d / "council.jsonl") if r.get("profile") == profile]
+    adversarial = [r for r in read_jsonl(d / "adversarial.jsonl") if r.get("profile") == profile]
+    decisions = read_jsonl(d / "decisions.jsonl")
+    docket = read_jsonl(d / "docket.jsonl")
+    deliverables = sorted(
+        str(p.relative_to(d)) for p in d.rglob("*")
+        if p.is_file() and p.name not in {
+            "timeline.jsonl", "docket.jsonl", "council.jsonl", "decisions.jsonl",
+            "red_flags.jsonl", "intake.json", "final_packet.json", "final_packet.md",
+        }
+    )
+    external_text_paths = sorted(
+        p for p in d.rglob("*")
+        if p.is_file() and is_external_text_deliverable(p, d)
+    )
+    external_text_deliverables = [str(p.relative_to(d)) for p in external_text_paths]
+    external_text_deliverable_hashes = {
+        str(p.relative_to(d)): sha256_file(p)
+        for p in external_text_paths
+    }
+    source_paths = [
+        p for p in d.rglob("*")
+        if is_source_evidence(p, d)
+    ]
+    source_manifest = source_evidence_manifest(source_paths, d)
+    accounting_control = accounting_control_manifest(
+        d, profile, source_manifest,
+        source_id_re=SOURCE_ID_RE, accounting_control_profiles=ACCOUNTING_CONTROL_PROFILES,
+    )
+    senior_review_evidence_manifest = review_evidence_manifest(council, adversarial, profile, source_manifest)
+    senior_review_evidence_clear = bool(senior_review_evidence_manifest) and all(
+        item["status"] == "pass" for item in senior_review_evidence_manifest
+    )
+    government_adversary_rows = government_adversary_manifest(senior_review_evidence_manifest)
+    government_adversary_clear = bool(government_adversary_rows) and all(
+        item["status"] == "pass" for item in government_adversary_rows
+    )
+    red_flag_resolution_evidence_manifest = red_flag_resolution_manifest(red_flags, source_manifest)
+    red_flag_resolution_evidence_clear = all(
+        item["status"] == "pass" for item in red_flag_resolution_evidence_manifest
+    )
+    nonblocking_red_flags = nonblocking_red_flag_manifest(red_flags, source_manifest)
+    nonblocking_red_flags_accounted_clear = all(
+        item["status"] == "pass" for item in nonblocking_red_flags
+    )
+    reviewer_identity = reviewer_identity_manifest(profile, root)
+    reviewer_identity_clear = bool(reviewer_identity) and all(
+        item["status"] == "pass" for item in reviewer_identity
+    )
+    report_quality_manifest = [
+        report_quality(p, d, source_manifest)
+        for p in external_text_paths
+    ]
+    report_quality_clear = bool(report_quality_manifest) and all(
+        item["status"] == "pass" for item in report_quality_manifest
+    )
+    gate_artifact_names = list(REQUIRED_GATE_ARTIFACTS)
+    gate_artifact_names.extend(
+        name for name in OPTIONAL_GATE_ARTIFACTS
+        if (d / name).exists()
+    )
+    gate_artifact_hashes = {
+        name: sha256_file(d / name)
+        for name in gate_artifact_names
+        if (d / name).exists()
+    }
+
+    rc_rf, red_flag_output = run_check([str(root / "bin/glaw-red-flags"), "status", "--matter", d.name], root)
+    rc_ethics, ethics_output = run_check([str(root / "bin/glaw-ethics"), "status", "--matter", d.name], root)
+    rc_upl, upl_output = run_check([str(root / "bin/glaw-upl-check"), str(d)], root)
+    rc_cites, citation_output = run_check(
+        [str(root / "bin/glaw-citation-gate"), "status", "--matter", d.name],
+        root,
+    )
+    rc_adv, adversarial_output = run_check(
+        [str(root / "bin/glaw-adversarial"), "status", "--profile", profile, "--matter", d.name],
+        root,
+    )
+    rc_council, council_output = run_check(
+        [str(root / "bin/glaw-council"), "status", "--profile", profile, "--matter", d.name],
+        root,
+    )
+    timeline_rows = read_jsonl(d / "timeline.jsonl")
+    gates = {
+        "intake_complete": has_event(timeline_rows, "intake_complete"),
+        "intake_artifact_clear": not intake_missing,
+        "conflicts_cleared": has_event(timeline_rows, "conflicts_cleared") and rc_ethics == 0,
+        "ethics_gate_complete": has_event(timeline_rows, "ethics_gate_complete") and rc_ethics == 0,
+        "citations_verified": has_event(timeline_rows, "citations_verified") and rc_cites == 0,
+        "citation_gate_complete": has_event(timeline_rows, "citation_gate_complete") and rc_cites == 0,
+        "adversarial_done": has_event(timeline_rows, "adversarial_done") and rc_adv == 0,
+        f"{profile}_adversarial_complete": has_event(timeline_rows, f"{profile}_adversarial_complete") and rc_adv == 0,
+        f"{profile}_council_complete": has_event(timeline_rows, f"{profile}_council_complete") and rc_council == 0,
+        "red_flags_clear": has_event(timeline_rows, "red_flags_clear") and rc_rf == 0,
+        "red_flag_resolution_evidence_clear": red_flag_resolution_evidence_clear,
+        "nonblocking_red_flags_accounted_clear": nonblocking_red_flags_accounted_clear,
+        "external_deliverable_present": bool(external_text_deliverables),
+        "source_evidence_manifest_clear": bool(source_manifest) and all(
+            int(item.get("size_bytes", 0)) > 0 for item in source_manifest
+        ),
+        "senior_review_evidence_source_clear": senior_review_evidence_clear,
+        "government_adversary_manifest_clear": government_adversary_clear,
+        "reviewer_identity_manifest_clear": reviewer_identity_clear,
+        "professional_report_manifest_clear": report_quality_clear,
+        "accounting_control_manifest_clear": accounting_control["status"] in {"pass", "not_required"},
+        "upl_footer_clear": rc_upl == 0,
+    }
+    compliance_rows = compliance_manifest(
+        profile,
+        gates,
+        accounting_control=accounting_control,
+        government_adversary_rows=government_adversary_rows,
+        source_manifest=source_manifest,
+        senior_review_evidence_manifest=senior_review_evidence_manifest,
+        red_flag_resolution_evidence_manifest=red_flag_resolution_evidence_manifest,
+        nonblocking_red_flags=nonblocking_red_flags,
+        reviewer_identity=reviewer_identity,
+        report_quality_manifest=report_quality_manifest,
+    )
+    compliance_clear = bool(compliance_rows) and all(item["status"] == "pass" for item in compliance_rows)
+    gates["compliance_manifest_clear"] = compliance_clear
+    blockers = blocking_red_flags(red_flags)
+    ready = all(gates.values()) and not blockers and rc_adv == 0 and rc_council == 0
+    packet = {
+        "schema_version": 1,
+        "generated_at": now(),
+        "matter_slug": d.name,
+        "workflow_profile": profile,
+        "status": "ready" if ready else "blocked",
+        "gates": gates,
+        "ethics_check": ethics_output,
+        "upl_check": upl_output,
+        "citation_check": citation_output,
+        "red_flag_check": red_flag_output,
+        "adversarial_check": adversarial_output,
+        "council_check": council_output,
+        "blocking_red_flags": blockers,
+        "nonblocking_red_flag_manifest": nonblocking_red_flags,
+        "intake": intake,
+        "intake_missing_fields": intake_missing,
+        "docket": docket,
+        "council_reviews": council,
+        "adversarial_reviews": adversarial,
+        "decisions": decisions,
+        "deliverables": deliverables,
+        "external_text_deliverables": external_text_deliverables,
+        "external_text_deliverable_hashes": external_text_deliverable_hashes,
+        "source_evidence_manifest": source_manifest,
+        "senior_review_evidence_manifest": senior_review_evidence_manifest,
+        "government_adversary_manifest": government_adversary_rows,
+        "compliance_manifest": compliance_rows,
+        "red_flag_resolution_evidence_manifest": red_flag_resolution_evidence_manifest,
+        "reviewer_identity_manifest": reviewer_identity,
+        "accounting_control_manifest": accounting_control,
+        "report_quality_required_markers": list(REPORT_REQUIRED_MARKERS),
+        "report_quality_manifest": report_quality_manifest,
+        "gate_artifact_hashes": gate_artifact_hashes,
+    }
+    packet_md = render_md(packet)
+    packet["final_packet_md_sha256"] = sha256_text(packet_md)
+    (d / "final_packet.json").write_text(json.dumps(packet, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    (d / "final_packet.md").write_text(packet_md, encoding="utf-8")
+    if ready:
+        timeline(d, "final_packet_ready", profile=profile)
+        print(f"FINAL PACKET READY {d.name}")
+        return 0
+    print(f"FINAL PACKET BLOCKED {d.name}", file=sys.stderr)
+    print(render_md(packet), file=sys.stderr)
+    return 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="glaw-final-packet")
+    ap.add_argument("build", nargs="?")
+    ap.add_argument("--profile", default="auto")
+    ap.add_argument("--matter", default=None)
+    args = ap.parse_args()
+    return cmd_build(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

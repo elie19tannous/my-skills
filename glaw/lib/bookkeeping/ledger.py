@@ -1,0 +1,455 @@
+#!/usr/bin/env python3
+"""GLAW general ledger — the persistent, double-entry book of record.
+
+The accounting foundation: an append-only journal of balanced entries that
+accumulates across periods. Bank transactions and manual/adjusting journal
+entries both post here as proper Dr/Cr journal entries; balances and statements
+are computed from the posted ledger as-of any date.
+
+Design goals (IRS / CPA grade):
+  * Double-entry, always balanced     sum(debits) == sum(credits) per entry, enforced.
+  * Append-only audit trail           each entry is sequential, hashed, timestamped;
+                                       entries are never edited — corrections are reversing
+                                       entries. Nothing is silently mutated.
+  * Period locking                    a locked period rejects new/back-dated entries.
+  * As-of queries                     account balances / trial balance / GL detail at any date.
+
+Storage: one JSONL file of entries per set of books, under
+  $GLAW_HOME/books/<book>/ledger.jsonl   (+ meta.json for locked periods)
+GLAW_HOME defaults to ~/.glaw (matches the rest of GLAW's state).
+"""
+from __future__ import annotations
+
+import contextlib
+import hashlib
+import json
+import os
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from pathlib import Path
+
+try:
+    import fcntl   # POSIX advisory file locking (macOS/Linux)
+except ImportError:   # pragma: no cover — non-POSIX: degrade to no-op
+    fcntl = None
+
+# Account-root → (type, normal-balance-sign). Debit-normal accounts carry positive
+# balances; credit-normal carry negative (the signed-amount convention statements uses).
+ACCOUNT_TYPES = {
+    "Assets": ("asset", "debit"),
+    "Expenses": ("expense", "debit"),
+    "Liabilities": ("liability", "credit"),
+    "Equity": ("equity", "credit"),
+    "Income": ("income", "credit"),
+    "Revenue": ("income", "credit"),
+}
+
+
+def _dec(v) -> Decimal:
+    try:
+        return Decimal(str(v))
+    except Exception:
+        return Decimal("0")
+
+
+def _home() -> Path:
+    return Path(os.environ.get("GLAW_HOME", str(Path.home() / ".glaw")))
+
+
+def _parse_jsonl(lines: list[str]) -> list[dict]:
+    """Parse JSONL ledger lines, tolerating a TORN TRAILING line — an in-flight append by a
+    concurrent post() in another process leaves the last line incomplete (a read racing the
+    write). Since appends only happen at EOF, only the last line can be torn: skip it (it will
+    be read once committed). A malformed NON-final line is real corruption and is raised."""
+    out: list[dict] = []
+    cleaned = [s.strip() for s in lines]
+    last = max((i for i, s in enumerate(cleaned) if s), default=-1)
+    for i, s in enumerate(cleaned):
+        if not s:
+            continue
+        try:
+            out.append(json.loads(s))
+        except json.JSONDecodeError:
+            if i == last:                      # torn in-flight append — skip, not corruption
+                break
+            raise LedgerError(f"corrupt ledger line {i + 1}: not valid JSON")
+    return out
+
+
+class LedgerError(Exception):
+    pass
+
+
+def validate_entry(je: dict) -> dict:
+    """Validate and normalize a journal entry. Raises LedgerError on any problem.
+    je = {date, memo, source?, lines: [{account, debit?, credit?}, ...]}"""
+    try:
+        d = date.fromisoformat(str(je["date"])[:10])
+    except Exception:
+        raise LedgerError(f"invalid or missing entry date: {je.get('date')!r}")
+    lines = je.get("lines") or []
+    if len(lines) < 2:
+        raise LedgerError("a journal entry needs at least two lines (a debit and a credit)")
+    norm_lines, tot_d, tot_c = [], Decimal("0"), Decimal("0")
+    for i, ln in enumerate(lines):
+        acct = (ln.get("account") or "").strip()
+        if not acct:
+            raise LedgerError(f"line {i}: missing account")
+        deb = _dec(ln.get("debit", 0))
+        cred = _dec(ln.get("credit", 0))
+        if deb < 0 or cred < 0:
+            raise LedgerError(f"line {i} ({acct}): debit/credit must be non-negative")
+        if (deb > 0) == (cred > 0):
+            raise LedgerError(f"line {i} ({acct}): exactly one of debit/credit must be > 0")
+        tot_d += deb
+        tot_c += cred
+        nl = {"account": acct, "debit": str(deb), "credit": str(cred), "memo": ln.get("memo", "")}
+        if ln.get("fx_amount") is not None:   # foreign amount this (reporting-valued) leg represents
+            nl["fx_amount"] = str(ln["fx_amount"])
+        if ln.get("currency"):                  # preserve per-line currency (FX/cross-currency entries)
+            nl["currency"] = ln["currency"]
+        norm_lines.append(nl)
+    if tot_d != tot_c:
+        raise LedgerError(f"entry does not balance: debits {tot_d} != credits {tot_c}")
+    if tot_d == 0:
+        raise LedgerError("entry has zero value")
+    out = {"date": d.isoformat(), "memo": je.get("memo", ""), "source": je.get("source", "manual"),
+           "lines": norm_lines}
+    if je.get("vendor"):                 # payee tag (for 1099-NEC information returns)
+        out["vendor"] = je["vendor"]
+    return out
+
+
+GENESIS = "GENESIS:glaw-ledger"   # the chain's seed (prev_hash of the very first entry)
+
+
+HASH_LEN = 64   # full SHA-256 hex (256-bit). New entries use this; legacy entries verify at
+                # whatever length they were stored with (backward compatible).
+
+
+def _entry_hash(e: dict, prev_hash: str, n: int = HASH_LEN) -> str:
+    """Tamper-evident, CHAINED entry hash. Covers every financially-material field — including
+    currency and source — plus the previous entry's hash, so editing a field, changing a
+    currency, deleting, inserting, or reordering an entry all break the chain. Full 256-bit by
+    default (64 hex); 64-bit truncation was the weak link for an audit-grade tamper claim."""
+    content = {k: e.get(k) for k in ("id", "date", "memo", "source", "currency", "lines")}
+    content["prev_hash"] = prev_hash
+    return hashlib.sha256(json.dumps(content, sort_keys=True, default=str).encode()).hexdigest()[:n]
+
+
+def _legacy_hash(e: dict, n: int = HASH_LEN) -> str:
+    """The pre-chain hash (id/date/memo/lines only) — for verifying entries written before the
+    chain existed, so old books still self-verify."""
+    return hashlib.sha256(json.dumps({k: e[k] for k in ("id", "date", "memo", "lines")},
+                          sort_keys=True, default=str).encode()).hexdigest()[:n]
+
+
+def verify_integrity(entries: list[dict]) -> list[tuple]:
+    """Return [(entry_id, reason), ...] for every integrity violation. Detects content edits
+    (incl. currency), AND — via the chain — deletions, insertions, and reordering. Entries with
+    no prev_hash (legacy) fall back to the self-hash check; the chain continues across them."""
+    problems = []
+    prev = GENESIS
+    for e in entries:
+        eid = e.get("id")
+        stored = e.get("entry_hash") or ""
+        n = len(stored) or HASH_LEN                            # verify at the stored length (legacy compat)
+        if "prev_hash" in e:                                   # chained entry
+            if e["prev_hash"] != prev:
+                problems.append((eid, "chain break (entry deleted, inserted, or reordered)"))
+            if stored != _entry_hash(e, e["prev_hash"], n):
+                problems.append((eid, "content/currency tampered (hash mismatch)"))
+        else:                                                  # legacy self-hash
+            if stored and stored != _legacy_hash(e, n):
+                problems.append((eid, "content tampered (legacy hash mismatch)"))
+        # each entry must also balance
+        if sum(_dec(l["debit"]) for l in e["lines"]) != sum(_dec(l["credit"]) for l in e["lines"]):
+            problems.append((eid, "entry does not balance"))
+        prev = e.get("entry_hash") or prev
+    return problems
+
+
+def bank_rows_to_entries(rows: list[dict], *, bank_account: str = "Assets:Bank:Checking") -> list[dict]:
+    """Convert glaw-bank-ingest rows into balanced journal entries (bank leg + contra)."""
+    from statements import _resolve_contra  # local module
+    out = []
+    for r in rows:
+        amt = _dec(r.get("amount"))
+        if amt == 0:
+            continue
+        contra = _resolve_contra(r.get("category"))
+        memo = (r.get("description") or "")[:120]
+        d = str(r.get("booking_date") or "")[:10] or date.today().isoformat()
+        if amt > 0:   # money in: debit bank, credit contra
+            lines = [{"account": bank_account, "debit": amt, "credit": 0},
+                     {"account": contra, "debit": 0, "credit": amt}]
+        else:         # money out: credit bank, debit contra
+            lines = [{"account": bank_account, "debit": 0, "credit": -amt},
+                     {"account": contra, "debit": -amt, "credit": 0}]
+        out.append({"date": d, "memo": memo, "source": r.get("source_method", "bank"),
+                    "lines": lines, "transaction_hash": r.get("transaction_hash"),
+                    "currency": r.get("currency")})
+    return out
+
+
+class Ledger:
+    def __init__(self, book: str = "default", home: Path | None = None):
+        self.book = book
+        self.dir = (home or _home()) / "books" / book
+        self.path = self.dir / "ledger.jsonl"
+        self.meta_path = self.dir / "meta.json"
+        self.index_path = self.dir / "balance-index.json"   # persistent cross-process balance cache
+        self._entries_cache: list[dict] | None = None   # per-instance parse memo (see entries())
+
+    # ---- persistence -------------------------------------------------------
+    def _meta(self) -> dict:
+        if self.meta_path.exists():
+            m = json.loads(self.meta_path.read_text())
+        else:
+            m = {"locked_through": None, "next_id": 1, "seen_hashes": {}}
+        # seen_hashes: O(1) dict membership. Convert a legacy list in place.
+        sh = m.get("seen_hashes")
+        if isinstance(sh, list):
+            m["seen_hashes"] = {h: 1 for h in sh}
+        elif sh is None:
+            m["seen_hashes"] = {}
+        return m
+
+    def _write_meta(self, m: dict) -> None:
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.meta_path.write_text(json.dumps(m, indent=2))
+
+    @contextlib.contextmanager
+    def _lock(self):
+        """Exclusive advisory lock around the read-meta → append → write-meta critical section,
+        so a scheduled-close cron and a manual post can't race (id collision / corrupt meta).
+        No-op on non-POSIX platforms (best effort)."""
+        if fcntl is None:
+            yield
+            return
+        self.dir.mkdir(parents=True, exist_ok=True)
+        with (self.dir / ".lock").open("w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+
+    def entries(self, as_of: str | None = None) -> list[dict]:
+        # parse the file at most once per instance; a single statement/audit op reads it via
+        # balances()+postings()+build() — without the memo that re-parses the whole file 3×.
+        # Invalidated on post()/import; callers treat the result read-only.
+        if self._entries_cache is None:
+            if not self.path.exists():
+                self._entries_cache = []
+            else:
+                self._entries_cache = _parse_jsonl(self.path.read_text().splitlines())
+        if as_of is None:
+            return self._entries_cache
+        cutoff = date.fromisoformat(as_of[:10])
+        return [e for e in self._entries_cache if date.fromisoformat(e["date"]) <= cutoff]
+
+    # ---- posting -----------------------------------------------------------
+    def post(self, je: dict, *, dedupe_hash: str | None = None) -> dict:
+        norm = validate_entry(je)                              # pure validation — no lock needed
+        with self._lock():                                    # serialize the read→append→write
+            meta = self._meta()
+            # period lock: cannot post into or before a locked period
+            if meta.get("locked_through"):
+                if date.fromisoformat(norm["date"]) <= date.fromisoformat(meta["locked_through"]):
+                    raise LedgerError(f"period locked through {meta['locked_through']}; "
+                                      f"cannot post entry dated {norm['date']} (use a reversing entry in an open period)")
+            if dedupe_hash and dedupe_hash in meta.get("seen_hashes", []):
+                return {"skipped": True, "reason": "duplicate", "hash": dedupe_hash}
+            eid = meta.get("next_id", 1)
+            posted_at = datetime.now(timezone.utc).isoformat()
+            payload = {"id": eid, "posted_at": posted_at, **norm}
+            if je.get("transaction_hash"):
+                payload["transaction_hash"] = je["transaction_hash"]
+            if je.get("currency"):
+                payload["currency"] = je["currency"]
+            # tamper-evident CHAIN: prev = the head of the chain. Bridge once from the last
+            # existing entry's hash for a legacy book that has no last_hash recorded yet.
+            prev = meta.get("last_hash")
+            if prev is None:
+                existing = self.entries()
+                prev = existing[-1].get("entry_hash") if existing else GENESIS
+            payload["prev_hash"] = prev
+            payload["entry_hash"] = _entry_hash(payload, prev)
+            self.dir.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a") as fh:
+                fh.write(json.dumps(payload, default=str) + "\n")
+            meta["next_id"] = eid + 1
+            meta["last_hash"] = payload["entry_hash"]
+            if dedupe_hash:
+                meta.setdefault("seen_hashes", {})[dedupe_hash] = 1
+            self._write_meta(meta)
+            self._entries_cache = None                # invalidate the parse memo
+            return {"id": eid, "entry_hash": payload["entry_hash"], "date": norm["date"]}
+
+    def import_bank(self, rows: list[dict], *, bank_account: str = "Assets:Bank:Checking") -> dict:
+        posted, skipped = 0, 0
+        for je in bank_rows_to_entries(rows, bank_account=bank_account):
+            res = self.post(je, dedupe_hash=je.get("transaction_hash"))
+            if res.get("skipped"):
+                skipped += 1
+            else:
+                posted += 1
+        return {"posted": posted, "skipped_duplicates": skipped}
+
+    def post_opening(self, account: str, amount, as_of: str, *, account_type: str = "asset",
+                     equity: str = "Equity:Opening Balance Equity") -> dict:
+        """Post an account's opening balance against Opening Balance Equity so the GL reflects
+        the true starting position (an ongoing company's books don't start at zero).
+        `amount` is the natural-balance magnitude: a debit balance for assets, a credit
+        balance (amount owed) for liabilities. Idempotent per (account, as_of)."""
+        amt = _dec(amount)
+        if amt == 0:
+            return {"skipped": True, "reason": "zero opening"}
+        h = f"opening:{account}:{as_of}"
+        if h in self._meta().get("seen_hashes", []):
+            return {"skipped": True, "reason": "opening already posted"}
+        if account_type == "liability":          # credit-normal: Cr the account, Dr OBE
+            lines = [{"account": equity, "debit": amt, "credit": 0},
+                     {"account": account, "debit": 0, "credit": amt}]
+        else:                                    # asset (debit-normal): Dr the account, Cr OBE
+            lines = [{"account": account, "debit": amt, "credit": 0},
+                     {"account": equity, "debit": 0, "credit": amt}]
+        return self.post({"date": as_of, "memo": f"Opening balance — {account}",
+                          "source": "opening-balance", "lines": lines}, dedupe_hash=h)
+
+    # ---- queries -----------------------------------------------------------
+    def postings(self, as_of: str | None = None) -> list[dict]:
+        """Flatten entries to signed postings: amount = debit - credit (debit positive)."""
+        out = []
+        for e in self.entries(as_of):
+            for ln in e["lines"]:
+                out.append({"date": e["date"], "id": e["id"], "memo": e["memo"],
+                            "account": ln["account"],
+                            "amount": _dec(ln["debit"]) - _dec(ln["credit"])})
+        return out
+
+    def balances(self, as_of: str | None = None) -> dict[str, Decimal]:
+        # historical as-of queries use the full path; the persistent index serves CURRENT balances
+        # incrementally (read only the bytes appended since the index was last built — cross-process,
+        # self-healing, and provably equal to the full recompute).
+        if as_of is not None:
+            bal: dict[str, Decimal] = {}
+            for p in self.postings(as_of):
+                bal[p["account"]] = bal.get(p["account"], Decimal("0")) + p["amount"]
+            return bal
+        return self._current_balances_via_index()
+
+    def _load_index(self) -> dict:
+        if self.index_path.exists():
+            try:
+                idx = json.loads(self.index_path.read_text())
+                if isinstance(idx, dict) and "through_offset" in idx:
+                    return idx
+            except Exception:
+                pass
+        return {"through_offset": 0, "balances": {}}
+
+    def _save_index(self, idx: dict) -> None:
+        try:                                              # atomic write; best-effort (a cache)
+            tmp = self.index_path.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(idx))
+            tmp.replace(self.index_path)
+        except Exception:
+            pass
+
+    def _current_balances_via_index(self) -> dict[str, Decimal]:
+        if not self.path.exists():
+            return {}
+        idx = self._load_index()
+        through = int(idx.get("through_offset", 0))
+        bal = {a: Decimal(v) for a, v in idx.get("balances", {}).items()}
+        size = self.path.stat().st_size
+        if through > size:                                # file shrank (rebuilt/tampered) → rebuild
+            through, bal = 0, {}
+        if through < size:
+            with self.path.open("rb") as fh:
+                fh.seek(through)
+                chunk = fh.read(size - through)
+            # only lines terminated by a newline are committed; a trailing partial line is an
+            # in-flight append by a concurrent post() — leave it for the next read.
+            nl = chunk.rfind(b"\n")
+            consumed = nl + 1 if nl != -1 else 0
+            for line in chunk[:consumed].decode("utf-8", "replace").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    e = json.loads(line)
+                except json.JSONDecodeError:
+                    raise LedgerError("corrupt ledger line in balance-index delta")
+                for ln in e["lines"]:
+                    a = ln["account"]
+                    bal[a] = bal.get(a, Decimal("0")) + _dec(ln["debit"]) - _dec(ln["credit"])
+            through += consumed
+            self._save_index({"through_offset": through, "balances": {a: str(v) for a, v in bal.items()}})
+        return bal
+
+    def gl(self, account: str, frm: str | None = None, to: str | None = None) -> dict:
+        run = Decimal("0")
+        rows = []
+        f = date.fromisoformat(frm) if frm else None
+        for p in self.postings(to):
+            if p["account"] != account:
+                continue
+            d = date.fromisoformat(p["date"])
+            run += p["amount"]                 # running balance includes opening
+            if f and d < f:
+                continue
+            rows.append({"date": p["date"], "id": p["id"], "memo": p["memo"],
+                         "amount": p["amount"], "balance": run})
+        return {"account": account, "rows": rows, "ending_balance": run}
+
+    # ---- controls ----------------------------------------------------------
+    def lock(self, through: str) -> dict:
+        d = date.fromisoformat(through[:10]).isoformat()
+        meta = self._meta()
+        meta["locked_through"] = d
+        self._write_meta(meta)
+        return {"locked_through": d}
+
+    def status(self) -> dict:
+        es = self.entries()
+        return {"book": self.book, "entries": len(es),
+                "locked_through": self._meta().get("locked_through"),
+                "first": es[0]["date"] if es else None,
+                "last": es[-1]["date"] if es else None}
+
+    def close_year(self, year: int, *, retained: str = "Equity:RetainedEarnings") -> dict:
+        """Year-end closing entry: zero Income & Expense into Retained Earnings."""
+        as_of = f"{year}-12-31"
+        # net of income+expense FOR THE YEAR (entries dated in `year`)
+        ytd = {}
+        start = date(year, 1, 1)
+        for p in self.postings(as_of):
+            if date.fromisoformat(p["date"]) < start:
+                continue
+            root = p["account"].split(":", 1)[0]
+            if root in ("Income", "Revenue", "Expenses"):
+                ytd[p["account"]] = ytd.get(p["account"], Decimal("0")) + p["amount"]
+        lines, net = [], Decimal("0")
+        for acct, bal in sorted(ytd.items()):
+            if bal == 0:
+                continue
+            # reverse the account's balance to zero it
+            if bal > 0:   # debit balance (expense) → credit it to close
+                lines.append({"account": acct, "debit": 0, "credit": bal})
+            else:
+                lines.append({"account": acct, "debit": -bal, "credit": 0})
+            net += -bal   # net income = -(sum of I/E signed balances)
+        # no non-zero income/expense to close (no activity, or the year is already closed)
+        if not lines:
+            return {"closed": False, "reason": "no income/expense activity to close (already closed?)"}
+        # plug to retained earnings
+        if net >= 0:
+            lines.append({"account": retained, "debit": 0, "credit": net})
+        else:
+            lines.append({"account": retained, "debit": -net, "credit": 0})
+        res = self.post({"date": as_of, "memo": f"Year-end close {year} → {retained}",
+                         "source": "year-end-close", "lines": lines})
+        return {"closed": True, "year": year, "net_income": net, "entry": res}

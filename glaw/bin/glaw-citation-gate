@@ -1,0 +1,363 @@
+#!/usr/bin/env python3
+"""GLAW citation verification ledger.
+
+This gate records the result of legal-research review. It does not claim to
+perform live Shepardizing offline; it enforces that every cited authority in a
+matter has a recorded verification outcome before final packet readiness.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlparse
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "lib"))
+from glaw_authority_sources import approved_authority_url
+from glaw_groundedness import audit_matter
+from glaw_corpus_freshness import (
+    DEFAULT_MAX_AGE_DAYS,
+    freshness_failure as _shared_freshness_failure,
+)
+
+
+BLOCKING = {"pending", "needs-substitute", "struck", "weak"}
+DEFECT_TYPES = {"incorrect", "misgrounded", "ungrounded", "incomplete"}
+NONE_DEFECTS = {"", "none", "verified"}
+LEGAL_RESEARCH_REVIEWERS = {"legal-research", "glaw-legal-research", "/glaw-legal-research"}
+APPROVED_CORPUS_TRUST = {"authoritative", "authenticated-copy"}
+def valid_http_url(value: str) -> bool:
+    parsed = urlparse(str(value).strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def valid_legal_research_reviewer(value: str) -> bool:
+    normalized = str(value).strip().lower().replace("_", "-")
+    return normalized in LEGAL_RESEARCH_REVIEWERS
+
+
+def normalized_defect_type(value: str) -> str:
+    return str(value or "").strip().lower().replace("_", "-")
+
+
+def verified_row_incomplete(row: dict, corpus: dict[str, dict] | None = None) -> bool:
+    corpus = corpus or {}
+    return (
+        row.get("status") == "verified"
+        and (
+            not str(row.get("proposition", "")).strip()
+            or not str(row.get("authority", "")).strip()
+            or not valid_legal_research_reviewer(str(row.get("reviewer", "")))
+            or not valid_http_url(str(row.get("source_url", "")))
+            or not str(row.get("support_summary", "")).strip()
+            or normalized_defect_type(row.get("defect_type", "")) not in NONE_DEFECTS
+            or bool(corpus_failure(row, corpus))
+        )
+    )
+
+
+def blocking_defect_missing(row: dict) -> bool:
+    status = str(row.get("status", "")).lower()
+    defect = normalized_defect_type(row.get("defect_type", ""))
+    return status in BLOCKING and defect not in DEFECT_TYPES
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def corpus_freshness_failure(row: dict, corpus_id: str, max_age_days: int = DEFAULT_MAX_AGE_DAYS) -> str:
+    return _shared_freshness_failure(row, corpus_id, max_age_days=max_age_days, style="corpus")
+
+
+def home() -> Path:
+    return Path(os.environ.get("GLAW_HOME", str(Path.home() / ".glaw")))
+
+
+def active_slug() -> str:
+    p = home() / ".active"
+    return p.read_text(encoding="utf-8").strip() if p.exists() else ""
+
+
+def matter_dir(slug: str | None) -> Path:
+    s = slug or active_slug()
+    if not s:
+        raise SystemExit("ERROR: no active matter. Run `glaw matter new \"<name>\"` first.")
+    d = home() / "matters" / s
+    if not d.is_dir():
+        raise SystemExit(f"ERROR: matter not found: {s}")
+    return d
+
+
+def ledger_path(d: Path) -> Path:
+    return d / "citations.jsonl"
+
+
+def corpus_path(d: Path) -> Path:
+    return d / "citation_corpus.jsonl"
+
+
+def append_jsonl(path: Path, row: dict) -> None:
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, sort_keys=False) + "\n")
+
+
+def row_hash(row: dict) -> str:
+    payload = dict(row)
+    payload.pop("row_hash", None)
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def stamp_row_hash(row: dict) -> dict:
+    row["row_hash"] = row_hash(row)
+    return row
+
+
+def validate_row_hashes(rows: list[dict], ledger_name: str) -> list[str]:
+    failures = []
+    for idx, row in enumerate(rows, start=1):
+        expected = row.get("row_hash")
+        if not expected:
+            failures.append(f"{ledger_name}:{idx} missing row_hash")
+        elif expected != row_hash(row):
+            failures.append(f"{ledger_name}:{idx} row_hash mismatch")
+    return failures
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    rows = []
+    for idx, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"ERROR: {path.name}:{idx} invalid JSON: {exc.msg}") from exc
+    return rows
+
+
+def latest_by_id(rows: list[dict]) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for row in rows:
+        out[str(row.get("id", ""))] = row
+    return out
+
+
+def corpus_rows(d: Path) -> tuple[dict[str, dict], list[str]]:
+    rows = read_jsonl(corpus_path(d))
+    failures = validate_row_hashes(rows, corpus_path(d).name)
+    latest = latest_by_id(rows)
+    for cid, row in latest.items():
+        source_path = d / str(row.get("source_path", ""))
+        if not source_path.is_file():
+            failures.append(f"corpus {cid} source_path missing")
+            continue
+        text = source_path.read_text(encoding="utf-8", errors="replace")
+        if hashlib.sha256(text.encode("utf-8")).hexdigest() != row.get("source_sha256"):
+            failures.append(f"corpus {cid} source_path hash mismatch")
+        segment = str(row.get("segment", ""))
+        if not segment or segment not in text:
+            failures.append(f"corpus {cid} segment missing from source text")
+        elif hashlib.sha256(segment.encode("utf-8")).hexdigest() != row.get("segment_sha256"):
+            failures.append(f"corpus {cid} segment hash mismatch")
+        stale = corpus_freshness_failure(row, cid)
+        if stale:
+            failures.append(stale)
+    return latest, failures
+
+
+def corpus_failure(row: dict, corpus: dict[str, dict]) -> str:
+    corpus_id = str(row.get("corpus_id", "")).strip()
+    if not corpus_id:
+        return "verified row missing corpus_id"
+    item = corpus.get(corpus_id)
+    if not item:
+        return f"verified row corpus_id not found: {corpus_id}"
+    if str(item.get("source_url", "")).strip() != str(row.get("source_url", "")).strip():
+        return f"verified row source_url does not match corpus {corpus_id}"
+    if not str(item.get("source_sha256", "")).strip() or not str(item.get("segment_sha256", "")).strip():
+        return f"corpus {corpus_id} missing hashes"
+    if row.get("source_sha256") and row.get("source_sha256") != item.get("source_sha256"):
+        return f"verified row source hash does not match corpus {corpus_id}"
+    if row.get("segment_sha256") and row.get("segment_sha256") != item.get("segment_sha256"):
+        return f"verified row segment hash does not match corpus {corpus_id}"
+    if item.get("trust_level") not in APPROVED_CORPUS_TRUST:
+        return f"corpus {corpus_id} is not authoritative: trust={item.get('trust_level', 'untrusted')}"
+    if not approved_authority_url(str(item.get("source_url", ""))):
+        return f"corpus {corpus_id} source domain is not approved for legal authority"
+    stale = corpus_freshness_failure(item, corpus_id)
+    if stale:
+        return stale
+    return ""
+
+
+def timeline(d: Path, event: str, **extra: object) -> None:
+    append_jsonl(d / "timeline.jsonl", {"ts": now(), "event": event, **extra})
+
+
+def cmd_record(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    corpus_item: dict = {}
+    if args.status == "verified":
+        missing = []
+        if not args.proposition.strip():
+            missing.append("--proposition")
+        if not args.authority.strip():
+            missing.append("--authority")
+        if not valid_legal_research_reviewer(args.reviewer):
+            missing.append("--reviewer legal-research")
+        if not valid_http_url(args.source_url):
+            missing.append("--source-url valid http(s)")
+        elif not approved_authority_url(args.source_url):
+            missing.append("--source-url approved authority source")
+        if not args.support_summary.strip():
+            missing.append("--support-summary")
+        if not args.corpus_id.strip():
+            missing.append("--corpus-id")
+        if normalized_defect_type(args.defect_type) not in NONE_DEFECTS:
+            missing.append("--defect-type none for verified")
+        corpus, corpus_failures = corpus_rows(d)
+        if corpus_failures:
+            missing.append("valid citation corpus")
+        corpus_item = corpus.get(args.corpus_id.strip(), {})
+        if args.corpus_id.strip() and not corpus_item:
+            missing.append("--corpus-id existing corpus record")
+        if corpus_item and corpus_item.get("source_url") != args.source_url:
+            missing.append("--source-url matching corpus")
+        if corpus_item and corpus_failure({"corpus_id": args.corpus_id.strip(), "source_url": args.source_url}, corpus):
+            missing.append("authoritative citation corpus")
+        if missing:
+            print("ERROR: verified citations require " + ", ".join(missing), file=sys.stderr)
+            return 2
+    else:
+        if normalized_defect_type(args.defect_type) not in DEFECT_TYPES:
+            print(
+                "ERROR: blocking citation statuses require --defect-type "
+                "incorrect|misgrounded|ungrounded|incomplete",
+                file=sys.stderr,
+            )
+            return 2
+    row = {
+        "ts": now(),
+        "id": args.id,
+        "proposition": args.proposition,
+        "authority": args.authority,
+        "status": args.status,
+        "defect_type": "none" if args.status == "verified" else normalized_defect_type(args.defect_type),
+        "support_summary": args.support_summary,
+        "corpus_id": args.corpus_id,
+        "source_sha256": corpus_item.get("source_sha256", "") if args.status == "verified" else "",
+        "segment_sha256": corpus_item.get("segment_sha256", "") if args.status == "verified" else "",
+        "source_url": args.source_url,
+        "reviewer": args.reviewer,
+        "notes": args.notes,
+    }
+    append_jsonl(ledger_path(d), stamp_row_hash(row))
+    timeline(d, "citation_review", id=args.id, status=args.status)
+    print(f"RECORDED citation {args.id}: {args.status}")
+    return 0
+
+
+def blockers(rows: list[dict], corpus: dict[str, dict]) -> list[dict]:
+    latest = latest_by_id(rows)
+    return [
+        row for row in latest.values()
+        if not row.get("id")
+        or str(row.get("status", "")).lower() in BLOCKING
+        or verified_row_incomplete(row, corpus)
+        or blocking_defect_missing(row)
+    ]
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    rows = read_jsonl(ledger_path(d))
+    hash_failures = validate_row_hashes(rows, ledger_path(d).name)
+    if hash_failures:
+        print("CITATIONS BLOCKED: ledger row hash failure")
+        for failure in hash_failures:
+            print(f"  {failure}")
+        return 1
+    corpus, corpus_failures = corpus_rows(d)
+    if corpus_failures:
+        print("CITATIONS BLOCKED: corpus failure")
+        for failure in corpus_failures:
+            print(f"  {failure}")
+        return 1
+    bad = blockers(rows, corpus)
+    latest = latest_by_id(rows)
+    print(f"CITATIONS {d.name}: {len(latest)} reviewed, {len(bad)} blocking")
+    for row in latest.values():
+        defect = normalized_defect_type(row.get("defect_type", ""))
+        defect_note = f" [{defect}]" if defect and defect not in NONE_DEFECTS else ""
+        print(f"  {row.get('id')} {row.get('status')}{defect_note}: {row.get('authority')}")
+    if not rows:
+        print("CITATIONS BLOCKED: no citation verification ledger")
+        return 1
+    if bad:
+        print("CITATIONS BLOCKED")
+        return 1
+    print("CITATIONS READY")
+    return 0
+
+
+def cmd_complete(args: argparse.Namespace) -> int:
+    d = matter_dir(args.matter)
+    rc = cmd_status(args)
+    if rc != 0:
+        return rc
+    groundedness = audit_matter(d)
+    groundedness["ts"] = now()
+    groundedness["matter"] = d.name
+    (d / "groundedness.json").write_text(
+        json.dumps(groundedness, indent=2, sort_keys=False) + "\n",
+        encoding="utf-8",
+    )
+    if groundedness["status"] != "pass":
+        print("CITATIONS BLOCKED: groundedness audit failed")
+        for failure in groundedness.get("failures", []):
+            print(f"  {failure}")
+        return 1
+    timeline(d, "citations_verified")
+    timeline(d, "citation_gate_complete")
+    print("CITATIONS COMPLETE")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="glaw-citation-gate")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("record")
+    p.add_argument("--id", required=True)
+    p.add_argument("--proposition", required=True)
+    p.add_argument("--authority", required=True)
+    p.add_argument("--status", required=True, choices=["verified", "weak", "needs-substitute", "struck", "pending"])
+    p.add_argument("--defect-type", default="")
+    p.add_argument("--support-summary", default="")
+    p.add_argument("--corpus-id", default="")
+    p.add_argument("--source-url", default="")
+    p.add_argument("--reviewer", default="")
+    p.add_argument("--notes", default="")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_record)
+    p = sub.add_parser("status")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_status)
+    p = sub.add_parser("complete")
+    p.add_argument("--matter", default=None)
+    p.set_defaults(func=cmd_complete)
+    args = ap.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
