@@ -1,41 +1,28 @@
 ---
 name: handoff
-description: Compact the current conversation into a handoff document for another agent to pick up. References existing artifacts (PRDs, plans, ADRs, issues, commits, diffs) by path or URL instead of duplicating them. Use when user wants to hand off the conversation to a fresh agent or starts a new session that picks up prior work.
-argument-hint: "What will the next session be used for?"
-license: MIT
-metadata:
-  derived_from: "https://github.com/mattpocock/skills/tree/main/skills/productivity/handoff"
-  original_author: "Matt Pocock (@mattpocock)"
-  original_license: MIT
-  voice: "Matt Pocock — no-duplication, reference-existing-artifacts, tailored to next-session focus"
-  version: 1.0.0
+description: 仅当用户显式调用 `$handoff`，或明确要求生成会话交接文档时使用。将当前对话压缩为脱敏、可执行的交接文档，供下一个 agent 接续工作；不要自动触发。
 ---
 
-# Handoff
+撰写一份交接文档，总结当前对话内容，使全新的 agent 能够无缝继续工作。
 
-> Derived from [Matt Pocock's handoff](https://github.com/mattpocock/skills/tree/main/skills/productivity/handoff) (MIT). Matt's no-duplication discipline preserved verbatim. Additions: tools + references + cs-* wrapper (see [references/companion_tooling.md](references/companion_tooling.md)).
+## 输出位置
 
-Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save it to a path produced by `mktemp -t handoff-XXXXXX.md` (read the file before you write to it).
+先解析当前平台的系统临时目录，再保存为 `handoff-YYYY-MM-DD-HHMM.md`（用实际时间戳替换）。优先使用平台 API，例如 Python 的 `tempfile.gettempdir()`；在 Unix 环境可使用 `$TMPDIR`，未设置时回退到 `/tmp`。生成后告知用户完整绝对路径。
 
-Suggest the skills to be used, if any, by the next session.
+## 文档结构
 
-Do not duplicate content already captured in other artifacts (PRDs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
+按以下结构组织交接文档：
 
-If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
+1. **背景与目标** — 一句话概述当前任务
+2. **已完成工作** — 带路径/URL 引用
+3. **当前状态** — 进展到哪一步、卡在哪里
+4. **待办事项** — 下一个 agent 需要做什么
+5. **推荐技能** — 建议调用的 skill 列表
+6. **关键上下文** — 环境、分支、配置等必要信息
 
-## Sections
+## 规则
 
-- **Goal of next session** (from user argument or inferred)
-- **State of play** (what's done, what's blocking)
-- **Open decisions** (what the next agent must decide)
-- **Skills to use** (concrete list)
-- **Artifacts** (paths/URLs to PRDs, plans, ADRs, issues, branches, PRs — do not duplicate)
-
-## Tooling
-
-See [references/companion_tooling.md](references/companion_tooling.md). Tools: template + dedup + recommender. Agent: `cs-handoff-author`. Command: `/cs:handoff`.
-
----
-
-**Version:** 1.0.0
-**Derived:** Matt Pocock (MIT) + this repo's wrapper
+- 不要重复已存在于其他产物（规格文档、计划、ADR、issue、commit、diff）中的内容，改为通过路径或 URL 引用。
+- 脱敏处理：删除 API key、密码、个人身份信息等敏感内容。
+- 如果用户传入了参数，将其视为下一次会话的重点方向，据此调整文档内容。
+- 如果当前对话极短（少于 3 轮实质交流），直接告知用户无需生成交接文档，除非用户坚持。

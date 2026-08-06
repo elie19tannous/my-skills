@@ -1,9 +1,14 @@
 ---
 name: imagen
-description: "AI image generation skill powered by Google Gemini, enabling seamless visual content creation for UI placeholders, documentation, and design assets."
-risk: safe
-source: "https://github.com/sanjay3290/ai-skills/tree/main/skills/imagen"
-date_added: "2026-02-27"
+description: |
+  Generate images using Google Gemini's image generation capabilities.
+  Use this skill when the user needs to create, generate, or produce images
+  for any purpose including UI mockups, icons, illustrations, diagrams,
+  concept art, placeholder images, or visual representations.
+license: Apache-2.0
+metadata:
+  author: sanjay3290
+  version: "1.0"
 ---
 
 # Imagen - AI Image Generation Skill
@@ -76,8 +81,3 @@ User: "Create a diagram showing microservices architecture"
 User: "Generate a placeholder avatar image for the user profile component"
 -> Creates image in appropriate size for component use
 ```
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

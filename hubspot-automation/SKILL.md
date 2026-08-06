@@ -1,14 +1,16 @@
 ---
 name: hubspot-automation
-description: "Automate HubSpot CRM operations (contacts, companies, deals, tickets, properties) via Rube MCP using Composio integration."
-risk: critical
-source: community
-date_added: "2026-02-27"
+description: Automate HubSpot CRM operations (contacts, companies, deals, tickets, properties) via Rube MCP using Composio integration.
+requires:
+  mcp: [rube]
+category: crm
 ---
 
 # HubSpot CRM Automation via Rube MCP
 
 Automate HubSpot CRM workflows including contact/company management, deal pipeline tracking, ticket search, and custom property creation through Composio's HubSpot toolkit.
+
+**Toolkit docs**: [composio.dev/toolkits/hubspot](https://composio.dev/toolkits/hubspot)
 
 ## Prerequisites
 
@@ -19,6 +21,7 @@ Automate HubSpot CRM workflows including contact/company management, deal pipeli
 ## Setup
 
 **Get Rube MCP**: Add `https://rube.app/mcp` as an MCP server in your client configuration. No API keys needed — just add the endpoint and it works.
+
 
 1. Verify Rube MCP is available by confirming `RUBE_SEARCH_TOOLS` responds
 2. Call `RUBE_MANAGE_CONNECTIONS` with toolkit `hubspot`
@@ -176,11 +179,5 @@ Automate HubSpot CRM workflows including contact/company management, deal pipeli
 | Create property | `HUBSPOT_CREATE_PROPERTY_FOR_SPECIFIED_OBJECT_TYPE` | `objectType, name, label, type, fieldType` |
 | Get owners | `HUBSPOT_RETRIEVE_OWNERS` | None |
 | Verify connection | `HUBSPOT_GET_ACCOUNT_INFO` | None |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*

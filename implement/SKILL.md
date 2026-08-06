@@ -1,32 +1,58 @@
 ---
 name: implement
-description: Implement a piece of work based on a PRD or set of issues.
-risk: unknown
-source: https://github.com/mattpocock/skills/tree/main/skills/engineering/implement
-source_repo: mattpocock/skills
-source_type: community
-date_added: 2026-07-01
-license: MIT
-license_source: https://github.com/mattpocock/skills/blob/main/LICENSE
+description: "Load code-style and task-specific skills, make the change described by the current context, then run post-implementation QA. Use for ad-hoc changes when no plan file or improvements backlog governs the work, and when the user asks to \"just implement\", \"implement directly\", \"implement without a plan\", or \"apply the change\"."
 ---
 
+# Implement
 
-## When to Use
+Standard implementation flow: load style rules, make the change, run post-implementation QA.
 
-Use this skill when you need implement a piece of work based on a PRD or set of issues.
+## Task Tracking
 
-Implement the work described by the user in the PRD or issues.
+At the start, use `TaskCreate` to create a task for each step:
 
-Use /tdd where possible, at pre-agreed seams.
+1. Run `/code-style` skill
+2. Load task-specific skills
+3. Make the change
+4. Run verification
+5. Run `/preview` skill for UI/UX changes
+6. Post-implementation QA
 
-Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+## Step 1: Run `/code-style` Skill
 
-Once done, use /review to review the work.
+Run the `/code-style` skill to load existence, reuse, mirror, and symmetry rules before editing.
 
-Commit your work to the current branch.
+## Step 2: Load Task-Specific Skills
 
-## Limitations
+Scan the work for types that match available skills, matching against the richest context available: a plan's **Implementation Steps** if a plan is in conversation context, otherwise the user request, a prior skill's task description, or an improvement entry. For each unambiguous match, run the skill via the Skill tool. For example, if the work includes "add a Drizzle migration" and a skill exists whose triggers reference Drizzle migrations, load it. If a work type has no matching skill trigger, do not load a generic skill.
 
-- Use this skill only when the task clearly matches its upstream source and local project context.
-- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
-- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.
+If unsure, do not load.
+
+## Step 3: Make the Change
+
+Apply the change described by the current context — the user request, a prior skill's task description, or an improvement entry. Keep the edit scoped to what the context describes. If the scope balloons beyond what the context specified, stop and confirm scope before continuing.
+
+## Step 4: Run Verification
+
+If a Verification section is in conversation context (e.g., from a plan file), execute the commands, smoke checks, or MCP tool invocations it specifies. If a check fails, run the `/investigate` skill. If a check is blocked by a dependency, unclear requirement, or environmental issue, use `AskUserQuestion` to surface the blocker and let the user choose how to proceed. If no Verification section is in context, skip this step.
+
+## Step 5: Run `/preview` Skill for UI/UX Changes
+
+If the change touches a user-facing surface (UI components, styles, templates, markup, user-facing routes or screens), run the `/preview` skill so the user can try it firsthand before QA. When it is unclear whether the change is user-facing, use `AskUserQuestion` to ask whether to preview rather than skipping silently. Skip this step for changes with no user-facing surface (backend-only, CLI, library, build or config).
+
+## Step 6: Post-Implementation QA
+
+When a plan file governs the work, hold this step until every Implementation Step has been applied, and continue to the next Implementation Step at every earlier boundary. Then run the `/finalize` skill.
+
+When no plan file governs the work, use `AskUserQuestion` to offer three options:
+
+- **Full QA** — run the `/finalize` skill
+- **Lighter pass** — run the `/simplify-all` skill
+- **Stop here** — leave the change as-is
+
+Then use the TaskList tool and proceed to any remaining task.
+
+## Rules
+
+- Defer `git commit`, `git push`, and PR creation to Step 6.
+- Don't reference `.turbo/` content (filenames, requirement IDs, shell references, headings) in code or comments. `.turbo/` is gitignored, so these references would be opaque to anyone reading without local copies.
