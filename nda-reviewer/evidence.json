@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "nda-reviewer",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "This skill encodes an NDA-review methodology, not jurisdiction-specific legal facts. Claims below are about the method and the authoritative standards it aligns to (trade-secret protection, market-standard NDA norms), plus the local script self-check. No live NDA review was performed. Enforceability of specific clauses (non-compete, liquidated damages) is deliberately out of scope and routed to local counsel.",
+  "claims": [
+    {
+      "claim_id": "nda-is-confidentiality-not-assignment",
+      "claim": "An NDA is a confidentiality instrument; a clause that assigns IP, grants a licence beyond the stated purpose, or binds only one side converts it into a one-sided transfer. Review by what the clause does, not the document title.",
+      "source_url": "local:references/nda-review-checklist.md",
+      "raw_snippet": "Correct default: express statement that no licence or ownership of IP is granted except the limited right to use the info for the defined purpose.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Core rule", "SKILL.md Step 6", "SKILL_HE.md כלל ליבה", "references/nda-review-checklist.md", "references/standard-clauses.md"]
+    },
+    {
+      "claim_id": "five-standard-carve-outs",
+      "claim": "A fair NDA excludes information that is (1) already public, (2) already known to the recipient, (3) independently developed, (4) rightfully received from a third party, and (5) required to be disclosed by law/court order (with notice + cooperation). Missing carve-outs are a red flag.",
+      "source_url": "local:references/standard-clauses.md",
+      "raw_snippet": "Confidential Information does not include information that: (a) is or becomes public through no breach; (b) was known before disclosure; (c) is independently developed; (d) is rightfully received from a third party; or (e) is required to be disclosed by law or court order, with prompt notice and cooperation.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "references/nda-review-checklist.md", "references/standard-clauses.md"]
+    },
+    {
+      "claim_id": "term-vs-survival-and-trade-secret",
+      "claim": "The agreement term and the survival of the confidentiality obligation are separate clocks; typical survival is 2-5 years for ordinary business information, with indefinite protection appropriate only for genuine trade secrets, tracking trade-secret law.",
+      "source_url": "https://www.wipo.int/tradesecrets/en/",
+      "raw_snippet": "WIPO: a trade secret is protected for as long as it remains secret; NDAs are the primary contractual mechanism to preserve that secrecy.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 5", "SKILL_HE.md שלב 5", "references/nda-review-checklist.md", "SKILL.md Reference Links"]
+    },
+    {
+      "claim_id": "feedback-clause-is-ip-assignment",
+      "claim": "A clause making feedback, suggestions, or improvements the discloser's property is an IP assignment wearing a friendly label and is a high-severity trap in evaluation/demo NDAs.",
+      "source_url": "local:references/standard-clauses.md",
+      "raw_snippet": "Red flag: 'feedback becomes Discloser's property'; 'improvements to Discloser's IP belong to Discloser'. Balanced: 'no rights in feedback transferred; each party retains its own IP'.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 6", "SKILL.md Gotchas", "SKILL_HE.md שלב 6", "references/standard-clauses.md"]
+    },
+    {
+      "claim_id": "enforceability-out-of-scope",
+      "claim": "Enforceability of clauses such as non-competes or liquidated damages is jurisdiction-specific and out of scope; the skill flags such clauses and routes the validity question to local counsel rather than opining on it.",
+      "source_url": "local:SKILL.md",
+      "raw_snippet": "Do not give a jurisdiction-specific enforceability opinion; distinguish unfair (negotiate) from unenforceable (legal question) from unusual-but-acceptable.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 8", "SKILL.md Gotchas", "SKILL.md Troubleshooting", "SKILL_HE.md שלב 8"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled nda_scanner.py is Python stdlib only (no network, no third-party deps) and ships an embedded self-check runnable via --selftest, which passes.",
+      "source_url": "local:scripts/nda_scanner.py",
+      "raw_snippet": "`python scripts/nda_scanner.py --selftest` prints 'selftest OK'. Verified 2026-07-09 on python3.11. Flags mutuality, missing carve-outs, perpetual/long term, and IP/feedback/licence traps; does not decide fairness or enforceability.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/nda_scanner.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}

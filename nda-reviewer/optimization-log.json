@@ -1,0 +1,33 @@
+{
+  "skill": "nda-reviewer",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Authored the nda-reviewer skill to the standard Lawcal legal-tech package: SKILL.md (English), SKILL_HE.md (Hebrew mirror), two references (nda-review-checklist, standard-clauses), an offline stdlib-only NDA clause flagger, metadata.json, evidence.json, and this log. The skill is general and cross-jurisdiction (NOT Israeli-specific) and reviews for one-sided terms, term/survival length, missing carve-outs, and IP-assignment traps. Its central discipline is reading a clause by what it does, not the document title, and routing enforceability questions to counsel. Ran the script self-check (--selftest: OK).",
+      "changes": [
+        {"type": "package", "id": "skill-md", "detail": "Authored SKILL.md: deal context, mutuality/balance tests, definition scope, the five standard carve-outs, term/survival/return, the IP/licence/feedback trap catalogue, prioritized redline, anti-overreach discipline, examples, gotchas, reference links, troubleshooting."},
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the instructions, examples, gotchas, and reference links."},
+        {"type": "package", "id": "references", "detail": "Added references/nda-review-checklist.md (end-to-end review pass) and references/standard-clauses.md (model balanced language + red-flag patterns for each common clause)."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 6 claims sourced to the method references, WIPO trade-secret guidance, and the local script self-check."},
+        {"type": "test", "id": "script-selftest", "detail": "Verified scripts/nda_scanner.py --selftest passes on python3.11 (stdlib only, no network)."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-enforceability-opinion",
+          "reason": "Whether a specific clause (non-compete, liquidated damages, choice of law) is enforceable is jurisdiction-specific and requires local counsel. The skill deliberately flags such clauses and routes the validity question rather than opining, to avoid giving wrong jurisdiction-specific advice.",
+          "status": "deferred"
+        },
+        {
+          "id": "D2-scanner-fairness-verdict",
+          "reason": "Deciding whether a clause is fair (vs merely present) requires reading the clause and knowing the deal direction and leverage. The scanner deliberately stops at pattern-based flagging and defers the fairness call to the human/agent.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

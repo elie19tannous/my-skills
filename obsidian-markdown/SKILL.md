@@ -1,209 +1,141 @@
 ---
 name: obsidian-markdown
-description: Create and edit Obsidian Flavored Markdown with wikilinks, embeds, callouts, properties, and other Obsidian-specific syntax. Use when working with .md files in Obsidian, or when the user mentions wikilinks, callouts, frontmatter, tags, embeds, or Obsidian notes.
-risk: unknown
-source: "https://github.com/kepano/obsidian-skills"
-date_added: "2026-03-21"
+description: "Explain, draft, or validate Obsidian Flavored Markdown syntax: properties, wikilinks, embeds, callouts, tags, comments, highlights, block references, math, and Mermaid. Use when the user explicitly requests Obsidian note formatting or syntax help, not for general Markdown or broad vault operations."
 ---
 
-# Obsidian Flavored Markdown Skill
+# Obsidian Flavored Markdown
 
-Create and edit valid Obsidian Flavored Markdown. Obsidian extends CommonMark and GFM with wikilinks, embeds, callouts, properties, comments, and other syntax. This skill covers only Obsidian-specific extensions -- standard Markdown (headings, bold, italic, lists, quotes, code blocks, tables) is assumed knowledge.
+Use this as a compact fallback for Obsidian-specific syntax. Prefer a separately
+installed `kepano/obsidian-skills` `obsidian-markdown` skill when available,
+then current [Obsidian Help](https://help.obsidian.md/), for detailed or
+version-sensitive questions.
 
-## When to Use
-- Use when writing or editing Markdown notes intended for Obsidian.
-- Use when the task involves wikilinks, embeds, callouts, frontmatter properties, or Obsidian-specific syntax.
-- Use when the user wants notes that render correctly inside an Obsidian vault.
+Resolve the installed product root from this skill's own location, not from the
+vault or current working directory:
 
-## Workflow: Creating an Obsidian Note
-
-1. **Add frontmatter** with properties (title, tags, aliases) at the top of the file. See [PROPERTIES.md](references/PROPERTIES.md) for all property types.
-2. **Write content** using standard Markdown for structure, plus Obsidian-specific syntax below.
-3. **Link related notes** using wikilinks (`[[Note]]`) for internal vault connections, or standard Markdown links for external URLs.
-4. **Embed content** from other notes, images, or PDFs using the `![[embed]]` syntax. See [EMBEDS.md](references/EMBEDS.md) for all embed types.
-5. **Add callouts** for highlighted information using `> [!type]` syntax. See [CALLOUTS.md](references/CALLOUTS.md) for all callout types.
-6. **Verify** the note renders correctly in Obsidian's reading view.
-
-> When choosing between wikilinks and Markdown links: use `[[wikilinks]]` for notes within the vault (Obsidian tracks renames automatically) and plain Markdown links for external URLs only.
-
-## Internal Links (Wikilinks)
-
-```markdown
-[[Note Name]]                          Link to note
-[[Note Name|Display Text]]             Custom display text
-[[Note Name#Heading]]                  Link to heading
-[[Note Name#^block-id]]                Link to block
-[[#Heading in same note]]              Same-note heading link
+```bash
+PRODUCT_ROOT=/absolute/path/to/installed/claude-obsidian
+CORE="$PRODUCT_ROOT/scripts/claude-obsidian.py"
+test -f "$CORE"
 ```
 
-Define a block ID by appending `^block-id` to any paragraph:
+Answer syntax questions read-only. If the user requests a vault edit, draft the
+complete note, read [operation-transactions.md](../wiki/references/operation-transactions.md),
+and build one `claude-obsidian.transaction.v1` bundle with
+`operation_type: markdown` and only `wiki/` targets. Inspect it, then set
+`APPROVAL_SHA256` to the returned `approval_sha256` after review and apply it
+through the same vault-bound plan. A canonical page create or removal includes
+an active index or MOC update in that bundle; update the overview only when its
+stable high-level synthesis changed:
 
-```markdown
-This paragraph can be linked to. ^my-block-id
+```bash
+python3 "$CORE" transaction inspect "$BUNDLE" --vault "$VAULT"
+python3 "$CORE" transaction apply "$BUNDLE" --vault "$VAULT" \
+  --approved-plan-sha256 "$APPROVAL_SHA256"
 ```
 
-For lists and quotes, place the block ID on a separate line after the block:
+Never write a note directly.
 
-```markdown
-> A quote block
+## Properties
 
-^quote-id
+Use flat YAML properties and `YYYY-MM-DD` dates. Quote wikilinks inside YAML.
+
+```yaml
+---
+type: concept
+title: "Contextual Retrieval"
+created: 2026-07-11
+updated: 2026-07-11
+status: developing
+tags:
+  - retrieval
+  - ai/knowledge
+aliases:
+  - Context-aware retrieval
+related:
+  - "[[Retrieval]]"
+sources:
+  - "[[Anthropic Contextual Retrieval]]"
+---
 ```
 
-## Embeds
+Do not nest objects in generated wiki properties. Use block lists rather than
+inline YAML arrays. Quote numeric-only tag values, for example `- "2026"`, so
+YAML parsers preserve them as tags instead of numbers. Keep unknown existing
+properties unless the requested edit changes them.
 
-Prefix any wikilink with `!` to embed its content inline:
+## Wikilinks and embeds
 
 ```markdown
-![[Note Name]]                         Embed full note
-![[Note Name#Heading]]                 Embed section
-![[image.png]]                         Embed image
-![[image.png|300]]                     Embed image with width
-![[document.pdf#page=3]]               Embed PDF page
+[[Note Name]]
+[[Note Name|Display text]]
+[[Note Name#Heading]]
+[[Note Name#^block-id]]
+[[Folder/Note Name]]
+
+This paragraph is addressable. ^evidence-block
+
+![[Note Name#Summary]]
+![[diagram.png|480]]
+![[paper.pdf#page=3]]
 ```
 
-See [EMBEDS.md](references/EMBEDS.md) for audio, video, search embeds, and external images.
+Match the target filename exactly. Use a vault-relative folder path when a
+basename is ambiguous. Use standard Markdown links for external URLs; use
+wikilinks for this vault's notes.
 
 ## Callouts
 
 ```markdown
 > [!note]
-> Basic callout.
+> Supporting context.
 
-> [!warning] Custom Title
-> Callout with a custom title.
+> [!warning] Review required
+> This claim has contradictory evidence.
 
-> [!faq]- Collapsed by default
-> Foldable callout (- collapsed, + expanded).
+> [!question]- Open question
+> What evidence would resolve this?
 ```
 
-Common types: `note`, `tip`, `warning`, `info`, `example`, `quote`, `bug`, `danger`, `success`, `failure`, `question`, `abstract`, `todo`.
+`-` starts collapsed and `+` starts expanded. Common built-in types include
+`note`, `abstract`, `info`, `todo`, `tip`, `success`, `question`, `warning`,
+`failure`, `danger`, `bug`, `example`, and `quote`. Preserve custom vault
+callout types rather than rewriting them.
 
-See [CALLOUTS.md](references/CALLOUTS.md) for the full list with aliases, nesting, and custom CSS callouts.
-
-## Properties (Frontmatter)
-
-```yaml
----
-title: My Note
-date: 2024-01-15
-tags:
-  - project
-  - active
-aliases:
-  - Alternative Name
-cssclasses:
-  - custom-class
----
-```
-
-Default properties: `tags` (searchable labels), `aliases` (alternative note names for link suggestions), `cssclasses` (CSS classes for styling).
-
-See [PROPERTIES.md](references/PROPERTIES.md) for all property types, tag syntax rules, and advanced usage.
-
-## Tags
-
-```markdown
-#tag                    Inline tag
-#nested/tag             Nested tag with hierarchy
-```
-
-Tags can contain letters, numbers (not first character), underscores, hyphens, and forward slashes. Tags can also be defined in frontmatter under the `tags` property.
-
-## Comments
-
-```markdown
-This is visible %%but this is hidden%% text.
-
-%%
-This entire block is hidden in reading view.
-%%
-```
-
-## Obsidian-Specific Formatting
-
-```markdown
-==Highlighted text==                   Highlight syntax
-```
-
-## Math (LaTeX)
-
-```markdown
-Inline: $e^{i\pi} + 1 = 0$
-
-Block:
-$$
-\frac{a}{b} = c
-$$
-```
-
-## Diagrams (Mermaid)
+## Other Obsidian syntax
 
 ````markdown
+#inline-tag #nested/tag
+
+==Highlighted text==
+
+Visible text %%hidden comment%%
+
+Inline math: $E = mc^2$
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
+
 ```mermaid
-graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Do this]
-    B -->|No| D[Do that]
+flowchart LR
+  Source --> Claim
 ```
 ````
 
-To link Mermaid nodes to Obsidian notes, add `class NodeName internal-link;`.
+Standard CommonMark/GFM headings, lists, tasks, tables, code fences, and
+footnotes remain valid. Avoid HTML when native Markdown is sufficient.
 
-## Footnotes
+## Validate a drafted note
 
-```markdown
-Text with a footnote[^1].
+- Parse the YAML boundary and keep property types consistent.
+- Verify every internal target, heading, and block reference that can be
+  checked locally; never fabricate a target to make a link look complete.
+- Keep evidence wording distinct from inference and preserve source locators.
+- Ensure code fences and callout quoting are balanced.
+- Run deterministic wiki lint after a requested mutation and report remaining
+  findings without silently repairing them.
 
-[^1]: Footnote content.
-
-Inline footnote.^[This is inline.]
-```
-
-## Complete Example
-
-````markdown
----
-title: Project Alpha
-date: 2024-01-15
-tags:
-  - project
-  - active
-status: in-progress
----
-
-# Project Alpha
-
-This project aims to [[improve workflow]] using modern techniques.
-
-> [!important] Key Deadline
-> The first milestone is due on ==January 30th==.
-
-## Tasks
-
-- [x] Initial planning
-- [ ] Development phase
-  - [ ] Backend implementation
-  - [ ] Frontend design
-
-## Notes
-
-The algorithm uses $O(n \log n)$ sorting. See [[Algorithm Notes#Sorting]] for details.
-
-![[Architecture Diagram.png|600]]
-
-Reviewed in [[Meeting Notes 2024-01-10#Decisions]].
-````
-
-## References
-
-- [Obsidian Flavored Markdown](https://help.obsidian.md/obsidian-flavored-markdown)
-- [Internal links](https://help.obsidian.md/links)
-- [Embed files](https://help.obsidian.md/embeds)
-- [Callouts](https://help.obsidian.md/callouts)
-- [Properties](https://help.obsidian.md/properties)
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+For source-cited pages, also follow
+[provenance.md](../wiki/references/provenance.md). Report the transaction
+operation ID and exact changed paths after an applied edit.

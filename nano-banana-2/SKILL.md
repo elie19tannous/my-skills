@@ -1,110 +1,274 @@
 ---
 name: nano-banana-2
-description: Generate and edit images using Google's Nano Banana 2 (Gemini 3.1 Flash Image Preview) API. This skill should be used when the user asks to create or modify images, especially when they need fast iteration, explicit aspect-ratio control, or resolution control from 512px to 4K.
+description: |
+  Image generation and editing using Google Gemini's Nano Banana 2 (gemini-3.1-flash-image-preview) model.
+  Use when user requests: "Generate an image", "Create an image", "Make me a picture", "Draw",
+  "Edit that image", "Change the color", "Remove background", "Add transparency", "Modify this image",
+  "Make it transparent", "Change the style", "Add text to image", or any image creation/manipulation task.
+  Supports text-to-image generation, image editing, multi-turn conversations, and transparency extraction
+  via difference matting technique.
 ---
 
 # Nano Banana 2 Image Generation & Editing
 
-Generate new images or edit existing images with Nano Banana 2 (`gemini-3.1-flash-image-preview`).
+Generate and edit images using Google's Gemini 3.1 Flash model with advanced transparency support.
 
-## Usage
+## Prerequisites
 
-Run the script using absolute or workspace-relative path (do NOT cd into the skill directory first):
+1. **Dependencies**:
+   ```bash
+   pip install google-genai Pillow numpy python-dotenv
+   ```
 
-**Generate new image:**
+2. **API Key**: The script loads from `.env` automatically. Only ask the user if the script fails with "No API key found".
+
+## CLI Usage (REQUIRED)
+
+**ALWAYS use the CLI script. Do NOT write Python code or create .py files.**
+
+Run `scripts/generate.py` directly:
+
 ```bash
-uv run ./.agents/skills/nano-banana-2/scripts/generate_image.py --prompt "your image description" --filename "output-name.png" [--resolution 512px|1K|2K|4K] [--aspect-ratio RATIO] [--api-key KEY]
+# Basic generation
+python scripts/generate.py "a cute banana sticker" -o banana.png
+
+# With transparency (for game assets, stickers, icons)
+python scripts/generate.py "pixel art sword" -o sword.png --transparent
+
+# Custom size and aspect ratio
+python scripts/generate.py "game logo" -o logo.png --size 4K --ratio 16:9
 ```
 
-**Edit image(s) with references:**
-```bash
-uv run ./.agents/skills/nano-banana-2/scripts/generate_image.py --prompt "editing instructions" --filename "output-name.png" --input-image "path/to/input1.png" [--input-image "path/to/input2.png" ...] [--resolution 512px|1K|2K|4K] [--aspect-ratio RATIO] [--api-key KEY]
-```
+**Options:**
+- `-o, --output` - Output filename (default: output.png)
+- `--transparent` - Extract true alpha channel using difference matting
+- `--size` - 1K, 2K, or 4K (default: 2K)
+- `--ratio` - Aspect ratio: 1:1, 16:9, 9:16, etc. (default: 1:1)
+- `--model` - Model override (default: gemini-3.1-flash-image-preview)
 
-Always run from the user's current working directory so outputs are saved in the active project context.
+**Note:** The script loads the API key from `.env` automatically. Do not check for API keys manually or ask the user about them - just run the script and it will error with instructions if the key is missing.
 
-## Model
+## Intent Detection
 
-Use model code:
-- `gemini-3.1-flash-image-preview` (Nano Banana 2)
+Analyze user request to determine:
 
-Do not use `gemini-3-pro-image-preview` in this skill.
+| Intent | Triggers | Action |
+|--------|----------|--------|
+| **Generate** | "create", "generate", "make", "draw", "design" | Text-to-image |
+| **Edit** | "edit", "change", "modify", "update", "fix" | Image-to-image |
+| **Transparency** | "transparent", "remove background", "alpha", "cutout", "PNG with transparency" | Use difference matting |
+| **Text overlay** | "add text", "write on", "label", "caption" | Use Gemini 3.1 Flash for accurate text |
 
-## Resolution Options
+## Resolution Selection
 
-Nano Banana 2 supports:
-- `512px` (fastest, low-latency iteration)
-- `1K` (default)
-- `2K`
-- `4K`
+Choose resolution based on use case:
 
-Map common user language:
-- "quick draft", "thumbnail", "tiny", "512", "0.5K" → `512px`
-- no resolution mention → `1K`
-- "2K", "medium", "normal" → `2K`
-- "4K", "high-res", "ultra", "print quality" → `4K`
+| Resolution | Best For | Pixel Output |
+|------------|----------|--------------|
+| **1K** | Quick previews, thumbnails, web icons | ~1024px |
+| **2K** | Social media, standard web images | ~2048px |
+| **4K** | Print, professional assets, sprite sheets | ~4096px |
 
-Use uppercase `K` for `1K`, `2K`, `4K`.
+**Heuristics:**
+- Sprite sheets, game assets, print materials → **4K**
+- Social media, blog images, presentations → **2K**
+- Quick tests, thumbnails, prototypes → **1K**
+
+When uncertain, ask user or default to **2K**.
 
 ## Aspect Ratios
 
-Supported aspect ratios:
-- `1:1`, `1:4`, `1:8`, `2:3`, `3:2`, `3:4`, `4:1`, `4:3`, `4:5`, `5:4`, `8:1`, `9:16`, `16:9`, `21:9`
+Available: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`
 
-Map common requests:
-- square post / icon → `1:1`
-- phone wallpaper / vertical reel → `9:16`
-- widescreen / slide / hero image → `16:9`
-- cinematic wide → `21:9`
-- portrait print → `2:3` or `3:4`
-- panorama banner → `4:1` or `8:1`
+**Selection guide:**
+- Square content (icons, avatars, social posts) → `1:1`
+- Portrait (mobile, vertical video) → `9:16` or `3:4`
+- Landscape (desktop, presentations) → `16:9` or `3:2`
+- Cinematic/ultrawide → `21:9`
 
-If unspecified, let the model default behavior apply.
+## Core Implementation
 
-## Reference Images (New in Gemini 3 Image workflows)
+### Basic Generation
 
-Provide up to 14 reference images when needed by repeating `--input-image`:
-- preserve character consistency
-- preserve object fidelity
-- combine multiple visual references into one output
+```python
+from google import genai
+from google.genai import types
+from PIL import Image
+import io
 
-Use one image for simple edits; use multiple images for composition or consistency-sensitive tasks.
+client = genai.Client()
 
-## API Key
+response = client.models.generate_content(
+    model="gemini-3.1-flash-image-preview",
+    contents="Your descriptive prompt here",
+    config=types.GenerateContentConfig(
+        response_modalities=['IMAGE'],
+        image_config=types.ImageConfig(
+            aspect_ratio="1:1",  # or other ratio
+            image_size="2K"     # 1K, 2K, or 4K
+        ),
+    ),
+)
 
-Resolve API key in this order:
-1. `--api-key` argument
-2. `GEMINI_API_KEY` environment variable
-
-If no key is available, stop and report a clear error.
-
-## Filename Generation
-
-Generate filenames as: `yyyy-mm-dd-hh-mm-ss-name.png`
-
-Examples:
-- `2026-02-26-17-31-04-japanese-garden.png`
-- `2026-02-26-17-31-59-social-banner.png`
-
-## Prompt Handling
-
-For generation, pass the user's request as-is unless critically underspecified.
-For editing, include explicit transformation instructions in the prompt and preserve the original intent.
-
-## Output
-
-- Save PNG to the current directory (or to a provided path in `--filename`)
-- Return the full saved path(s)
-- Do not read the output image back unless explicitly requested
-
-## Examples
-
-**Create a 4K widescreen image:**
-```bash
-uv run ./.agents/skills/nano-banana-2/scripts/generate_image.py --prompt "Futuristic city skyline at blue hour with neon reflections" --filename "2026-02-26-17-45-00-futuristic-skyline.png" --resolution 4K --aspect-ratio 16:9
+# Extract image from response
+for part in response.parts:
+    if part.inline_data is not None:
+        image = Image.open(io.BytesIO(part.inline_data.data))
+        image.save("output.png")
+        break
 ```
 
-**Edit with multiple references:**
-```bash
-uv run ./.agents/skills/nano-banana-2/scripts/generate_image.py --prompt "Create a polished campaign image that keeps the exact logo details and character identity" --filename "2026-02-26-17-50-10-campaign-image.png" --input-image "logo.png" --input-image "character.png" --resolution 2K --aspect-ratio 4:5
+### Image Editing
+
+```python
+# Load existing image
+input_image = Image.open("input.png")
+
+response = client.models.generate_content(
+    model="gemini-3.1-flash-image-preview",
+    contents=[
+        input_image,
+        "Edit instruction: Change the background to sunset colors"
+    ],
+    config=types.GenerateContentConfig(
+        response_modalities=['TEXT', 'IMAGE'],
+        image_config=types.ImageConfig(
+            aspect_ratio="1:1",
+            image_size="2K"
+        ),
+    ),
+)
 ```
+
+### Multi-Turn Editing
+
+Preserve context across edits using thought signatures:
+
+```python
+# First edit
+response1 = client.models.generate_content(
+    model="gemini-3.1-flash-image-preview",
+    contents=[image, "Add a red hat"],
+    config=config,
+)
+
+# Continue editing (include previous response)
+response2 = client.models.generate_content(
+    model="gemini-3.1-flash-image-preview",
+    contents=[
+        image,
+        "Add a red hat",
+        response1,  # Include for context preservation
+        "Now make the hat blue instead"
+    ],
+    config=config,
+)
+```
+
+## Transparency Extraction
+
+When user needs transparent images, use **difference matting**. See `scripts/transparency.py`.
+
+**When to use:**
+- User explicitly asks for transparency
+- Game sprites, icons, logos
+- Assets that will be composited
+- Cutouts and stickers
+
+**Process:**
+1. Generate image on pure white background (#FFFFFF)
+2. Edit same image to pure black background (#000000)
+3. Calculate alpha from pixel differences
+4. Recover original colors
+
+**Key insight:** Opaque pixels appear identical on both backgrounds (distance ≈ 0), transparent pixels show background color (max distance).
+
+```python
+from scripts.transparency import extract_alpha_difference_matting
+
+# After generating white and black background versions
+final_image = extract_alpha_difference_matting(img_on_white, img_on_black)
+final_image.save("output.png")  # RGBA with true transparency
+```
+
+## Prompt Engineering
+
+### Fundamental Principle
+
+> "Describe the scene, don't just list keywords."
+
+Narrative paragraphs outperform disconnected word lists.
+
+### Effective Prompt Structure
+
+```
+[Style/Medium] of [Subject] in [Context/Setting], [Lighting], [Additional details]
+```
+
+**Examples:**
+
+```
+# Photorealistic
+A professional studio photograph of a brass steampunk pocket watch,
+shot with a 50mm lens, soft diffused lighting from the left,
+shallow depth of field with bokeh background, 4K HDR quality.
+
+# Illustration
+A detailed digital illustration of a medieval blacksmith's forge,
+isometric perspective, warm orange glow from the furnace,
+dieselpunk aesthetic with exposed pipes and riveted metal plates.
+
+# Product mockup
+A product photography shot of a ceramic coffee mug on a marble surface,
+natural window lighting, minimalist Scandinavian style, clean white background.
+```
+
+### Text in Images
+
+For images containing text, use Gemini 3.1 Flash:
+- Keep text to 25 characters or less per element
+- Use 2-3 distinct text phrases maximum
+- Specify font style generally (bold, elegant, handwritten)
+- Indicate size (small, medium, large)
+
+### Quality Modifiers
+
+Add these for enhanced output:
+- **Photography:** 4K, HDR, studio photo, professional lighting
+- **Art:** detailed, by a professional, high-quality illustration
+- **General:** high-fidelity, crisp details, polished finish
+
+## Error Handling
+
+```python
+from google.genai import errors
+
+def generate_with_retry(client, *, model, contents, config, max_attempts=5):
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return client.models.generate_content(
+                model=model, contents=contents, config=config
+            )
+        except errors.APIError as e:
+            code = getattr(e, "code", None) or getattr(e, "status", None)
+            if code not in (429, 500, 502, 503, 504) or attempt >= max_attempts:
+                raise
+            delay = min(30, 2 ** (attempt - 1))
+            time.sleep(delay)
+```
+
+## Model Selection
+
+| Model | Use Case |
+|-------|----------|
+| `gemini-3.1-flash-image-preview` | Fast generation, image editing, text rendering, multi-turn, transparency workflows |
+| `gemini-3-pro-image-preview` | Complex edits, highest quality output |
+| `imagen-4.0-generate-001` | Photorealistic images, no editing needed |
+
+Default to **gemini-3.1-flash-image-preview** for most tasks.
+
+## File References
+
+- `scripts/generate.py` - CLI for image generation (use this instead of writing code)
+- `scripts/transparency.py` - Difference matting implementation
+- `references/prompts.md` - Extended prompt examples by category

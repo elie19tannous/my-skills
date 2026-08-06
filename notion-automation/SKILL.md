@@ -1,14 +1,16 @@
 ---
 name: notion-automation
 description: "Automate Notion tasks via Rube MCP (Composio): pages, databases, blocks, comments, users. Always search tools first for current schemas."
-risk: critical
-source: community
-date_added: "2026-02-27"
+requires:
+  mcp: [rube]
+category: storage-docs
 ---
 
 # Notion Automation via Rube MCP
 
 Automate Notion operations through Composio's Notion toolkit via Rube MCP.
+
+**Toolkit docs**: [composio.dev/toolkits/notion](https://composio.dev/toolkits/notion)
 
 ## Prerequisites
 
@@ -215,10 +217,5 @@ Automate Notion operations through Composio's Notion toolkit via Rube MCP.
 | Create comment | NOTION_CREATE_COMMENT | page_id, rich_text |
 | List comments | NOTION_FETCH_COMMENTS | page_id |
 
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*
