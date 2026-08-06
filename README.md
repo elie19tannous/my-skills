@@ -1,5 +1,30 @@
 # My Claude Skills
 
-Private collection of 4140 skills learned with Claude Code since day 1.
+Collection of **0 skills** gathered with Claude Code since day 1.
 
-Shared privately. Each folder = one skill (see its SKILL.md).
+Each top-level folder is one skill — see its `SKILL.md` for what it does and when it triggers.
+16400 `SKILL.md` files in total (some skills bundle sub-skills).
+
+## History
+
+| Date | Skills |
+|------|--------|
+| 2026-07-23 | 4,140 |
+| 2026-08-06 | 0 |
+
+Latest addition: a GitHub-wide sweep of 345 agent-skill repositories, 238 of them installed —
+covering security/DFIR, academic publishing (per-journal packs), game development,
+Apple/iOS, cloud (AWS/Azure/GCP), legal, finance/trading, design systems, and media generation.
+
+## Install
+
+```bash
+npx -y skills@latest add elie19tannous/my-skills -g --copy --skill '*' -y
+```
+
+Or copy any single folder into `~/.claude/skills/`.
+
+## Credit
+
+These skills come from many open-source authors across GitHub. Each folder keeps its
+original contents and license where the source repo provided one.
