@@ -1,11 +1,9 @@
 ---
 name: azure-mgmt-mongodbatlas-dotnet
-description: Manage MongoDB Atlas Organizations as Azure ARM resources using Azure.ResourceManager.MongoDBAtlas SDK. Use when creating, updating, listing, or deleting MongoDB Atlas organizations through Azure Marketplace integration. This SDK manages the Azure-side organization resource, not Atlas clusters/databases directly.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.ResourceManager.MongoDBAtlas
+description: "Manage MongoDB Atlas Organizations as Azure ARM resources with unified billing through Azure Marketplace."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure.ResourceManager.MongoDBAtlas SDK
@@ -40,17 +38,6 @@ This SDK manages **MongoDB Atlas Organizations as Azure ARM resources** for mark
 
 For cluster management, use the MongoDB Atlas API directly after creating the organization.
 
-## Environment Variables
-
-```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
-AZURE_RESOURCE_GROUP=<your-resource-group> # Required: Azure resource group name
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
-AZURE_TENANT_ID=<your-tenant-id> # For service principal auth (optional)
-AZURE_CLIENT_ID=<your-client-id> # For service principal auth (optional)
-AZURE_CLIENT_SECRET=<your-client-secret> # For service principal auth (optional)
-```
-
 ## Authentication
 
 ```csharp
@@ -59,13 +46,8 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.MongoDBAtlas;
 using Azure.ResourceManager.MongoDBAtlas.Models;
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
+// Create ARM client with DefaultAzureCredential
+var credential = new DefaultAzureCredential();
 var armClient = new ArmClient(credential);
 ```
 
@@ -372,3 +354,11 @@ var response = await orgResource.GetAsync();
 - [Microsoft Learn: MongoDB Atlas on Azure](https://learn.microsoft.com/en-us/azure/partner-solutions/mongodb-atlas/)
 - [API Reference](https://learn.microsoft.com/en-us/dotnet/api/azure.resourcemanager.mongodbatlas)
 - [Azure SDK for .NET](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/mongodbatlas)
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

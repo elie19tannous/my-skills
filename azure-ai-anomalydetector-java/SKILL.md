@@ -1,11 +1,9 @@
 ---
 name: azure-ai-anomalydetector-java
-description: Build anomaly detection applications with Azure AI Anomaly Detector SDK for Java. Use when implementing univariate/multivariate anomaly detection, time-series analysis, or AI-powered monitoring.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-ai-anomalydetector
+description: "Build anomaly detection applications with Azure AI Anomaly Detector SDK for Java. Use when implementing univariate/multivariate anomaly detection, time-series analysis, or AI-powered monitoring."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Anomaly Detector SDK for Java
@@ -51,20 +49,10 @@ UnivariateClient univariateClient = new AnomalyDetectorClientBuilder()
 ### With DefaultAzureCredential
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 MultivariateClient client = new AnomalyDetectorClientBuilder()
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .endpoint(endpoint)
     .buildMultivariateClient();
 ```
@@ -247,9 +235,8 @@ try {
 ## Environment Variables
 
 ```bash
-AZURE_ANOMALY_DETECTOR_ENDPOINT=https://<resource>.cognitiveservices.azure.com/ # Required for all auth methods
-AZURE_ANOMALY_DETECTOR_API_KEY=<your-api-key> # Only required for AzureKeyCredential auth
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_ANOMALY_DETECTOR_ENDPOINT=https://<resource>.cognitiveservices.azure.com/
+AZURE_ANOMALY_DETECTOR_API_KEY=<your-api-key>
 ```
 
 ## Best Practices
@@ -269,3 +256,11 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 - "streaming anomaly detection"
 - "change point detection"
 - "Azure AI Anomaly Detector"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

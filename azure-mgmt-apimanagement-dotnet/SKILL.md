@@ -1,12 +1,9 @@
 ---
 name: azure-mgmt-apimanagement-dotnet
-description: |
-  Azure Resource Manager SDK for API Management in .NET. Use for MANAGEMENT PLANE operations: creating/managing APIM services, APIs, products, subscriptions, policies, users, groups, gateways, and backends via Azure Resource Manager. Triggers: "API Management", "APIM service", "create APIM", "manage APIs", "ApiManagementServiceResource", "API policies", "APIM products", "APIM subscriptions".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.ResourceManager.ApiManagement
+description: Azure Resource Manager SDK for API Management in .NET.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure.ResourceManager.ApiManagement (.NET)
@@ -29,11 +26,11 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
-AZURE_TENANT_ID=<tenant-id> # For service principal auth (optional)
-AZURE_CLIENT_ID=<client-id> # For service principal auth (optional)
-AZURE_CLIENT_SECRET=<client-secret> # For service principal auth (optional)
+AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+# For service principal auth (optional)
+AZURE_TENANT_ID=<tenant-id>
+AZURE_CLIENT_ID=<client-id>
+AZURE_CLIENT_SECRET=<client-secret>
 ```
 
 ## Authentication
@@ -43,13 +40,8 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ApiManagement;
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
+// Always use DefaultAzureCredential
+var credential = new DefaultAzureCredential();
 var armClient = new ArmClient(credential);
 
 // Get subscription
@@ -305,10 +297,10 @@ catch (RequestFailedException ex)
 
 | File | When to Read |
 |------|--------------|
-| [references/service-management.md](references/service-management.md) | Service CRUD, SKUs, networking, backup/restore |
-| [references/apis-operations.md](references/apis-operations.md) | APIs, operations, schemas, versioning |
-| [references/products-subscriptions.md](references/products-subscriptions.md) | Products, subscriptions, access control |
-| [references/policies.md](references/policies.md) | Policy XML patterns, scopes, common policies |
+| references/service-management.md | Service CRUD, SKUs, networking, backup/restore |
+| references/apis-operations.md | APIs, operations, schemas, versioning |
+| references/products-subscriptions.md | Products, subscriptions, access control |
+| references/policies.md | Policy XML patterns, scopes, common policies |
 
 ## Related Resources
 
@@ -317,3 +309,11 @@ catch (RequestFailedException ex)
 | [API Management Documentation](https://learn.microsoft.com/en-us/azure/api-management/) | Official Azure docs |
 | [Policy Reference](https://learn.microsoft.com/en-us/azure/api-management/api-management-policies) | Complete policy reference |
 | [SDK Reference](https://learn.microsoft.com/en-us/dotnet/api/azure.resourcemanager.apimanagement) | .NET API reference |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

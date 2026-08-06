@@ -1,13 +1,9 @@
 ---
 name: azure-ai-agents-persistent-java
-description: |
-  Azure AI Agents Persistent SDK for Java. Low-level SDK for creating and managing AI agents with threads, messages, runs, and tools.
-  Triggers: "PersistentAgentsClient", "persistent agents java", "agent threads java", "agent runs java", "streaming agents java".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-ai-agents-persistent
+description: Azure AI Agents Persistent SDK for Java. Low-level SDK for creating and managing AI agents with threads, messages, runs, and tools.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure AI Agents Persistent SDK for Java
@@ -27,9 +23,8 @@ Low-level SDK for creating and managing persistent AI agents with threads, messa
 ## Environment Variables
 
 ```bash
-PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project> # Required for project configuration
-MODEL_DEPLOYMENT_NAME=gpt-4o-mini # Required for agent model selection
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 ```
 
 ## Authentication
@@ -37,22 +32,12 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 ```java
 import com.azure.ai.agents.persistent.PersistentAgentsClient;
 import com.azure.ai.agents.persistent.PersistentAgentsClientBuilder;
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
 
 String endpoint = System.getenv("PROJECT_ENDPOINT");
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
-
 PersistentAgentsClient client = new PersistentAgentsClientBuilder()
     .endpoint(endpoint)
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildClient();
 ```
 
@@ -150,3 +135,11 @@ try {
 |----------|-----|
 | Maven Package | https://central.sonatype.com/artifact/com.azure/azure-ai-agents-persistent |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/ai/azure-ai-agents-persistent |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

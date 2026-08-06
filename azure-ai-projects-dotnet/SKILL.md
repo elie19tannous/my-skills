@@ -1,12 +1,9 @@
 ---
 name: azure-ai-projects-dotnet
-description: |
-  Azure AI Projects SDK for .NET. High-level client for Azure AI Foundry projects including agents, connections, datasets, deployments, evaluations, and indexes. Use for AI Foundry project management, versioned agents, and orchestration. Triggers: "AI Projects", "AIProjectClient", "Foundry project", "versioned agents", "evaluations", "datasets", "connections", "deployments .NET".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.AI.Projects
+description: Azure AI Projects SDK for .NET. High-level client for Azure AI Foundry projects including agents, connections, datasets, deployments, evaluations, and indexes.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure.AI.Projects (.NET)
@@ -31,11 +28,10 @@ dotnet add package Azure.AI.Agents.Persistent --prerelease
 ## Environment Variables
 
 ```bash
-PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>  # Required: Azure AI project endpoint
-MODEL_DEPLOYMENT_NAME=gpt-4o-mini  # Required: model deployment name
-CONNECTION_NAME=<your-connection-name>  # Optional: project connection name
-AI_SEARCH_CONNECTION_NAME=<ai-search-connection>  # Optional: Azure AI Search connection name
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+MODEL_DEPLOYMENT_NAME=gpt-4o-mini
+CONNECTION_NAME=<your-connection-name>
+AI_SEARCH_CONNECTION_NAME=<ai-search-connection>
 ```
 
 ## Authentication
@@ -45,16 +41,9 @@ using Azure.Identity;
 using Azure.AI.Projects;
 
 var endpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
 AIProjectClient projectClient = new AIProjectClient(
     new Uri(endpoint), 
-    credential);
+    new DefaultAzureCredential());
 ```
 
 ## Client Hierarchy
@@ -358,3 +347,11 @@ catch (RequestFailedException ex)
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.ai.projects |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects |
 | Samples | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects/samples |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

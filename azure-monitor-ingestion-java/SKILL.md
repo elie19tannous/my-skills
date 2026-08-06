@@ -1,13 +1,9 @@
 ---
 name: azure-monitor-ingestion-java
-description: |
-  Azure Monitor Ingestion SDK for Java. Send custom logs to Azure Monitor via Data Collection Rules (DCR) and Data Collection Endpoints (DCE).
-  Triggers: "LogsIngestionClient java", "azure monitor ingestion java", "custom logs java", "DCR java", "data collection rule java".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-monitor-ingestion
+description: Azure Monitor Ingestion SDK for Java. Send custom logs to Azure Monitor via Data Collection Rules (DCR) and Data Collection Endpoints (DCE).
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Monitor Ingestion SDK for Java
@@ -57,10 +53,9 @@ Or use Azure SDK BOM:
 ## Environment Variables
 
 ```bash
-DATA_COLLECTION_ENDPOINT=https://<dce-name>.<region>.ingest.monitor.azure.com  # Required for all auth methods
-DATA_COLLECTION_RULE_ID=dcr-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # Required for log upload routing
-STREAM_NAME=Custom-MyTable_CL  # Required for the target DCR stream
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+DATA_COLLECTION_ENDPOINT=https://<dce-name>.<region>.ingest.monitor.azure.com
+DATA_COLLECTION_RULE_ID=dcr-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STREAM_NAME=Custom-MyTable_CL
 ```
 
 ## Client Creation
@@ -68,20 +63,12 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 ### Synchronous Client
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
+import com.azure.identity.DefaultAzureCredential;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
 import com.azure.monitor.ingestion.LogsIngestionClient;
 import com.azure.monitor.ingestion.LogsIngestionClientBuilder;
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
+DefaultAzureCredential credential = new DefaultAzureCredentialBuilder().build();
 
 LogsIngestionClient client = new LogsIngestionClientBuilder()
     .endpoint("<data-collection-endpoint>")
@@ -96,7 +83,7 @@ import com.azure.monitor.ingestion.LogsIngestionAsyncClient;
 
 LogsIngestionAsyncClient asyncClient = new LogsIngestionClientBuilder()
     .endpoint("<data-collection-endpoint>")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildAsyncClient();
 ```
 
@@ -224,7 +211,7 @@ try {
 
 ## Querying Uploaded Logs
 
-Use [azure-monitor-query](../query/SKILL.md) to query ingested logs:
+Use azure-monitor-query to query ingested logs:
 
 ```java
 // See azure-monitor-query skill for LogsQueryClient usage
@@ -241,3 +228,11 @@ String query = "MyTable_CL | where TimeGenerated > ago(1h) | limit 10";
 | DCE Overview | https://learn.microsoft.com/azure/azure-monitor/essentials/data-collection-endpoint-overview |
 | DCR Overview | https://learn.microsoft.com/azure/azure-monitor/essentials/data-collection-rule-overview |
 | Troubleshooting | https://github.com/Azure/azure-sdk-for-java/blob/main/sdk/monitor/azure-monitor-ingestion/TROUBLESHOOTING.md |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

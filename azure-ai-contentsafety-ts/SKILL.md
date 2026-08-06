@@ -1,11 +1,9 @@
 ---
 name: azure-ai-contentsafety-ts
-description: Analyze text and images for harmful content using Azure AI Content Safety (@azure-rest/ai-content-safety). Use when moderating user-generated content, detecting hate speech, violence, sexual content, or self-harm, or managing custom blocklists.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure-rest/ai-content-safety'
+description: "Analyze text and images for harmful content with customizable blocklists."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Content Safety REST SDK for TypeScript
@@ -23,7 +21,6 @@ npm install @azure-rest/ai-content-safety @azure/identity @azure/core-auth
 ```bash
 CONTENT_SAFETY_ENDPOINT=https://<resource>.cognitiveservices.azure.com
 CONTENT_SAFETY_KEY=<api-key>
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -46,17 +43,11 @@ const client = ContentSafetyClient(
 
 ```typescript
 import ContentSafetyClient from "@azure-rest/ai-content-safety";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+import { DefaultAzureCredential } from "@azure/identity";
 
 const client = ContentSafetyClient(
   process.env.CONTENT_SAFETY_ENDPOINT!,
-  credential
+  new DefaultAzureCredential()
 );
 ```
 
@@ -309,3 +300,11 @@ import ContentSafetyClient, {
 3. **Use blocklists for domain-specific terms** - Supplement AI detection with custom rules
 4. **Log moderation decisions** - Keep audit trail for compliance
 5. **Handle edge cases** - Empty text, very long text, unsupported image formats
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

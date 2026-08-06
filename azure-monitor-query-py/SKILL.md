@@ -1,13 +1,9 @@
 ---
 name: azure-monitor-query-py
-description: |
-  Azure Monitor Query SDK for Python. Use for querying Log Analytics workspaces and Azure Monitor metrics.
-  Triggers: "azure-monitor-query", "LogsQueryClient", "MetricsQueryClient", "Log Analytics", "Kusto queries", "Azure metrics".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-monitor-query
+description: Azure Monitor Query SDK for Python. Use for querying Log Analytics workspaces and Azure Monitor metrics.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Monitor Query SDK for Python
@@ -24,34 +20,18 @@ pip install azure-monitor-query
 
 ```bash
 # Log Analytics
-AZURE_LOG_ANALYTICS_WORKSPACE_ID=<workspace-id>  # Required for log queries
+AZURE_LOG_ANALYTICS_WORKSPACE_ID=<workspace-id>
 
 # Metrics
-AZURE_METRICS_RESOURCE_URI=/subscriptions/<sub>/resourceGroups/<rg>/providers/<provider>/<type>/<name>  # Required for metric queries
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_METRICS_RESOURCE_URI=/subscriptions/<sub>/resourceGroups/<rg>/providers/<provider>/<type>/<name>
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
+credential = DefaultAzureCredential()
 ```
 
 ## Logs Query Client
@@ -62,6 +42,8 @@ credential = DefaultAzureCredential(require_envvar=True)
 from azure.monitor.query import LogsQueryClient
 from datetime import timedelta
 
+client = LogsQueryClient(credential)
+
 query = """
 AppRequests
 | where TimeGenerated > ago(1h)
@@ -69,16 +51,15 @@ AppRequests
 | order by TimeGenerated desc
 """
 
-with LogsQueryClient(credential) as client:
-    response = client.query_workspace(
-        workspace_id=os.environ["AZURE_LOG_ANALYTICS_WORKSPACE_ID"],
-        query=query,
-        timespan=timedelta(hours=1)
-    )
+response = client.query_workspace(
+    workspace_id=os.environ["AZURE_LOG_ANALYTICS_WORKSPACE_ID"],
+    query=query,
+    timespan=timedelta(hours=1)
+)
 
-    for table in response.tables:
-        for row in table.rows:
-            print(row)
+for table in response.tables:
+    for row in table.rows:
+        print(row)
 ```
 
 ### Query with Time Range
@@ -147,19 +128,20 @@ elif response.status == LogsQueryStatus.FAILURE:
 from azure.monitor.query import MetricsQueryClient
 from datetime import timedelta
 
-with MetricsQueryClient(credential) as metrics_client:
-    response = metrics_client.query_resource(
-        resource_uri=os.environ["AZURE_METRICS_RESOURCE_URI"],
-        metric_names=["Percentage CPU", "Network In Total"],
-        timespan=timedelta(hours=1),
-        granularity=timedelta(minutes=5)
-    )
+metrics_client = MetricsQueryClient(credential)
 
-    for metric in response.metrics:
-        print(f"{metric.name}:")
-        for time_series in metric.timeseries:
-            for data in time_series.data:
-                print(f"  {data.timestamp}: {data.average}")
+response = metrics_client.query_resource(
+    resource_uri=os.environ["AZURE_METRICS_RESOURCE_URI"],
+    metric_names=["Percentage CPU", "Network In Total"],
+    timespan=timedelta(hours=1),
+    granularity=timedelta(minutes=5)
+)
+
+for metric in response.metrics:
+    print(f"{metric.name}:")
+    for time_series in metric.timeseries:
+        for data in time_series.data:
+            print(f"  {data.timestamp}: {data.average}")
 ```
 
 ### Aggregations
@@ -214,14 +196,18 @@ from azure.monitor.query.aio import LogsQueryClient, MetricsQueryClient
 from azure.identity.aio import DefaultAzureCredential
 
 async def query_logs():
-    async with DefaultAzureCredential() as credential:
-        async with LogsQueryClient(credential) as client:
-            response = await client.query_workspace(
-                workspace_id=workspace_id,
-                query="AppRequests | take 10",
-                timespan=timedelta(hours=1)
-            )
-            return response
+    credential = DefaultAzureCredential()
+    client = LogsQueryClient(credential)
+    
+    response = await client.query_workspace(
+        workspace_id=workspace_id,
+        query="AppRequests | take 10",
+        timespan=timedelta(hours=1)
+    )
+    
+    await client.close()
+    await credential.close()
+    return response
 ```
 
 ## Common Kusto Queries
@@ -257,13 +243,18 @@ AppExceptions
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for portable auth across local dev and Azure (avoid connection strings / API keys when possible).
-4. **Use timedelta** for relative time ranges
-4. **Handle partial results** for large queries
-5. **Use batch queries** when running multiple queries
-6. **Set appropriate granularity** for metrics to reduce data points
-7. **Convert to DataFrame** for easier data analysis
-8. **Use aggregations** to summarize metric data
-9. **Filter by dimensions** to narrow metric results
+1. **Use timedelta** for relative time ranges
+2. **Handle partial results** for large queries
+3. **Use batch queries** when running multiple queries
+4. **Set appropriate granularity** for metrics to reduce data points
+5. **Convert to DataFrame** for easier data analysis
+6. **Use aggregations** to summarize metric data
+7. **Filter by dimensions** to narrow metric results
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

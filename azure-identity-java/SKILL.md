@@ -1,16 +1,14 @@
 ---
 name: azure-identity-java
-description: Azure Identity library for Java authentication with Azure services. Use when implementing DefaultAzureCredential, managed identity, service principal, or any Azure authentication pattern in Java applications.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-identity
+description: "Authenticate Java applications with Azure services using Microsoft Entra ID (Azure AD)."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
-# Azure Identity library for Java
+# Azure Identity (Java)
 
-Authentication library for Azure SDK clients using Microsoft Entra ID.
+Authenticate Java applications with Azure services using Microsoft Entra ID (Azure AD).
 
 ## Installation
 
@@ -37,7 +35,14 @@ Authentication library for Azure SDK clients using Microsoft Entra ID.
 
 ## DefaultAzureCredential (Recommended)
 
-The `DefaultAzureCredential` tries multiple authentication methods in order. See [DefaultAzureCredential overview](https://aka.ms/azsdk/java/identity/credential-chains#defaultazurecredential-overview) for the current credential chain order and defaults.
+The `DefaultAzureCredential` tries multiple authentication methods in order:
+
+1. Environment variables
+2. Workload Identity
+3. Managed Identity
+4. Azure CLI
+5. Azure PowerShell
+6. Azure Developer CLI
 
 ```java
 import com.azure.identity.DefaultAzureCredential;
@@ -148,7 +153,6 @@ EnvironmentCredential credential = new EnvironmentCredentialBuilder().build();
 ### Required Environment Variables
 
 **For service principal with secret:**
-
 ```bash
 AZURE_TENANT_ID=<tenant-id>
 AZURE_CLIENT_ID=<client-id>
@@ -156,12 +160,19 @@ AZURE_CLIENT_SECRET=<client-secret>
 ```
 
 **For service principal with certificate:**
-
 ```bash
 AZURE_TENANT_ID=<tenant-id>
 AZURE_CLIENT_ID=<client-id>
 AZURE_CLIENT_CERTIFICATE_PATH=/path/to/cert.pem
 AZURE_CLIENT_CERTIFICATE_PASSWORD=<optional-password>
+```
+
+**For username/password:**
+```bash
+AZURE_TENANT_ID=<tenant-id>
+AZURE_CLIENT_ID=<client-id>
+AZURE_USERNAME=<username>
+AZURE_PASSWORD=<password>
 ```
 
 ## Azure CLI Credential
@@ -355,3 +366,11 @@ AZURE_AUTHORITY_HOST=https://login.microsoftonline.com/
 - "managed identity Java", "service principal Java"
 - "Azure login Java", "Azure credentials Java"
 - "AZURE_CLIENT_ID", "AZURE_TENANT_ID"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

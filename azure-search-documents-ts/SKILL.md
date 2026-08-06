@@ -1,11 +1,9 @@
 ---
 name: azure-search-documents-ts
-description: Build search applications using Azure AI Search SDK for JavaScript (@azure/search-documents). Use when creating/managing indexes, implementing vector/hybrid search, semantic ranking, or building agentic retrieval with knowledge bases.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/search-documents'
+description: "Build search applications with vector, hybrid, and semantic search capabilities."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Search SDK for TypeScript
@@ -24,22 +22,17 @@ npm install @azure/search-documents @azure/identity
 AZURE_SEARCH_ENDPOINT=https://<service-name>.search.windows.net
 AZURE_SEARCH_INDEX_NAME=my-index
 AZURE_SEARCH_ADMIN_KEY=<admin-key>  # Optional if using Entra ID
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
 ```typescript
 import { SearchClient, SearchIndexClient } from "@azure/search-documents";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 
 const endpoint = process.env.AZURE_SEARCH_ENDPOINT!;
 const indexName = process.env.AZURE_SEARCH_INDEX_NAME!;
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+const credential = new DefaultAzureCredential();
 
 // For searching
 const searchClient = new SearchClient(endpoint, indexName, credential);
@@ -273,3 +266,11 @@ import {
 4. **Use filters for security** - Implement document-level security with filters
 5. **Index incrementally** - Use `mergeOrUploadDocuments` for updates
 6. **Monitor query performance** - Use `includeTotalCount: true` sparingly in production
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

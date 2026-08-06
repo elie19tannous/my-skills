@@ -1,119 +1,315 @@
 ---
 name: azure-static-web-apps
-description: Expert knowledge for Azure Static Web Apps development including troubleshooting, decision making, limits & quotas, security, configuration, integrations & coding patterns, and deployment. Use when wiring SWA APIs to Azure DBs, configuring custom domains/DNS, auth/roles, CI/CD, or plan limits, and other Azure Static Web Apps related development tasks. Not for Azure App Service (use azure-app-service), Azure Functions (use azure-functions), Azure Container Apps (use azure-container-apps), Azure Web PubSub (use azure-web-pubsub).
-compatibility: Requires network access. Uses mcp_microsoftdocs:microsoft_docs_fetch or fetch_webpage to retrieve documentation.
-metadata:
-  generated_at: "2026-06-07"
-  generator: "docs2skills/1.0.0"
+description: Helps create, configure, and deploy Azure Static Web Apps using the SWA CLI. Use when deploying static sites to Azure, setting up SWA local development, configuring staticwebapp.config.json, adding Azure Functions APIs to SWA, or setting up GitHub Actions CI/CD for Static Web Apps.
 ---
-# Azure Static Web Apps Skill
 
-This skill provides expert guidance for Azure Static Web Apps. Covers troubleshooting, decision making, limits & quotas, security, configuration, integrations & coding patterns, and deployment. It combines local quick-reference content with remote documentation fetching capabilities.
+## Overview
 
-## How to Use This Skill
+Azure Static Web Apps (SWA) hosts static frontends with optional serverless API backends. The SWA CLI (`swa`) provides local development emulation and deployment capabilities.
 
-> **IMPORTANT for Agent**: Use the **Category Index** below to locate relevant sections. For categories with line ranges (e.g., `L35-L120`), use `read_file` with the specified lines. For categories with file links (e.g., `[security.md](security.md)`), use `read_file` on the linked reference file
+**Key features:**
+- Local emulator with API proxy and auth simulation
+- Framework auto-detection and configuration
+- Direct deployment to Azure
+- Database connections support
 
-> **IMPORTANT for Agent**: If `metadata.generated_at` is more than 3 months old, suggest the user pull the latest version from the repository. If `mcp_microsoftdocs` tools are not available, suggest the user install it: [Installation Guide](https://github.com/MicrosoftDocs/mcp/blob/main/README.md)
+**Config files:**
+- `swa-cli.config.json` - CLI settings, **created by `swa init`** (never create manually)
+- `staticwebapp.config.json` - Runtime config (routes, auth, headers, API runtime) - can be created manually
 
-This skill requires **network access** to fetch documentation content:
-- **Preferred**: Use `mcp_microsoftdocs:microsoft_docs_fetch` with query string `from=learn-agent-skill`. Returns Markdown.
-- **Fallback**: Use `fetch_webpage` with query string `from=learn-agent-skill&accept=text/markdown`. Returns Markdown.
+## General Instructions
 
-## Category Index
+### Installation
 
-| Category | Lines | Description |
-|----------|-------|-------------|
-| Troubleshooting | L35-L39 | Diagnosing and fixing common Static Web Apps deployment and runtime issues, including build failures, configuration problems, and troubleshooting tools/logs. |
-| Decision Making | L40-L47 | Guidance on key architecture choices: Functions hosting model, using Front Door/CDN edge, Next.js deployment options, and comparing Free vs Standard Static Web Apps plans. |
-| Limits & Quotas | L48-L54 | Details on Static Web Apps plan quotas, resource and behavior limits, supported languages/frameworks, and available runtime versions across tiers. |
-| Security | L55-L66 | Configuring auth, roles, secrets, and access: Entra ID/Graph roles, auth providers, user info, deployment tokens, Key Vault/managed identity, password protection, and private endpoints. |
-| Configuration | L67-L93 | Configuring domains, DNS, backends (Functions, App Service, Container Apps, APIM), build/runtime settings, local emulation (SWA CLI), monitoring, and database/network for Static Web Apps. |
-| Integrations & Coding Patterns | L94-L102 | How to connect Static Web Apps APIs to Azure databases (Cosmos DB, SQL, MySQL, PostgreSQL), including Mongoose usage, connection strings, and typical integration patterns. |
-| Deployment | L103-L119 | Deploying Static Web Apps via GitHub/GitLab/Bitbucket/CLI/ARM/Bicep, configuring CI/CD, preview environments, traffic splitting, and optional Azure Front Door CDN setup |
+```bash
+npm install -D @azure/static-web-apps-cli
+```
 
-### Troubleshooting
-| Topic | URL |
-|-------|-----|
-| Troubleshoot common deployment and runtime issues in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/troubleshooting |
+Verify: `npx swa --version`
 
-### Decision Making
-| Topic | URL |
-|-------|-----|
-| Choose managed vs bring-your-own Azure Functions for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/apis-functions |
-| Use enterprise-grade edge for Azure Static Web Apps with Azure Front Door and CDN | https://learn.microsoft.com/en-us/azure/static-web-apps/enterprise-edge |
-| Select Next.js deployment model on Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/nextjs |
-| Choose Azure Static Web Apps Free vs Standard plans | https://learn.microsoft.com/en-us/azure/static-web-apps/plans |
+### Quick Start Workflow
 
-### Limits & Quotas
-| Topic | URL |
-|-------|-----|
-| Azure Static Web Apps limits and behavioral specifics | https://learn.microsoft.com/en-us/azure/static-web-apps/faq |
-| Supported languages and runtime versions for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/languages-runtimes |
-| Quotas and limits for Azure Static Web Apps plans | https://learn.microsoft.com/en-us/azure/static-web-apps/quotas |
+**IMPORTANT: Always use `swa init` to create configuration files. Never manually create `swa-cli.config.json`.**
 
-### Security
-| Topic | URL |
-|-------|-----|
-| Assign Static Web Apps roles using Microsoft Graph and Entra ID | https://learn.microsoft.com/en-us/azure/static-web-apps/assign-roles-microsoft-graph |
-| Configure authentication and authorization for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization |
-| Configure custom authentication providers for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-custom |
-| Manage and reset deployment tokens for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/deployment-token-management |
-| Use Key Vault and managed identity for Static Web Apps auth secrets | https://learn.microsoft.com/en-us/azure/static-web-apps/key-vault-secrets |
-| Enable password protection for Azure Static Web Apps environments | https://learn.microsoft.com/en-us/azure/static-web-apps/password-protection |
-| Configure private endpoint access for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/private-endpoint |
-| Access authenticated user information in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/user-information |
+1. `swa init` - **Required first step** - auto-detects framework and creates `swa-cli.config.json`
+2. `swa start` - Run local emulator at `http://localhost:4280`
+3. `swa login` - Authenticate with Azure
+4. `swa deploy` - Deploy to Azure
 
-### Configuration
-| Topic | URL |
-|-------|-----|
-| Configure apex domains with Azure DNS for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/apex-domain-azure-dns |
-| Configure apex/root domains with external registrars for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/apex-domain-external |
-| Configure Azure API Management integration with Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/apis-api-management |
-| Link Azure App Service backends to Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/apis-app-service |
-| Integrate Azure Container Apps as APIs for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/apis-container-apps |
-| Set application settings for Static Web Apps backend APIs | https://learn.microsoft.com/en-us/azure/static-web-apps/application-settings |
-| Configure staticwebapp.config.json for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/configuration |
-| Configure custom domains for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/custom-domain |
-| Set up Azure DNS custom domains for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/custom-domain-azure-dns |
-| Manage default domain routing in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/custom-domain-default |
-| Use external DNS providers for Static Web Apps custom domains | https://learn.microsoft.com/en-us/azure/static-web-apps/custom-domain-external |
-| Configure database connections and firewall for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/database-configuration |
-| Configure build settings for front-end frameworks in Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/front-end-frameworks |
-| Link existing Azure Functions apps to Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/functions-bring-your-own |
-| Configure local development environment for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/local-development |
-| Use metrics for managed Functions in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/metrics |
-| Enable Application Insights monitoring for Azure Static Web Apps APIs | https://learn.microsoft.com/en-us/azure/static-web-apps/monitor |
-| Inject runtime snippets into Static Web Apps pages | https://learn.microsoft.com/en-us/azure/static-web-apps/snippets |
-| Azure Static Web Apps CLI command reference | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli |
-| Run and proxy API servers with Azure Static Web Apps CLI | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli-api-server |
-| Configure Azure Static Web Apps CLI with swa-cli.config.json | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli-configuration |
-| Emulate Azure Static Web Apps locally with SWA CLI | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli-emulator |
-| Use Azure Static Web Apps CLI for local emulation and workflows | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli-overview |
+### Configuration Files
 
-### Integrations & Coding Patterns
-| Topic | URL |
-|-------|-----|
-| Use Mongoose with Azure Cosmos DB in Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/add-mongoose |
-| Connect Azure Static Web Apps to Azure Cosmos DB | https://learn.microsoft.com/en-us/azure/static-web-apps/database-azure-cosmos-db |
-| Connect Azure Static Web Apps to Azure SQL Database | https://learn.microsoft.com/en-us/azure/static-web-apps/database-azure-sql |
-| Connect Azure Static Web Apps to Azure Database for MySQL | https://learn.microsoft.com/en-us/azure/static-web-apps/database-mysql |
-| Connect Azure Static Web Apps to Azure Database for PostgreSQL | https://learn.microsoft.com/en-us/azure/static-web-apps/database-postgresql |
+**swa-cli.config.json** - Created by `swa init`, do not create manually:
+- Run `swa init` for interactive setup with framework detection
+- Run `swa init --yes` to accept auto-detected defaults
+- Edit the generated file only to customize settings after initialization
 
-### Deployment
-| Topic | URL |
-|-------|-----|
-| Deploy Bitbucket-hosted apps to Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/bitbucket |
-| Create branch-based preview environments with stable URLs | https://learn.microsoft.com/en-us/azure/static-web-apps/branch-environments |
-| Configure CI/CD build YAML for Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/build-configuration |
-| Deploy Azure Static Web Apps with external CI/CD providers | https://learn.microsoft.com/en-us/azure/static-web-apps/external-providers |
-| Manually configure Azure Front Door as CDN for Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/front-door-manual |
-| Deploy GitLab-hosted apps to Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/gitlab |
-| Create named preview environments in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/named-environments |
-| Use preview environments and temporary URLs in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/preview-environments |
-| Deploy Azure Static Web Apps using ARM templates | https://learn.microsoft.com/en-us/azure/static-web-apps/publish-azure-resource-manager |
-| Deploy Azure Static Web Apps with Bicep templates | https://learn.microsoft.com/en-us/azure/static-web-apps/publish-bicep |
-| Review pull requests using pre-production environments in Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/review-publish-pull-requests |
-| Deploy static web apps using Azure Static Web Apps CLI | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli-deploy |
-| Install Azure Static Web Apps CLI with supported platforms | https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli-install |
-| Configure traffic splitting between environments in Azure Static Web Apps | https://learn.microsoft.com/en-us/azure/static-web-apps/traffic-splitting |
+Example of generated config (for reference only):
+```json
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "app": {
+      "appLocation": ".",
+      "apiLocation": "api",
+      "outputLocation": "dist",
+      "appBuildCommand": "npm run build",
+      "run": "npm run dev",
+      "appDevserverUrl": "http://localhost:3000"
+    }
+  }
+}
+```
+
+**staticwebapp.config.json** (in app source or output folder) - This file CAN be created manually for runtime configuration:
+```json
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*", "/css/*"]
+  },
+  "routes": [
+    { "route": "/api/*", "allowedRoles": ["authenticated"] }
+  ],
+  "platform": {
+    "apiRuntime": "node:20"
+  }
+}
+```
+
+## Command-line Reference
+
+### swa login
+
+Authenticate with Azure for deployment.
+
+```bash
+swa login                              # Interactive login
+swa login --subscription-id <id>       # Specific subscription
+swa login --clear-credentials          # Clear cached credentials
+```
+
+**Flags:** `--subscription-id, -S` | `--resource-group, -R` | `--tenant-id, -T` | `--client-id, -C` | `--client-secret, -CS` | `--app-name, -n`
+
+### swa init
+
+Configure a new SWA project based on an existing frontend and (optional) API. Detects frameworks automatically.
+
+```bash
+swa init                    # Interactive setup
+swa init --yes              # Accept defaults
+```
+
+### swa build
+
+Build frontend and/or API.
+
+```bash
+swa build                   # Build using config
+swa build --auto            # Auto-detect and build
+swa build myApp             # Build specific configuration
+```
+
+**Flags:** `--app-location, -a` | `--api-location, -i` | `--output-location, -O` | `--app-build-command, -A` | `--api-build-command, -I`
+
+### swa start
+
+Start local development emulator.
+
+```bash
+swa start                                    # Serve from outputLocation
+swa start ./dist                             # Serve specific folder
+swa start http://localhost:3000              # Proxy to dev server
+swa start ./dist --api-location ./api        # With API folder
+swa start http://localhost:3000 --run "npm start"  # Auto-start dev server
+```
+
+**Common framework ports:**
+| Framework | Port |
+|-----------|------|
+| React/Vue/Next.js | 3000 |
+| Angular | 4200 |
+| Vite | 5173 |
+
+**Key flags:**
+- `--port, -p` - Emulator port (default: 4280)
+- `--api-location, -i` - API folder path
+- `--api-port, -j` - API port (default: 7071)
+- `--run, -r` - Command to start dev server
+- `--open, -o` - Open browser automatically
+- `--ssl, -s` - Enable HTTPS
+
+### swa deploy
+
+Deploy to Azure Static Web Apps.
+
+```bash
+swa deploy                              # Deploy using config
+swa deploy ./dist                       # Deploy specific folder
+swa deploy --env production             # Deploy to production
+swa deploy --deployment-token <TOKEN>   # Use deployment token
+swa deploy --dry-run                    # Preview without deploying
+```
+
+**Get deployment token:**
+- Azure Portal: Static Web App → Overview → Manage deployment token
+- CLI: `swa deploy --print-token`
+- Environment variable: `SWA_CLI_DEPLOYMENT_TOKEN`
+
+**Key flags:**
+- `--env` - Target environment (`preview` or `production`)
+- `--deployment-token, -d` - Deployment token
+- `--app-name, -n` - Azure SWA resource name
+
+### swa db
+
+Initialize database connections.
+
+```bash
+swa db init --database-type mssql
+swa db init --database-type postgresql
+swa db init --database-type cosmosdb_nosql
+```
+
+## Scenarios
+
+### Create SWA from Existing Frontend and Backend
+
+**Always run `swa init` before `swa start` or `swa deploy`. Do not manually create `swa-cli.config.json`.**
+
+```bash
+# 1. Install CLI
+npm install -D @azure/static-web-apps-cli
+
+# 2. Initialize - REQUIRED: creates swa-cli.config.json with auto-detected settings
+npx swa init              # Interactive mode
+# OR
+npx swa init --yes        # Accept auto-detected defaults
+
+# 3. Build application (if needed)
+npm run build
+
+# 4. Test locally (uses settings from swa-cli.config.json)
+npx swa start
+
+# 5. Deploy
+npx swa login
+npx swa deploy --env production
+```
+
+### Add Azure Functions Backend
+
+1. **Create API folder:**
+```bash
+mkdir api && cd api
+func init --worker-runtime node --model V4
+func new --name message --template "HTTP trigger"
+```
+
+2. **Example function** (`api/src/functions/message.js`):
+```javascript
+const { app } = require('@azure/functions');
+
+app.http('message', {
+    methods: ['GET', 'POST'],
+    authLevel: 'anonymous',
+    handler: async (request) => {
+        const name = request.query.get('name') || 'World';
+        return { jsonBody: { message: `Hello, ${name}!` } };
+    }
+});
+```
+
+3. **Set API runtime** in `staticwebapp.config.json`:
+```json
+{
+  "platform": { "apiRuntime": "node:20" }
+}
+```
+
+4. **Update CLI config** in `swa-cli.config.json`:
+```json
+{
+  "configurations": {
+    "app": { "apiLocation": "api" }
+  }
+}
+```
+
+5. **Test locally:**
+```bash
+npx swa start ./dist --api-location ./api
+# Access API at http://localhost:4280/api/message
+```
+
+**Supported API runtimes:** `node:18`, `node:20`, `node:22`, `dotnet:8.0`, `dotnet-isolated:8.0`, `python:3.10`, `python:3.11`
+
+### Set Up GitHub Actions Deployment
+
+1. **Create SWA resource** in Azure Portal or via Azure CLI
+2. **Link GitHub repository** - workflow auto-generated, or create manually:
+
+`.github/workflows/azure-static-web-apps.yml`:
+```yaml
+name: Azure Static Web Apps CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+
+jobs:
+  build_and_deploy:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build And Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: /
+          api_location: api
+          output_location: dist
+
+  close_pr:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close
+```
+
+3. **Add secret:** Copy deployment token to repository secret `AZURE_STATIC_WEB_APPS_API_TOKEN`
+
+**Workflow settings:**
+- `app_location` - Frontend source path
+- `api_location` - API source path
+- `output_location` - Built output folder
+- `skip_app_build: true` - Skip if pre-built
+- `app_build_command` - Custom build command
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| 404 on client routes | Add `navigationFallback` with `rewrite: "/index.html"` to `staticwebapp.config.json` |
+| API returns 404 | Verify `api` folder structure, ensure `platform.apiRuntime` is set, check function exports |
+| Build output not found | Verify `output_location` matches actual build output directory |
+| Auth not working locally | Use `/.auth/login/<provider>` to access auth emulator UI |
+| CORS errors | APIs under `/api/*` are same-origin; external APIs need CORS headers |
+| Deployment token expired | Regenerate in Azure Portal → Static Web App → Manage deployment token |
+| Config not applied | Ensure `staticwebapp.config.json` is in `app_location` or `output_location` |
+| Local API timeout | Default is 45 seconds; optimize function or check for blocking calls |
+
+**Debug commands:**
+```bash
+swa start --verbose log        # Verbose output
+swa deploy --dry-run           # Preview deployment
+swa --print-config             # Show resolved configuration
+```

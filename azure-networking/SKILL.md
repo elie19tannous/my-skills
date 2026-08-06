@@ -1,87 +1,554 @@
 ---
 name: azure-networking
-description: Expert knowledge for Azure Networking development including troubleshooting, decision making, architecture & design patterns, limits & quotas, security, and configuration. Use when designing hub-spoke/VWAN VNets, planning IP ranges, securing with firewalls/NSGs, or using VNet Manager, and other Azure Networking related development tasks. Not for Azure Virtual Network (use azure-virtual-network), Azure Virtual Network Manager (use azure-virtual-network-manager), Azure Virtual WAN (use azure-virtual-wan), Azure Network Watcher (use azure-network-watcher).
-compatibility: Requires network access. Uses mcp_microsoftdocs:microsoft_docs_fetch or fetch_webpage to retrieve documentation.
+description: Configure Azure VNets, NSGs, and Azure Firewall. Implement hub-spoke topology and private endpoints. Use when designing Azure network infrastructure.
+license: MIT
 metadata:
-  generated_at: "2026-07-05"
-  generator: "docs2skills/1.0.0"
+  author: devops-skills
+  version: "1.0"
 ---
-# Azure Networking Skill
 
-This skill provides expert guidance for Azure Networking. Covers troubleshooting, decision making, architecture & design patterns, limits & quotas, security, and configuration. It combines local quick-reference content with remote documentation fetching capabilities.
+# Azure Networking
 
-## How to Use This Skill
+Design and implement Azure network infrastructure including VNets, subnets, NSGs, VNet peering, private endpoints, Azure Firewall, and Application Gateway. Covers both az CLI commands and Terraform configurations for production hub-spoke topologies.
 
-> **IMPORTANT for Agent**: Use the **Category Index** below to locate relevant sections. For categories with line ranges (e.g., `L35-L120`), use `read_file` with the specified lines. For categories with file links (e.g., `[security.md](security.md)`), use `read_file` on the linked reference file
+## When to Use
 
-> **IMPORTANT for Agent**: If `metadata.generated_at` is more than 3 months old, suggest the user pull the latest version from the repository. If `mcp_microsoftdocs` tools are not available, suggest the user install it: [Installation Guide](https://github.com/MicrosoftDocs/mcp/blob/main/README.md)
+- You are designing the network foundation for Azure workloads.
+- You need to isolate environments with VNets and NSGs.
+- You are connecting on-premises networks to Azure via VPN or ExpressRoute.
+- You need private connectivity to PaaS services via private endpoints.
+- You are implementing centralized egress filtering with Azure Firewall.
+- You need to set up load balancing or application-layer routing with Application Gateway.
 
-This skill requires **network access** to fetch documentation content:
-- **Preferred**: Use `mcp_microsoftdocs:microsoft_docs_fetch` with query string `from=learn-agent-skill`. Returns Markdown.
-- **Fallback**: Use `fetch_webpage` with query string `from=learn-agent-skill&accept=text/markdown`. Returns Markdown.
+## Prerequisites
 
-## Category Index
+```bash
+# Install Azure CLI
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
-| Category | Lines | Description |
-|----------|-------|-------------|
-| Troubleshooting | L34-L38 | Monitoring tools and step-by-step guidance to diagnose, troubleshoot, and resolve issues with Azure virtual networks, connectivity, performance, and other network resources. |
-| Decision Making | L39-L54 | Guidance on choosing Azure network designs and services: load balancing, hybrid/multicloud connectivity, secure topologies, private access, and controlling internet ingress/egress. |
-| Architecture & Design Patterns | L55-L67 | Designing secure Azure network topologies (hub-spoke, flat, multi-region, Virtual WAN), planning IP ranges/subnets, and applying common workload-specific network patterns. |
-| Limits & Quotas | L68-L72 | Using Azure region round-trip latency stats to compare network performance between regions, plan deployments, and optimize app responsiveness based on measured latency. |
-| Security | L73-L83 | Designing secure Azure networks: firewall and DDoS tiers, VM access, DNS/private name resolution, NSG/ASG rules, WAF protection, and policy-based compliance for network resources. |
-| Configuration | L84-L87 | Configuring and centrally managing multiple VNets using Azure Virtual Network Manager, including network groups, connectivity, security rules, and governance at scale. |
+# Login and set subscription
+az login
+az account set --subscription "my-subscription-id"
 
-### Troubleshooting
-| Topic | URL |
-|-------|-----|
-| Monitor and troubleshoot Azure network resources | https://learn.microsoft.com/en-us/azure/networking/design-guide/monitor |
+# Register required providers
+az provider register --namespace Microsoft.Network
 
-### Decision Making
-| Topic | URL |
-|-------|-----|
-| Choose Azure load balancing and app delivery options | https://learn.microsoft.com/en-us/azure/networking/design-guide/app-delivery |
-| Plan cross-cloud connectivity with Azure networking | https://learn.microsoft.com/en-us/azure/networking/design-guide/cross-cloud |
-| Plan cross-region and multicloud connectivity in Azure | https://learn.microsoft.com/en-us/azure/networking/design-guide/cross-region |
-| Choose hybrid connectivity: VPN vs ExpressRoute | https://learn.microsoft.com/en-us/azure/networking/design-guide/hybrid-connectivity |
-| Select Azure services for internet ingress | https://learn.microsoft.com/en-us/azure/networking/design-guide/internet-ingress |
-| Plan lift-and-shift Azure network designs | https://learn.microsoft.com/en-us/azure/networking/design-guide/lift-and-shift |
-| Design networks for migrate-and-modernize workloads | https://learn.microsoft.com/en-us/azure/networking/design-guide/migrate-modernize |
-| Control outbound internet egress from Azure VNets | https://learn.microsoft.com/en-us/azure/networking/design-guide/outbound-egress |
-| Select private access options for Azure PaaS | https://learn.microsoft.com/en-us/azure/networking/design-guide/private-platform-as-a-service |
-| Decide when to use core Azure network foundation services | https://learn.microsoft.com/en-us/azure/networking/foundations/network-foundations-overview |
-| Choose a secure Azure application delivery service | https://learn.microsoft.com/en-us/azure/networking/secure-application-delivery |
-| Select a secure Azure network topology | https://learn.microsoft.com/en-us/azure/networking/secure-network-topology |
+# Create resource group
+az group create --name networking-rg --location eastus
+```
 
-### Architecture & Design Patterns
-| Topic | URL |
-|-------|-----|
-| Deploy a Zero Trust virtual network for web apps | https://learn.microsoft.com/en-us/azure/networking/create-zero-trust-network-web-apps |
-| Design a secure hub-spoke network for Azure web apps | https://learn.microsoft.com/en-us/azure/networking/cross-service-scenarios/design-secure-hub-spoke-network |
-| Implement a single-workload flat VNet topology | https://learn.microsoft.com/en-us/azure/networking/design-guide/flat-network |
-| Design hub-and-spoke network topology in Azure | https://learn.microsoft.com/en-us/azure/networking/design-guide/hub-spoke |
-| Plan IP addressing for Azure virtual networks | https://learn.microsoft.com/en-us/azure/networking/design-guide/ip-planning |
-| Design multi-region Azure network architectures | https://learn.microsoft.com/en-us/azure/networking/design-guide/multi-region |
-| Architect global transit networks with Azure Virtual WAN | https://learn.microsoft.com/en-us/azure/networking/design-guide/virtual-wan |
-| Design Azure virtual networks and subnet layouts | https://learn.microsoft.com/en-us/azure/networking/design-guide/vnets-subnets |
-| Apply common Azure networking workload patterns | https://learn.microsoft.com/en-us/azure/networking/design-guide/workload-patterns |
+## VNet and Subnet Creation
 
-### Limits & Quotas
-| Topic | URL |
-|-------|-----|
-| Use Azure region round-trip latency statistics | https://learn.microsoft.com/en-us/azure/networking/azure-network-latency |
+### Hub VNet
 
-### Security
-| Topic | URL |
-|-------|-----|
-| Design Azure Firewall tiers and traffic inspection | https://learn.microsoft.com/en-us/azure/networking/design-guide/azure-firewall |
-| Select Azure DDoS protection tiers for networks | https://learn.microsoft.com/en-us/azure/networking/design-guide/ddos |
-| Secure developer and admin access to Azure VMs | https://learn.microsoft.com/en-us/azure/networking/design-guide/developer-admin-access |
-| Design secure DNS and private name resolution in Azure | https://learn.microsoft.com/en-us/azure/networking/design-guide/dns-security |
-| Secure Azure VNets with NSGs and ASGs | https://learn.microsoft.com/en-us/azure/networking/design-guide/network-application-security-groups |
-| Protect web apps with Azure Web Application Firewall | https://learn.microsoft.com/en-us/azure/networking/design-guide/web-application-firewall |
-| Apply Azure Policy compliance controls to networking | https://learn.microsoft.com/en-us/azure/networking/security-controls-policy |
+```bash
+# Create hub VNet for shared services
+az network vnet create \
+  --resource-group networking-rg \
+  --name hub-vnet \
+  --address-prefix 10.0.0.0/16 \
+  --location eastus \
+  --tags environment=prod role=hub
 
-### Configuration
-| Topic | URL |
-|-------|-----|
-| Manage Azure VNets centrally with Virtual Network Manager | https://learn.microsoft.com/en-us/azure/networking/design-guide/azure-virtual-network-manager |
+# Add subnets to hub
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name hub-vnet \
+  --name AzureFirewallSubnet \
+  --address-prefix 10.0.1.0/26
+
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name hub-vnet \
+  --name GatewaySubnet \
+  --address-prefix 10.0.2.0/27
+
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name hub-vnet \
+  --name SharedServicesSubnet \
+  --address-prefix 10.0.3.0/24
+
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name hub-vnet \
+  --name AzureBastionSubnet \
+  --address-prefix 10.0.4.0/26
+```
+
+### Spoke VNet
+
+```bash
+# Create spoke VNet for application workloads
+az network vnet create \
+  --resource-group networking-rg \
+  --name spoke-prod-vnet \
+  --address-prefix 10.1.0.0/16 \
+  --location eastus \
+  --tags environment=prod role=spoke
+
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name web-subnet \
+  --address-prefix 10.1.1.0/24
+
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name app-subnet \
+  --address-prefix 10.1.2.0/24
+
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name data-subnet \
+  --address-prefix 10.1.3.0/24 \
+  --private-endpoint-network-policies Enabled
+
+# List all subnets in a VNet
+az network vnet subnet list \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --output table
+```
+
+## Network Security Groups
+
+```bash
+# Create NSG for web tier
+az network nsg create \
+  --resource-group networking-rg \
+  --name web-nsg \
+  --tags tier=web
+
+# Allow HTTPS from internet
+az network nsg rule create \
+  --resource-group networking-rg \
+  --nsg-name web-nsg \
+  --name AllowHTTPS \
+  --priority 100 \
+  --direction Inbound \
+  --access Allow \
+  --protocol Tcp \
+  --source-address-prefixes Internet \
+  --destination-port-ranges 443
+
+# Allow HTTP for redirect
+az network nsg rule create \
+  --resource-group networking-rg \
+  --nsg-name web-nsg \
+  --name AllowHTTP \
+  --priority 110 \
+  --direction Inbound \
+  --access Allow \
+  --protocol Tcp \
+  --source-address-prefixes Internet \
+  --destination-port-ranges 80
+
+# Deny all other inbound traffic
+az network nsg rule create \
+  --resource-group networking-rg \
+  --nsg-name web-nsg \
+  --name DenyAllInbound \
+  --priority 4096 \
+  --direction Inbound \
+  --access Deny \
+  --protocol '*' \
+  --source-address-prefixes '*' \
+  --destination-port-ranges '*'
+
+# Create NSG for app tier -- only allow from web subnet
+az network nsg create \
+  --resource-group networking-rg \
+  --name app-nsg
+
+az network nsg rule create \
+  --resource-group networking-rg \
+  --nsg-name app-nsg \
+  --name AllowFromWeb \
+  --priority 100 \
+  --direction Inbound \
+  --access Allow \
+  --protocol Tcp \
+  --source-address-prefixes 10.1.1.0/24 \
+  --destination-port-ranges 8080
+
+# Create NSG for data tier -- only allow from app subnet
+az network nsg create \
+  --resource-group networking-rg \
+  --name data-nsg
+
+az network nsg rule create \
+  --resource-group networking-rg \
+  --nsg-name data-nsg \
+  --name AllowSQLFromApp \
+  --priority 100 \
+  --direction Inbound \
+  --access Allow \
+  --protocol Tcp \
+  --source-address-prefixes 10.1.2.0/24 \
+  --destination-port-ranges 1433
+
+# Associate NSG with subnet
+az network vnet subnet update \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name web-subnet \
+  --network-security-group web-nsg
+
+az network vnet subnet update \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name app-subnet \
+  --network-security-group app-nsg
+
+az network vnet subnet update \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name data-subnet \
+  --network-security-group data-nsg
+
+# View effective NSG rules
+az network nic list-effective-nsg \
+  --resource-group networking-rg \
+  --name myvm-nic \
+  --output table
+```
+
+## VNet Peering
+
+```bash
+# Peer hub to spoke
+az network vnet peering create \
+  --resource-group networking-rg \
+  --name hub-to-spoke-prod \
+  --vnet-name hub-vnet \
+  --remote-vnet spoke-prod-vnet \
+  --allow-vnet-access \
+  --allow-forwarded-traffic \
+  --allow-gateway-transit
+
+# Peer spoke to hub
+az network vnet peering create \
+  --resource-group networking-rg \
+  --name spoke-prod-to-hub \
+  --vnet-name spoke-prod-vnet \
+  --remote-vnet hub-vnet \
+  --allow-vnet-access \
+  --allow-forwarded-traffic \
+  --use-remote-gateways false
+
+# Verify peering status
+az network vnet peering list \
+  --resource-group networking-rg \
+  --vnet-name hub-vnet \
+  --output table
+```
+
+## Private Endpoints
+
+```bash
+# Create private endpoint for Azure SQL
+az network private-endpoint create \
+  --resource-group networking-rg \
+  --name sql-private-endpoint \
+  --vnet-name spoke-prod-vnet \
+  --subnet data-subnet \
+  --private-connection-resource-id "/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Sql/servers/myserver" \
+  --group-id sqlServer \
+  --connection-name sql-connection
+
+# Create private DNS zone for SQL
+az network private-dns zone create \
+  --resource-group networking-rg \
+  --name privatelink.database.windows.net
+
+# Link DNS zone to VNet
+az network private-dns link vnet create \
+  --resource-group networking-rg \
+  --zone-name privatelink.database.windows.net \
+  --name spoke-dns-link \
+  --virtual-network spoke-prod-vnet \
+  --registration-enabled false
+
+# Create DNS record for the private endpoint
+az network private-endpoint dns-zone-group create \
+  --resource-group networking-rg \
+  --endpoint-name sql-private-endpoint \
+  --name sql-dns-group \
+  --private-dns-zone privatelink.database.windows.net \
+  --zone-name privatelink.database.windows.net
+
+# Create private endpoint for Storage Account
+az network private-endpoint create \
+  --resource-group networking-rg \
+  --name storage-private-endpoint \
+  --vnet-name spoke-prod-vnet \
+  --subnet data-subnet \
+  --private-connection-resource-id "/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/mystorageacct" \
+  --group-id blob \
+  --connection-name storage-blob-connection
+
+# Create private endpoint for Key Vault
+az network private-endpoint create \
+  --resource-group networking-rg \
+  --name kv-private-endpoint \
+  --vnet-name spoke-prod-vnet \
+  --subnet app-subnet \
+  --private-connection-resource-id "/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.KeyVault/vaults/myvault" \
+  --group-id vault \
+  --connection-name kv-connection
+```
+
+## Azure Firewall
+
+```bash
+# Create public IP for firewall
+az network public-ip create \
+  --resource-group networking-rg \
+  --name fw-public-ip \
+  --sku Standard \
+  --allocation-method Static
+
+# Create Azure Firewall
+az network firewall create \
+  --resource-group networking-rg \
+  --name hub-firewall \
+  --location eastus \
+  --sku AZFW_VNet \
+  --tier Standard
+
+# Configure firewall IP
+az network firewall ip-config create \
+  --resource-group networking-rg \
+  --firewall-name hub-firewall \
+  --name fw-ipconfig \
+  --public-ip-address fw-public-ip \
+  --vnet-name hub-vnet
+
+# Get firewall private IP for route tables
+FW_PRIVATE_IP=$(az network firewall show \
+  --resource-group networking-rg \
+  --name hub-firewall \
+  --query "ipConfigurations[0].privateIpAddress" \
+  --output tsv)
+
+# Create application rule allowing web traffic
+az network firewall application-rule create \
+  --resource-group networking-rg \
+  --firewall-name hub-firewall \
+  --collection-name AllowWeb \
+  --name AllowGoogle \
+  --protocols Https=443 Http=80 \
+  --source-addresses 10.1.0.0/16 \
+  --target-fqdns "*.google.com" "*.microsoft.com" \
+  --action Allow \
+  --priority 100
+
+# Create network rule for DNS
+az network firewall network-rule create \
+  --resource-group networking-rg \
+  --firewall-name hub-firewall \
+  --collection-name AllowDNS \
+  --name AllowDNS \
+  --protocols UDP \
+  --source-addresses 10.1.0.0/16 \
+  --destination-addresses 168.63.129.16 \
+  --destination-ports 53 \
+  --action Allow \
+  --priority 200
+
+# Create route table to send traffic through firewall
+az network route-table create \
+  --resource-group networking-rg \
+  --name spoke-route-table
+
+az network route-table route create \
+  --resource-group networking-rg \
+  --route-table-name spoke-route-table \
+  --name default-to-firewall \
+  --address-prefix 0.0.0.0/0 \
+  --next-hop-type VirtualAppliance \
+  --next-hop-ip-address "$FW_PRIVATE_IP"
+
+# Associate route table with spoke subnet
+az network vnet subnet update \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name app-subnet \
+  --route-table spoke-route-table
+```
+
+## Application Gateway with WAF
+
+```bash
+# Create public IP
+az network public-ip create \
+  --resource-group networking-rg \
+  --name appgw-public-ip \
+  --sku Standard \
+  --allocation-method Static
+
+# Create Application Gateway subnet
+az network vnet subnet create \
+  --resource-group networking-rg \
+  --vnet-name spoke-prod-vnet \
+  --name AppGatewaySubnet \
+  --address-prefix 10.1.10.0/24
+
+# Create Application Gateway with WAF v2
+az network application-gateway create \
+  --resource-group networking-rg \
+  --name myapp-appgw \
+  --location eastus \
+  --sku WAF_v2 \
+  --capacity 2 \
+  --vnet-name spoke-prod-vnet \
+  --subnet AppGatewaySubnet \
+  --public-ip-address appgw-public-ip \
+  --http-settings-port 80 \
+  --http-settings-protocol Http \
+  --frontend-port 443 \
+  --servers 10.1.2.4 10.1.2.5
+
+# Enable WAF policy
+az network application-gateway waf-policy create \
+  --resource-group networking-rg \
+  --name myapp-waf-policy
+
+az network application-gateway waf-policy managed-rule rule-set add \
+  --resource-group networking-rg \
+  --policy-name myapp-waf-policy \
+  --type OWASP \
+  --version 3.2
+```
+
+## Terraform Configuration
+
+```hcl
+resource "azurerm_virtual_network" "hub" {
+  name                = "hub-vnet"
+  location            = azurerm_resource_group.networking.location
+  resource_group_name = azurerm_resource_group.networking.name
+  address_space       = ["10.0.0.0/16"]
+  tags                = var.tags
+}
+
+resource "azurerm_subnet" "firewall" {
+  name                 = "AzureFirewallSubnet"
+  resource_group_name  = azurerm_resource_group.networking.name
+  virtual_network_name = azurerm_virtual_network.hub.name
+  address_prefixes     = ["10.0.1.0/26"]
+}
+
+resource "azurerm_virtual_network" "spoke" {
+  name                = "spoke-prod-vnet"
+  location            = azurerm_resource_group.networking.location
+  resource_group_name = azurerm_resource_group.networking.name
+  address_space       = ["10.1.0.0/16"]
+  tags                = var.tags
+}
+
+resource "azurerm_subnet" "web" {
+  name                 = "web-subnet"
+  resource_group_name  = azurerm_resource_group.networking.name
+  virtual_network_name = azurerm_virtual_network.spoke.name
+  address_prefixes     = ["10.1.1.0/24"]
+}
+
+resource "azurerm_network_security_group" "web" {
+  name                = "web-nsg"
+  location            = azurerm_resource_group.networking.location
+  resource_group_name = azurerm_resource_group.networking.name
+
+  security_rule {
+    name                       = "AllowHTTPS"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "DenyAllInbound"
+    priority                   = 4096
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  tags = var.tags
+}
+
+resource "azurerm_subnet_network_security_group_association" "web" {
+  subnet_id                 = azurerm_subnet.web.id
+  network_security_group_id = azurerm_network_security_group.web.id
+}
+
+resource "azurerm_virtual_network_peering" "hub_to_spoke" {
+  name                      = "hub-to-spoke"
+  resource_group_name       = azurerm_resource_group.networking.name
+  virtual_network_name      = azurerm_virtual_network.hub.name
+  remote_virtual_network_id = azurerm_virtual_network.spoke.id
+  allow_forwarded_traffic   = true
+  allow_gateway_transit     = true
+}
+
+resource "azurerm_virtual_network_peering" "spoke_to_hub" {
+  name                      = "spoke-to-hub"
+  resource_group_name       = azurerm_resource_group.networking.name
+  virtual_network_name      = azurerm_virtual_network.spoke.name
+  remote_virtual_network_id = azurerm_virtual_network.hub.id
+  allow_forwarded_traffic   = true
+  use_remote_gateways       = false
+}
+
+resource "azurerm_private_endpoint" "sql" {
+  name                = "sql-private-endpoint"
+  location            = azurerm_resource_group.networking.location
+  resource_group_name = azurerm_resource_group.networking.name
+  subnet_id           = azurerm_subnet.data.id
+
+  private_service_connection {
+    name                           = "sql-connection"
+    private_connection_resource_id = azurerm_mssql_server.main.id
+    subresource_names              = ["sqlServer"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "sql-dns-group"
+    private_dns_zone_ids = [azurerm_private_dns_zone.sql.id]
+  }
+}
+```
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| VMs cannot reach the internet | NSG blocking outbound or missing route | Check NSG rules with `az network nic list-effective-nsg`; verify route table |
+| VNet peering shows `Disconnected` | Peering created in one direction only | Create peering from both sides (hub-to-spoke AND spoke-to-hub) |
+| Private endpoint DNS not resolving | Private DNS zone not linked to VNet | Link DNS zone with `az network private-dns link vnet create` |
+| NSG rule not taking effect | Higher-priority rule overriding | List rules with `az network nsg rule list` and check priority ordering |
+| Application Gateway health probes failing | Backend pool servers unreachable | Verify NSG allows traffic from the AppGateway subnet |
+| Azure Firewall blocking legitimate traffic | Missing application or network rule | Check firewall logs in Log Analytics; add appropriate rule |
+| Cross-VNet communication failing | Peering not configured or route missing | Verify peering status and that `allow-vnet-access` is enabled |
+| High latency between regions | Traffic routing through unexpected path | Use `az network watcher next-hop` to diagnose routing |
+
+## Related Skills
+
+- `azure-vms` -- VM network interface and NSG configuration.
+- `azure-aks` -- AKS VNet integration with Azure CNI.
+- `azure-sql` -- Private endpoint configuration for database access.
+- `terraform-azure` -- Network infrastructure provisioning with Terraform.
+- `azure-functions` -- VNet integration for Premium plan functions.

@@ -1,13 +1,9 @@
 ---
 name: azure-messaging-webpubsubservice-py
-description: |
-  Azure Web PubSub Service SDK for Python. Use for real-time messaging, WebSocket connections, and pub/sub patterns.
-  Triggers: "azure-messaging-webpubsubservice", "WebPubSubServiceClient", "real-time", "WebSocket", "pub/sub".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-messaging-webpubsubservice
+description: Azure Web PubSub Service SDK for Python. Use for real-time messaging, WebSocket connections, and pub/sub patterns.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Web PubSub Service SDK for Python
@@ -27,22 +23,9 @@ pip install azure-messaging-webpubsubclient
 ## Environment Variables
 
 ```bash
-AZURE_WEBPUBSUB_HUB=my-hub  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_WEBPUBSUB_CONNECTION_STRING=Endpoint=https://<name>.webpubsub.azure.com;AccessKey=...
+AZURE_WEBPUBSUB_HUB=my-hub
 ```
-
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
 
 ## Service Client (Server-Side)
 
@@ -50,21 +33,21 @@ AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used i
 
 ```python
 from azure.messaging.webpubsubservice import WebPubSubServiceClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
+# Connection string
+client = WebPubSubServiceClient.from_connection_string(
+    connection_string=os.environ["AZURE_WEBPUBSUB_CONNECTION_STRING"],
+    hub="my-hub"
+)
 
-with WebPubSubServiceClient(
+# Entra ID
+from azure.identity import DefaultAzureCredential
+
+client = WebPubSubServiceClient(
     endpoint="https://<name>.webpubsub.azure.com",
     hub="my-hub",
-    credential=credential
-) as client:
-    # Use `client` for all subsequent operations (see examples below)
-    ...
+    credential=DefaultAzureCredential()
+)
 ```
 
 ### Generate Client Access Token
@@ -197,20 +180,24 @@ has_permission = client.check_permission(
 ```python
 from azure.messaging.webpubsubclient import WebPubSubClient
 
-with WebPubSubClient(credential=token["url"]) as client:
-    @client.on("connected")
-    def on_connected(e):
-        print(f"Connected: {e.connection_id}")
+client = WebPubSubClient(credential=token["url"])
 
-    @client.on("server-message")
-    def on_message(e):
-        print(f"Message: {e.data}")
+# Event handlers
+@client.on("connected")
+def on_connected(e):
+    print(f"Connected: {e.connection_id}")
 
-    @client.on("group-message")
-    def on_group_message(e):
-        print(f"Group {e.group}: {e.data}")
+@client.on("server-message")
+def on_message(e):
+    print(f"Message: {e.data}")
 
-    client.send_to_group("my-group", "Hello from Python!")
+@client.on("group-message")
+def on_group_message(e):
+    print(f"Group {e.group}: {e.data}")
+
+# Connect and send
+client.open()
+client.send_to_group("my-group", "Hello from Python!")
 ```
 
 ## Async Service Client
@@ -220,13 +207,17 @@ from azure.messaging.webpubsubservice.aio import WebPubSubServiceClient
 from azure.identity.aio import DefaultAzureCredential
 
 async def broadcast():
-    async with DefaultAzureCredential() as credential:
-        async with WebPubSubServiceClient(
-            endpoint="https://<name>.webpubsub.azure.com",
-            hub="my-hub",
-            credential=credential
-        ) as client:
-            await client.send_to_all("Hello async!", content_type="text/plain")
+    credential = DefaultAzureCredential()
+    client = WebPubSubServiceClient(
+        endpoint="https://<name>.webpubsub.azure.com",
+        hub="my-hub",
+        credential=credential
+    )
+    
+    await client.send_to_all("Hello async!", content_type="text/plain")
+    
+    await client.close()
+    await credential.close()
 ```
 
 ## Client Operations
@@ -245,13 +236,18 @@ async def broadcast():
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for portable auth across local dev and Azure (avoid connection strings / access keys when possible).
-4. **Use roles** to limit client permissions
-4. **Use groups** for targeted messaging
-5. **Generate short-lived tokens** for security
-6. **Use user IDs** to send to users across connections
-7. **Handle reconnection** in client applications
-8. **Use JSON** content type for structured data
-9. **Close connections** gracefully with reasons
+1. **Use roles** to limit client permissions
+2. **Use groups** for targeted messaging
+3. **Generate short-lived tokens** for security
+4. **Use user IDs** to send to users across connections
+5. **Handle reconnection** in client applications
+6. **Use JSON** content type for structured data
+7. **Close connections** gracefully with reasons
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

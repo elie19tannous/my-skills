@@ -1,13 +1,9 @@
 ---
 name: azure-ai-translation-document-py
-description: |
-  Azure AI Document Translation SDK for batch translation of documents with format preservation. Use for translating Word, PDF, Excel, PowerPoint, and other document formats at scale.
-  Triggers: "document translation", "batch translation", "translate documents", "DocumentTranslationClient".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-ai-translation-document
+description: Azure AI Document Translation SDK for batch translation of documents with format preservation. Use for translating Word, PDF, Excel, PowerPoint, and other document formats at scale.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure AI Document Translation SDK for Python
@@ -23,61 +19,39 @@ pip install azure-ai-translation-document
 ## Environment Variables
 
 ```bash
-AZURE_DOCUMENT_TRANSLATION_ENDPOINT=https://<resource>.cognitiveservices.azure.com  # Required for all auth methods
+AZURE_DOCUMENT_TRANSLATION_ENDPOINT=https://<resource>.cognitiveservices.azure.com
+AZURE_DOCUMENT_TRANSLATION_KEY=<your-api-key>  # If using API key
+
 # Storage for source and target documents
-AZURE_SOURCE_CONTAINER_URL=https://<storage>.blob.core.windows.net/<container>?<sas>  # Required for all auth methods
-AZURE_TARGET_CONTAINER_URL=https://<storage>.blob.core.windows.net/<container>?<sas>  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
-AZURE_DOCUMENT_TRANSLATION_KEY=<your-api-key>  # Only required for the legacy API-key auth path below
+AZURE_SOURCE_CONTAINER_URL=https://<storage>.blob.core.windows.net/<container>?<sas>
+AZURE_TARGET_CONTAINER_URL=https://<storage>.blob.core.windows.net/<container>?<sas>
 ```
 
-## Authentication & Lifecycle
+## Authentication
 
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+### API Key
 
 ```python
 import os
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.ai.translation.document import DocumentTranslationClient
+from azure.core.credentials import AzureKeyCredential
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
+endpoint = os.environ["AZURE_DOCUMENT_TRANSLATION_ENDPOINT"]
+key = os.environ["AZURE_DOCUMENT_TRANSLATION_KEY"]
 
-with DocumentTranslationClient(
-    endpoint=os.environ["AZURE_DOCUMENT_TRANSLATION_ENDPOINT"],
-    credential=credential,
-) as client:
-    statuses = list(client.list_translation_statuses())
+client = DocumentTranslationClient(endpoint, AzureKeyCredential(key))
 ```
 
-### Legacy: API Key (existing keyed deployments)
-
-New code should use `DefaultAzureCredential` above. Use `AzureKeyCredential` only if you have an existing keyed deployment that hasn't been migrated to Entra ID yet — for example, regulated environments still completing their Entra rollout.
+### Entra ID (Recommended)
 
 ```python
-import os
-from azure.core.credentials import AzureKeyCredential
-from azure.ai.translation.document import DocumentTranslationClient, SingleDocumentTranslationClient
+from azure.ai.translation.document import DocumentTranslationClient
+from azure.identity import DefaultAzureCredential
 
-with DocumentTranslationClient(
+client = DocumentTranslationClient(
     endpoint=os.environ["AZURE_DOCUMENT_TRANSLATION_ENDPOINT"],
-    credential=AzureKeyCredential(os.environ["AZURE_DOCUMENT_TRANSLATION_KEY"]),
-) as client:
-    statuses = list(client.list_translation_statuses())
-
-# SingleDocumentTranslationClient accepts the same key-based credential.
+    credential=DefaultAzureCredential()
+)
 ```
 
 ## Basic Document Translation
@@ -132,17 +106,17 @@ poller = client.begin_translation(
 
 ```python
 from azure.ai.translation.document import SingleDocumentTranslationClient
-from azure.identity import DefaultAzureCredential
+
+single_client = SingleDocumentTranslationClient(endpoint, AzureKeyCredential(key))
 
 with open("document.docx", "rb") as f:
     document_content = f.read()
 
-with SingleDocumentTranslationClient(endpoint, DefaultAzureCredential()) as single_client:
-    result = single_client.translate(
-        body=document_content,
-        target_language="es",
-        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+result = single_client.translate(
+    body=document_content,
+    target_language="es",
+    content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
 
 # Save translated document
 with open("document_es.docx", "wb") as f:
@@ -241,13 +215,12 @@ from azure.ai.translation.document.aio import DocumentTranslationClient
 from azure.identity.aio import DefaultAzureCredential
 
 async def translate_documents():
-    async with DefaultAzureCredential() as credential:
-        async with DocumentTranslationClient(
-            endpoint=endpoint,
-            credential=credential,
-        ) as client:
-            poller = await client.begin_translation(inputs=[...])
-            result = await poller.result()
+    async with DocumentTranslationClient(
+        endpoint=endpoint,
+        credential=DefaultAzureCredential()
+    ) as client:
+        poller = await client.begin_translation(inputs=[...])
+        result = await poller.result()
 ```
 
 ## Supported Formats
@@ -267,12 +240,18 @@ async def translate_documents():
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use SAS tokens** with minimal required permissions
-4. **Monitor long-running operations** with `poller.status()`
-5. **Handle document-level errors** by iterating document statuses
-6. **Use glossaries** for domain-specific terminology
-7. **Separate target containers** for each language
-8. **Use async client** for multiple concurrent jobs
-9. **Check supported formats** before submitting documents
+1. **Use SAS tokens** with minimal required permissions
+2. **Monitor long-running operations** with `poller.status()`
+3. **Handle document-level errors** by iterating document statuses
+4. **Use glossaries** for domain-specific terminology
+5. **Separate target containers** for each language
+6. **Use async client** for multiple concurrent jobs
+7. **Check supported formats** before submitting documents
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

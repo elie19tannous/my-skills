@@ -1,13 +1,9 @@
 ---
 name: azure-speech-to-text-rest-py
-description: |-
-  Azure Speech to Text REST API for short audio (Python). Use for simple speech recognition of audio files up to 60 seconds without the Speech SDK.
-  Triggers: "speech to text REST", "short audio transcription", "speech recognition REST API", "STT REST", "recognize speech REST".
-  DO NOT USE FOR: Long audio (>60 seconds), real-time streaming, batch transcription, custom speech models, speech translation. Use Speech SDK or Batch Transcription API instead.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
+description: Azure Speech to Text REST API for short audio (Python). Use for simple speech recognition of audio files up to 60 seconds without the Speech SDK.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Speech to Text REST API for Short Audio
@@ -351,14 +347,12 @@ Common language codes (see [full list](https://learn.microsoft.com/azure/ai-serv
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients.** Use `with httpx.Client(...) as client:` (sync) or `async with httpx.AsyncClient(...) as client:` (async) so connections are pooled and closed deterministically.
-3. **Use WAV PCM 16kHz mono** for best compatibility
-4. **Enable chunked transfer** for lower latency
-5. **Cache access tokens** for 9 minutes (valid for 10)
-6. **Specify the correct language** for accurate recognition
-7. **Use detailed format** when you need confidence scores
-8. **Handle all RecognitionStatus values** in production code
+1. **Use WAV PCM 16kHz mono** for best compatibility
+2. **Enable chunked transfer** for lower latency
+3. **Cache access tokens** for 9 minutes (valid for 10)
+4. **Specify the correct language** for accurate recognition
+5. **Use detailed format** when you need confidence scores
+6. **Handle all RecognitionStatus values** in production code
 
 ## When NOT to Use This API
 
@@ -375,4 +369,12 @@ Use the Speech SDK or Batch Transcription API instead when you need:
 
 | File | Contents |
 |------|----------|
-| [references/pronunciation-assessment.md](references/pronunciation-assessment.md) | Pronunciation assessment parameters and scoring |
+| references/pronunciation-assessment.md | Pronunciation assessment parameters and scoring |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,11 +1,9 @@
 ---
 name: azure-storage-blob-java
-description: Build blob storage applications with Azure Storage Blob SDK for Java. Use when uploading, downloading, or managing files in Azure Blob Storage, working with containers, or implementing streaming data operations.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-storage-blob
+description: "Build blob storage applications using the Azure Storage Blob SDK for Java."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Storage Blob SDK for Java
@@ -45,22 +43,11 @@ BlobServiceClient serviceClient = new BlobServiceClientBuilder()
 ### With DefaultAzureCredential
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 BlobServiceClient serviceClient = new BlobServiceClientBuilder()
     .endpoint("<storage-account-url>")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildClient();
 ```
 
@@ -389,9 +376,8 @@ BlobServiceClient client = new BlobServiceClientBuilder()
 ## Environment Variables
 
 ```bash
-AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...  # Alternative to Entra ID auth
-AZURE_STORAGE_ACCOUNT_URL=https://<account>.blob.core.windows.net  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
+AZURE_STORAGE_ACCOUNT_URL=https://<account>.blob.core.windows.net
 ```
 
 ## Trigger Phrases
@@ -402,3 +388,11 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 - "storage streaming"
 - "SAS token generation"
 - "blob metadata properties"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

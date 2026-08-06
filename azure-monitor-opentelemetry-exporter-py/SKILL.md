@@ -1,13 +1,9 @@
 ---
 name: azure-monitor-opentelemetry-exporter-py
-description: |
-  Azure Monitor OpenTelemetry Exporter for Python. Use for low-level OpenTelemetry export to Application Insights.
-  Triggers: "azure-monitor-opentelemetry-exporter", "AzureMonitorTraceExporter", "AzureMonitorMetricExporter", "AzureMonitorLogExporter".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-monitor-opentelemetry-exporter
+description: Azure Monitor OpenTelemetry Exporter for Python. Use for low-level OpenTelemetry export to Application Insights.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Monitor OpenTelemetry Exporter for Python
@@ -23,14 +19,10 @@ pip install azure-monitor-opentelemetry-exporter
 ## Environment Variables
 
 ```bash
-APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=xxx;IngestionEndpoint=https://xxx.in.applicationinsights.azure.com/  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=xxx;IngestionEndpoint=https://xxx.in.applicationinsights.azure.com/
 ```
 
-> **🔑 Auth & lifecycle:** These exporters take a connection string by design, but for *AAD-authenticated ingestion* (where supported) prefer `DefaultAzureCredential` via the `credential=` parameter — see the [Azure AD Authentication](#azure-ad-authentication) section. Any Azure SDK clients you create alongside the exporter should be wrapped in `with`/`async with` blocks (and async credentials from `azure.identity.aio` likewise).
-
 ## When to Use
-
 | Scenario | Use |
 |----------|-----|
 | Quick setup, auto-instrumentation | `azure-monitor-opentelemetry` (distro) |
@@ -40,16 +32,14 @@ AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used i
 ## Trace Exporter
 
 ```python
-from azure.identity import DefaultAzureCredential
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
-# Reads APPLICATIONINSIGHTS_CONNECTION_STRING from env to identify the resource;
-# DefaultAzureCredential authenticates ingestion via Microsoft Entra ID.
+# Create exporter
 exporter = AzureMonitorTraceExporter(
-    credential=DefaultAzureCredential(),
+    connection_string="InstrumentationKey=xxx;..."
 )
 
 # Configure tracer provider
@@ -67,15 +57,14 @@ with tracer.start_as_current_span("my-span"):
 ## Metric Exporter
 
 ```python
-from azure.identity import DefaultAzureCredential
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from azure.monitor.opentelemetry.exporter import AzureMonitorMetricExporter
 
-# Reads APPLICATIONINSIGHTS_CONNECTION_STRING from env; AAD-authenticated ingestion via DefaultAzureCredential.
+# Create exporter
 exporter = AzureMonitorMetricExporter(
-    credential=DefaultAzureCredential(),
+    connection_string="InstrumentationKey=xxx;..."
 )
 
 # Configure meter provider
@@ -92,15 +81,14 @@ counter.add(1, {"route": "/api/users"})
 
 ```python
 import logging
-from azure.identity import DefaultAzureCredential
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
 
-# Reads APPLICATIONINSIGHTS_CONNECTION_STRING from env; AAD-authenticated ingestion via DefaultAzureCredential.
+# Create exporter
 exporter = AzureMonitorLogExporter(
-    credential=DefaultAzureCredential(),
+    connection_string="InstrumentationKey=xxx;..."
 )
 
 # Configure logger provider
@@ -122,29 +110,20 @@ logger.info("This will be sent to Application Insights")
 Exporters read `APPLICATIONINSIGHTS_CONNECTION_STRING` automatically:
 
 ```python
-from azure.identity import DefaultAzureCredential
 from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
-# Connection string from environment; AAD-authenticated ingestion via DefaultAzureCredential.
-exporter = AzureMonitorTraceExporter(
-    credential=DefaultAzureCredential(),
-)
+# Connection string from environment
+exporter = AzureMonitorTraceExporter()
 ```
 
 ## Azure AD Authentication
 
 ```python
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
 exporter = AzureMonitorTraceExporter(
-    credential=credential
+    credential=DefaultAzureCredential()
 )
 ```
 
@@ -168,11 +147,10 @@ trace.set_tracer_provider(TracerProvider(sampler=sampler))
 Configure offline storage for retry:
 
 ```python
-from azure.identity import DefaultAzureCredential
 from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
 exporter = AzureMonitorTraceExporter(
-    credential=DefaultAzureCredential(),
+    connection_string="...",
     storage_directory="/path/to/storage",  # Custom storage path
     disable_offline_storage=False  # Enable retry (default)
 )
@@ -182,7 +160,7 @@ exporter = AzureMonitorTraceExporter(
 
 ```python
 exporter = AzureMonitorTraceExporter(
-    credential=DefaultAzureCredential(),
+    connection_string="...",
     disable_offline_storage=True  # No retry on failure
 )
 ```
@@ -220,11 +198,14 @@ exporter = AzureMonitorTraceExporter(
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Flush and shut down providers at process exit.** Call the shutdown/flush APIs (e.g. `tracer_provider.shutdown()`, `meter_provider.shutdown()`, `logger_provider.shutdown()`) at process exit to flush telemetry before the process terminates.
-3. **Use BatchSpanProcessor** for production (not SimpleSpanProcessor)
-4. **Use ApplicationInsightsSampler** for consistent sampling across services
-5. **Enable offline storage** for reliability in production
-6. **Use Microsoft Entra authentication** instead of instrumentation keys
-7. **Set export intervals** appropriate for your workload
-8. **Use the distro** (`azure-monitor-opentelemetry`) unless you need custom pipelines
+1. **Use BatchSpanProcessor** for production (not SimpleSpanProcessor)
+2. **Use ApplicationInsightsSampler** for consistent sampling across services
+3. **Enable offline storage** for reliability in production
+4. **Use AAD authentication** instead of instrumentation keys
+5. **Set export intervals** appropriate for your workload
+6. **Use the distro** (`azure-monitor-opentelemetry`) unless you need custom pipelines
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

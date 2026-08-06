@@ -1,11 +1,9 @@
 ---
 name: azure-data-tables-java
-description: Build table storage applications with Azure Tables SDK for Java. Use when working with Azure Table Storage or Cosmos DB Table API for NoSQL key-value data, schemaless storage, or structured data at scale.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-data-tables
+description: "Build table storage applications using the Azure Tables SDK for Java. Works with both Azure Table Storage and Cosmos DB Table API."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Tables SDK for Java
@@ -63,22 +61,11 @@ TableServiceClient serviceClient = new TableServiceClientBuilder()
 ### With DefaultAzureCredential (Storage only)
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 TableServiceClient serviceClient = new TableServiceClientBuilder()
     .endpoint("<your-table-account-url>")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildClient();
 ```
 
@@ -324,12 +311,11 @@ try {
 
 ```bash
 # Storage Account
-AZURE_TABLES_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...  # Alternative to Entra ID auth
-AZURE_TABLES_ENDPOINT=https://<account>.table.core.windows.net  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_TABLES_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
+AZURE_TABLES_ENDPOINT=https://<account>.table.core.windows.net
 
 # Cosmos DB Table API
-COSMOS_TABLE_ENDPOINT=https://<account>.table.cosmosdb.azure.com  # Alternative endpoint for Cosmos DB Table API
+COSMOS_TABLE_ENDPOINT=https://<account>.table.cosmosdb.azure.com
 ```
 
 ## Best Practices
@@ -348,3 +334,11 @@ COSMOS_TABLE_ENDPOINT=https://<account>.table.cosmosdb.azure.com  # Alternative 
 - "NoSQL key-value storage"
 - "partition key row key"
 - "table entity CRUD"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

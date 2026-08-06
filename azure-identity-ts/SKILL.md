@@ -1,24 +1,19 @@
 ---
 name: azure-identity-ts
-description: Authenticate to Azure services using Azure Identity library for JavaScript (@azure/identity). Use when configuring authentication with DefaultAzureCredential, managed identity, service principals, or interactive browser login.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/identity'
+description: "Authenticate to Azure services with various credential types."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
-# Azure Identity library for TypeScript
+# Azure Identity SDK for TypeScript
 
-Authentication library for Azure SDK clients using Microsoft Entra ID.
+Authenticate to Azure services with various credential types.
 
 ## Installation
 
 ```bash
 npm install @azure/identity
-
-# For Visual Studio Code credential support
-npm install @azure/identity-vscode
 ```
 
 ## Environment Variables
@@ -29,7 +24,6 @@ npm install @azure/identity-vscode
 AZURE_TENANT_ID=<tenant-id>
 AZURE_CLIENT_ID=<client-id>
 AZURE_CLIENT_SECRET=<client-secret>
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ### Service Principal (Certificate)
@@ -49,16 +43,12 @@ AZURE_CLIENT_ID=<client-id>
 AZURE_FEDERATED_TOKEN_FILE=/var/run/secrets/tokens/azure-identity
 ```
 
-## DefaultAzureCredential (Recommended for Local Development)
+## DefaultAzureCredential (Recommended)
 
 ```typescript
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+const credential = new DefaultAzureCredential();
 
 // Use with any Azure SDK client
 import { BlobServiceClient } from "@azure/storage-blob";
@@ -68,7 +58,14 @@ const blobClient = new BlobServiceClient(
 );
 ```
 
-See [DefaultAzureCredential overview](https://aka.ms/azsdk/js/identity/credential-chains#defaultazurecredential-overview) for the current credential chain order and defaults.
+**Credential Chain Order:**
+1. EnvironmentCredential
+2. WorkloadIdentityCredential
+3. ManagedIdentityCredential
+4. VisualStudioCodeCredential
+5. AzureCliCredential
+6. AzurePowerShellCredential
+7. AzureDeveloperCliCredential
 
 ## Managed Identity
 
@@ -93,14 +90,6 @@ const credential = new ManagedIdentityCredential({
 ```typescript
 const credential = new ManagedIdentityCredential({
   resourceId: "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<name>"
-});
-```
-
-### User-Assigned (by Object ID)
-
-```typescript
-const credential = new ManagedIdentityCredential({
-  objectId: "<user-assigned-object-id>"
 });
 ```
 
@@ -187,17 +176,6 @@ const credential = new ChainedTokenCredential(
 
 ## Developer Credentials
 
-### Visual Studio Code
-
-```typescript
-import { useIdentityPlugin, VisualStudioCodeCredential } from "@azure/identity";
-import { vsCodePlugin } from "@azure/identity-vscode";
-
-useIdentityPlugin(vsCodePlugin);
-
-const credential = new VisualStudioCodeCredential();
-```
-
 ### Azure CLI
 
 ```typescript
@@ -248,7 +226,7 @@ const credentialChina = new ClientSecretCredential(
 ```typescript
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
+const credential = new DefaultAzureCredential();
 
 // Create a function that returns tokens
 const getAccessToken = getBearerTokenProvider(
@@ -319,9 +297,17 @@ AzureLogger.log = (...args) => {
 
 ## Best Practices
 
-1. **Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production**
+1. **Use DefaultAzureCredential** - Works in development (CLI) and production (managed identity)
 2. **Never hardcode credentials** - Use environment variables or managed identity
 3. **Prefer managed identity** - No secrets to manage in production
 4. **Scope credentials appropriately** - Use user-assigned identity for multi-tenant scenarios
 5. **Handle token refresh** - Azure SDK handles this automatically
 6. **Use ChainedTokenCredential** - For custom fallback scenarios
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

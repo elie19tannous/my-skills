@@ -1,11 +1,9 @@
 ---
 name: azure-ai-document-intelligence-ts
-description: Extract text, tables, and structured data from documents using Azure Document Intelligence (@azure-rest/ai-document-intelligence). Use when processing invoices, receipts, IDs, forms, or building custom document models.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure-rest/ai-document-intelligence'
+description: "Extract text, tables, and structured data from documents using prebuilt and custom models."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Document Intelligence REST SDK for TypeScript
@@ -23,7 +21,6 @@ npm install @azure-rest/ai-document-intelligence @azure/identity
 ```bash
 DOCUMENT_INTELLIGENCE_ENDPOINT=https://<resource>.cognitiveservices.azure.com
 DOCUMENT_INTELLIGENCE_API_KEY=<api-key>
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -34,17 +31,11 @@ AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used i
 
 ```typescript
 import DocumentIntelligence from "@azure-rest/ai-document-intelligence";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+import { DefaultAzureCredential } from "@azure/identity";
 
 const client = DocumentIntelligence(
   process.env.DOCUMENT_INTELLIGENCE_ENDPOINT!,
-  credential
+  new DefaultAzureCredential()
 );
 ```
 
@@ -332,3 +323,11 @@ import DocumentIntelligence, {
 4. **Handle confidence scores** - Fields have confidence values, set thresholds for your use case
 5. **Use pagination** - Use `paginate()` helper for listing models
 6. **Prefer neural mode** - For custom models, neural handles more variation than template
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

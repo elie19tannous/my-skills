@@ -1,13 +1,9 @@
 ---
 name: azure-mgmt-apicenter-py
-description: |
-  Azure API Center Management SDK for Python. Use for managing API inventory, metadata, and governance across your organization.
-  Triggers: "azure-mgmt-apicenter", "ApiCenterMgmtClient", "API Center", "API inventory", "API governance".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-mgmt-apicenter
+description: Azure API Center Management SDK for Python. Use for managing API inventory, metadata, and governance across your organization.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure API Center Management SDK for Python
@@ -24,40 +20,20 @@ pip install azure-identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=your-subscription-id  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_SUBSCRIPTION_ID=your-subscription-id
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.mgmt.apicenter import ApiCenterMgmtClient
 import os
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
-with ApiCenterMgmtClient(
-    credential=credential,
+client = ApiCenterMgmtClient(
+    credential=DefaultAzureCredential(),
     subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"]
-) as client:
-    # Use `client` for all subsequent operations (see examples below)
-    ...
+)
 ```
 
 ## Create API Center
@@ -258,11 +234,17 @@ metadata = client.metadata_schemas.create_or_update(
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use workspaces** to organize APIs by team or domain
-4. **Define metadata schemas** for consistent governance
-5. **Track deployments** to understand where APIs are running
-6. **Import specifications** to enable API analysis and linting
-7. **Use lifecycle stages** to track API maturity
-8. **Add contacts** for API ownership and support
+1. **Use workspaces** to organize APIs by team or domain
+2. **Define metadata schemas** for consistent governance
+3. **Track deployments** to understand where APIs are running
+4. **Import specifications** to enable API analysis and linting
+5. **Use lifecycle stages** to track API maturity
+6. **Add contacts** for API ownership and support
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

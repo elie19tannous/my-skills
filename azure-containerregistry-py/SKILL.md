@@ -1,13 +1,9 @@
 ---
 name: azure-containerregistry-py
-description: |
-  Azure Container Registry SDK for Python. Use for managing container images, artifacts, and repositories.
-  Triggers: "azure-containerregistry", "ContainerRegistryClient", "container images", "docker registry", "ACR".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-containerregistry
+description: Azure Container Registry SDK for Python. Use for managing container images, artifacts, and repositories.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Container Registry SDK for Python
@@ -23,42 +19,21 @@ pip install azure-containerregistry
 ## Environment Variables
 
 ```bash
-AZURE_CONTAINERREGISTRY_ENDPOINT=https://<registry-name>.azurecr.io  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_CONTAINERREGISTRY_ENDPOINT=https://<registry-name>.azurecr.io
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ### Entra ID (Recommended)
 
 ```python
-import os
 from azure.containerregistry import ContainerRegistryClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
-with ContainerRegistryClient(
+client = ContainerRegistryClient(
     endpoint=os.environ["AZURE_CONTAINERREGISTRY_ENDPOINT"],
-    credential=credential
-) as client:
-    # Use client here (see following sections for operations)
-    ...
+    credential=DefaultAzureCredential()
+)
 ```
 
 ### Anonymous Access (Public Registry)
@@ -66,21 +41,20 @@ with ContainerRegistryClient(
 ```python
 from azure.containerregistry import ContainerRegistryClient
 
-with ContainerRegistryClient(
+client = ContainerRegistryClient(
     endpoint="https://mcr.microsoft.com",
     credential=None,
     audience="https://mcr.microsoft.com"
-) as client:
-    # Use client here (see following sections for operations)
-    ...
+)
 ```
 
 ## List Repositories
 
 ```python
-with ContainerRegistryClient(endpoint, DefaultAzureCredential()) as client:
-    for repository in client.list_repository_names():
-        print(repository)
+client = ContainerRegistryClient(endpoint, DefaultAzureCredential())
+
+for repository in client.list_repository_names():
+    print(repository)
 ```
 
 ## Repository Operations
@@ -207,17 +181,18 @@ client.delete_tag("my-image", "old-tag")
 ```python
 from azure.containerregistry import ContainerRegistryClient
 
-with ContainerRegistryClient(endpoint, DefaultAzureCredential()) as client:
-    # Download manifest
-    manifest = client.download_manifest("my-image", "latest")
-    print(f"Media type: {manifest.media_type}")
-    print(f"Digest: {manifest.digest}")
+client = ContainerRegistryClient(endpoint, DefaultAzureCredential())
 
-    # Download blob
-    blob = client.download_blob("my-image", "sha256:abc123...")
-    with open("layer.tar.gz", "wb") as f:
-        for chunk in blob:
-            f.write(chunk)
+# Download manifest
+manifest = client.download_manifest("my-image", "latest")
+print(f"Media type: {manifest.media_type}")
+print(f"Digest: {manifest.digest}")
+
+# Download blob
+blob = client.download_blob("my-image", "sha256:abc123...")
+with open("layer.tar.gz", "wb") as f:
+    for chunk in blob:
+        f.write(chunk)
 ```
 
 ## Async Client
@@ -227,10 +202,14 @@ from azure.containerregistry.aio import ContainerRegistryClient
 from azure.identity.aio import DefaultAzureCredential
 
 async def list_repos():
-    async with DefaultAzureCredential() as credential:
-        async with ContainerRegistryClient(endpoint, credential) as client:
-            async for repo in client.list_repository_names():
-                print(repo)
+    credential = DefaultAzureCredential()
+    client = ContainerRegistryClient(endpoint, credential)
+    
+    async for repo in client.list_repository_names():
+        print(repo)
+    
+    await client.close()
+    await credential.close()
 ```
 
 ## Clean Up Old Images
@@ -264,12 +243,18 @@ for manifest in client.list_manifest_properties("my-image"):
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use Microsoft Entra ID** for authentication in production
-4. **Delete by digest** not tag to avoid orphaned images
-5. **Lock production images** with can_delete=False
-6. **Clean up untagged manifests** regularly
-7. **Use async client** for high-throughput operations
-8. **Order by last_updated** to find recent/old images
-9. **Check manifest.tags** before deleting to avoid removing tagged images
+1. **Use Entra ID** for authentication in production
+2. **Delete by digest** not tag to avoid orphaned images
+3. **Lock production images** with can_delete=False
+4. **Clean up untagged manifests** regularly
+5. **Use async client** for high-throughput operations
+6. **Order by last_updated** to find recent/old images
+7. **Check manifest.tags** before deleting to avoid removing tagged images
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

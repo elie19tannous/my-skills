@@ -1,13 +1,9 @@
 ---
 name: azure-eventhub-py
-description: |
-  Azure Event Hubs SDK for Python streaming. Use for high-throughput event ingestion, producers, consumers, and checkpointing.
-  Triggers: "event hubs", "EventHubProducerClient", "EventHubConsumerClient", "streaming", "partitions".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-eventhub
+description: Azure Event Hubs SDK for Python streaming. Use for high-throughput event ingestion, producers, consumers, and checkpointing.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Event Hubs SDK for Python
@@ -25,56 +21,36 @@ pip install azure-eventhub-checkpointstoreblob-aio
 ## Environment Variables
 
 ```bash
-EVENT_HUB_FULLY_QUALIFIED_NAMESPACE=<namespace>.servicebus.windows.net  # Required for all auth methods
-EVENT_HUB_NAME=my-eventhub  # Required for all auth methods
-STORAGE_ACCOUNT_URL=https://<account>.blob.core.windows.net  # Required for checkpoint storage
-CHECKPOINT_CONTAINER=checkpoints  # Required for checkpoint storage
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+EVENT_HUB_FULLY_QUALIFIED_NAMESPACE=<namespace>.servicebus.windows.net
+EVENT_HUB_NAME=my-eventhub
+STORAGE_ACCOUNT_URL=https://<account>.blob.core.windows.net
+CHECKPOINT_CONTAINER=checkpoints
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.eventhub import EventHubProducerClient, EventHubConsumerClient
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
+credential = DefaultAzureCredential()
 namespace = "<namespace>.servicebus.windows.net"
 eventhub_name = "my-eventhub"
 
 # Producer
-with EventHubProducerClient(
+producer = EventHubProducerClient(
     fully_qualified_namespace=namespace,
     eventhub_name=eventhub_name,
     credential=credential
-) as producer:
-    # Use producer here (see following sections for operations)
-    ...
+)
 
 # Consumer
-with EventHubConsumerClient(
+consumer = EventHubConsumerClient(
     fully_qualified_namespace=namespace,
     eventhub_name=eventhub_name,
     consumer_group="$Default",
     credential=credential
-) as consumer:
-    # Use consumer here (see following sections for operations)
-    ...
+)
 ```
 
 ## Client Types
@@ -91,11 +67,13 @@ with EventHubConsumerClient(
 from azure.eventhub import EventHubProducerClient, EventData
 from azure.identity import DefaultAzureCredential
 
-with EventHubProducerClient(
+producer = EventHubProducerClient(
     fully_qualified_namespace="<namespace>.servicebus.windows.net",
     eventhub_name="my-eventhub",
     credential=DefaultAzureCredential()
-) as producer:
+)
+
+with producer:
     # Create batch (handles size limits)
     event_data_batch = producer.create_batch()
     
@@ -134,12 +112,14 @@ def on_event(partition_context, event):
     print(f"Data: {event.body_as_str()}")
     partition_context.update_checkpoint(event)
 
-with EventHubConsumerClient(
+consumer = EventHubConsumerClient(
     fully_qualified_namespace="<namespace>.servicebus.windows.net",
     eventhub_name="my-eventhub",
     consumer_group="$Default",
     credential=DefaultAzureCredential()
-) as consumer:
+)
+
+with consumer:
     consumer.receive(
         on_event=on_event,
         starting_position="-1",  # Beginning of stream
@@ -159,18 +139,20 @@ checkpoint_store = BlobCheckpointStore(
     credential=DefaultAzureCredential()
 )
 
-with EventHubConsumerClient(
+consumer = EventHubConsumerClient(
     fully_qualified_namespace="<namespace>.servicebus.windows.net",
     eventhub_name="my-eventhub",
     consumer_group="$Default",
     credential=DefaultAzureCredential(),
     checkpoint_store=checkpoint_store
-) as consumer:
-    def on_event(partition_context, event):
-        print(f"Received: {event.body_as_str()}")
-        # Checkpoint after processing
-        partition_context.update_checkpoint(event)
+)
 
+def on_event(partition_context, event):
+    print(f"Received: {event.body_as_str()}")
+    # Checkpoint after processing
+    partition_context.update_checkpoint(event)
+
+with consumer:
     consumer.receive(on_event=on_event)
 ```
 
@@ -241,20 +223,26 @@ with producer:
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async) for proper cleanup. For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for portable auth across local dev and Azure (avoid connection strings / API keys when possible).
-4. **Use batches** for sending multiple events
-5. **Use checkpoint store** in production for reliable processing
-6. **Use async client** for high-throughput scenarios
-7. **Use partition keys** for ordered delivery within a partition
-8. **Handle batch size limits** — catch ValueError when batch is full
-9. **Set appropriate consumer groups** for different applications
+1. **Use batches** for sending multiple events
+2. **Use checkpoint store** in production for reliable processing
+3. **Use async client** for high-throughput scenarios
+4. **Use partition keys** for ordered delivery within a partition
+5. **Handle batch size limits** — catch ValueError when batch is full
+6. **Use context managers** (`with`/`async with`) for proper cleanup
+7. **Set appropriate consumer groups** for different applications
 
 ## Reference Files
 
 | File | Contents |
 |------|----------|
-| [references/checkpointing.md](references/checkpointing.md) | Checkpoint store patterns, blob checkpointing, checkpoint strategies |
-| [references/partitions.md](references/partitions.md) | Partition management, load balancing, starting positions |
-| [scripts/setup_consumer.py](scripts/setup_consumer.py) | CLI for Event Hub info, consumer setup, and event sending/receiving |
+| references/checkpointing.md | Checkpoint store patterns, blob checkpointing, checkpoint strategies |
+| references/partitions.md | Partition management, load balancing, starting positions |
+| scripts/setup_consumer.py | CLI for Event Hub info, consumer setup, and event sending/receiving |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

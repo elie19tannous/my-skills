@@ -1,15 +1,20 @@
 ---
 name: azure-storage-queue-rust
-description: |
-  Azure Queue Storage library for Rust. Send, receive, and manage queue messages.
-  Triggers: "queue storage rust", "QueueClient rust", "send message rust", "receive messages rust", "QueueServiceClient rust", "queue rust".
+description: 'Azure Queue Storage library for Rust. Send, receive, and manage queue messages. Triggers: "queue storage rust", "QueueClient rust", "send message rust", "receive messages rust", "QueueServiceClient rust", "queue rust".'
+risk: critical
+source: https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-storage-queue-rust
+source_repo: microsoft/skills
+source_type: official
+date_added: 2026-07-01
 license: MIT
-metadata:
-  author: Microsoft
-  package: azure_storage_queue
+license_source: https://github.com/microsoft/skills/blob/main/LICENSE
 ---
 
 # Azure Queue Storage library for Rust
+## When to Use
+
+Use this skill when you need azure Queue Storage library for Rust. Send, receive, and manage queue messages. Triggers: "queue storage rust", "QueueClient rust", "send message rust", "receive messages rust", "QueueServiceClient rust", "queue rust".
+
 
 Client library for Azure Queue Storage — send, receive, and manage queue messages.
 
@@ -165,3 +170,9 @@ For Entra ID auth, assign one of these roles to the identity:
 | API Reference | https://docs.rs/crate/azure_storage_queue/latest                                      |
 | crates.io     | https://crates.io/crates/azure_storage_queue                                          |
 | Source Code   | https://github.com/Azure/azure-sdk-for-rust/tree/main/sdk/storage/azure_storage_queue |
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

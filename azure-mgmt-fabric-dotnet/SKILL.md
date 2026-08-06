@@ -1,12 +1,9 @@
 ---
 name: azure-mgmt-fabric-dotnet
-description: |
-  Azure Resource Manager SDK for Fabric in .NET. Use for MANAGEMENT PLANE operations: provisioning, scaling, suspending/resuming Microsoft Fabric capacities, checking name availability, and listing SKUs via Azure Resource Manager. Triggers: "Fabric capacity", "create capacity", "suspend capacity", "resume capacity", "Fabric SKU", "provision Fabric", "ARM Fabric", "FabricCapacityResource".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.ResourceManager.Fabric
+description: Azure Resource Manager SDK for Fabric in .NET.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure.ResourceManager.Fabric (.NET)
@@ -30,11 +27,11 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
-AZURE_TENANT_ID=<tenant-id> # For service principal auth (optional)
-AZURE_CLIENT_ID=<client-id> # For service principal auth (optional)
-AZURE_CLIENT_SECRET=<client-secret> # For service principal auth (optional)
+AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+# For service principal auth (optional)
+AZURE_TENANT_ID=<tenant-id>
+AZURE_CLIENT_ID=<client-id>
+AZURE_CLIENT_SECRET=<client-secret>
 ```
 
 ## Authentication
@@ -44,13 +41,8 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Fabric;
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
+// Always use DefaultAzureCredential
+var credential = new DefaultAzureCredential();
 var armClient = new ArmClient(credential);
 
 // Get subscription
@@ -286,7 +278,7 @@ await foreach (var skuDetails in capacity.Value.GetSkusForCapacityAsync())
 
 1. **Use `WaitUntil.Completed`** for operations that must finish before proceeding
 2. **Use `WaitUntil.Started`** when you want to poll manually or run operations in parallel
-3. **Use `DefaultAzureCredential`** — never hardcode credentials
+3. **Always use `DefaultAzureCredential`** — never hardcode credentials
 4. **Handle `RequestFailedException`** for ARM API errors
 5. **Use `CreateOrUpdateAsync`** for idempotent operations
 6. **Suspend when not in use** — Fabric capacities bill for compute even when idle
@@ -345,3 +337,11 @@ catch (RequestFailedException ex)
 - [GitHub Source](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/fabric/Azure.ResourceManager.Fabric)
 - [Microsoft Fabric Documentation](https://learn.microsoft.com/fabric/)
 - [Fabric Capacity Management](https://learn.microsoft.com/fabric/admin/service-admin-portal-capacity-settings)
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

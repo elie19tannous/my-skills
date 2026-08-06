@@ -1,13 +1,9 @@
 ---
 name: azure-eventgrid-py
-description: |
-  Azure Event Grid SDK for Python. Use for publishing events, handling CloudEvents, and event-driven architectures.
-  Triggers: "event grid", "EventGridPublisherClient", "CloudEvent", "EventGridEvent", "publish events".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-eventgrid
+description: Azure Event Grid SDK for Python. Use for publishing events, handling CloudEvents, and event-driven architectures.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Event Grid SDK for Python
@@ -23,40 +19,20 @@ pip install azure-eventgrid azure-identity
 ## Environment Variables
 
 ```bash
-EVENTGRID_TOPIC_ENDPOINT=https://<topic-name>.<region>.eventgrid.azure.net/api/events  # Required for Event Grid topic publishing
-EVENTGRID_NAMESPACE_ENDPOINT=https://<namespace>.<region>.eventgrid.azure.net  # Required for namespace operations
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+EVENTGRID_TOPIC_ENDPOINT=https://<topic-name>.<region>.eventgrid.azure.net/api/events
+EVENTGRID_NAMESPACE_ENDPOINT=https://<namespace>.<region>.eventgrid.azure.net
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-import os
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.eventgrid import EventGridPublisherClient
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
+credential = DefaultAzureCredential()
 endpoint = "https://<topic-name>.<region>.eventgrid.azure.net/api/events"
 
-with EventGridPublisherClient(endpoint, credential) as client:
-    # Use client here (see following sections for operations)
-    ...
+client = EventGridPublisherClient(endpoint, credential)
 ```
 
 ## Event Types
@@ -72,25 +48,26 @@ with EventGridPublisherClient(endpoint, credential) as client:
 from azure.eventgrid import EventGridPublisherClient, CloudEvent
 from azure.identity import DefaultAzureCredential
 
-with EventGridPublisherClient(endpoint, DefaultAzureCredential()) as client:
-    # Single event
-    event = CloudEvent(
+client = EventGridPublisherClient(endpoint, DefaultAzureCredential())
+
+# Single event
+event = CloudEvent(
+    type="MyApp.Events.OrderCreated",
+    source="/myapp/orders",
+    data={"order_id": "12345", "amount": 99.99}
+)
+client.send(event)
+
+# Multiple events
+events = [
+    CloudEvent(
         type="MyApp.Events.OrderCreated",
         source="/myapp/orders",
-        data={"order_id": "12345", "amount": 99.99}
+        data={"order_id": f"order-{i}"}
     )
-    client.send(event)
-
-    # Multiple events
-    events = [
-        CloudEvent(
-            type="MyApp.Events.OrderCreated",
-            source="/myapp/orders",
-            data={"order_id": f"order-{i}"}
-        )
-        for i in range(10)
-    ]
-    client.send(events)
+    for i in range(10)
+]
+client.send(events)
 ```
 
 ## Publish EventGridEvents
@@ -165,18 +142,17 @@ asyncio.run(publish_events())
 For Event Grid Namespaces (pull delivery):
 
 ```python
-from azure.eventgrid import EventGridPublisherClient
-from azure.identity import DefaultAzureCredential
+from azure.eventgrid.aio import EventGridPublisherClient
 
 # Namespace endpoint (different from custom topic)
 namespace_endpoint = "https://<namespace>.<region>.eventgrid.azure.net"
 topic_name = "my-topic"
 
-with EventGridPublisherClient(
+async with EventGridPublisherClient(
     endpoint=namespace_endpoint,
     credential=DefaultAzureCredential()
 ) as client:
-    client.send(
+    await client.send(
         event,
         namespace_topic=topic_name
     )
@@ -184,12 +160,17 @@ with EventGridPublisherClient(
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for portable auth across local dev and Azure (avoid connection strings / API keys when possible).
-4. **Use CloudEvents** for new applications (industry standard)
-5. **Batch events** when publishing multiple events
-6. **Include meaningful subjects** for filtering
-7. **Use async client** for high-throughput scenarios
-8. **Handle retries** — Event Grid has built-in retry
-9. **Set appropriate event types** for routing and filtering
+1. **Use CloudEvents** for new applications (industry standard)
+2. **Batch events** when publishing multiple events
+3. **Include meaningful subjects** for filtering
+4. **Use async client** for high-throughput scenarios
+5. **Handle retries** — Event Grid has built-in retry
+6. **Set appropriate event types** for routing and filtering
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

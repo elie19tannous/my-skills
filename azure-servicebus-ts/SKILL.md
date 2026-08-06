@@ -1,11 +1,9 @@
 ---
 name: azure-servicebus-ts
-description: Build messaging applications using Azure Service Bus SDK for JavaScript (@azure/service-bus). Use when implementing queues, topics/subscriptions, message sessions, dead-letter handling, or enterprise messaging patterns.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/service-bus'
+description: "Enterprise messaging with queues, topics, and subscriptions."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Service Bus SDK for TypeScript
@@ -25,23 +23,16 @@ SERVICEBUS_NAMESPACE=<namespace>.servicebus.windows.net
 SERVICEBUS_QUEUE_NAME=my-queue
 SERVICEBUS_TOPIC_NAME=my-topic
 SERVICEBUS_SUBSCRIPTION_NAME=my-subscription
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
 ```typescript
 import { ServiceBusClient } from "@azure/service-bus";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+import { DefaultAzureCredential } from "@azure/identity";
 
 const fullyQualifiedNamespace = process.env.SERVICEBUS_NAMESPACE!;
-const client = new ServiceBusClient(fullyQualifiedNamespace, credential);
+const client = new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
 ```
 
 ## Core Workflow
@@ -228,7 +219,7 @@ const receiver = client.createReceiver("my-queue", { receiveMode: "receiveAndDel
 
 ## Best Practices
 
-1. **Use Microsoft Entra Token Credential** - Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production
+1. **Use Entra ID auth** - Avoid connection strings in production
 2. **Reuse clients** - Create `ServiceBusClient` once, share across senders/receivers
 3. **Close resources** - Always close senders/receivers when done
 4. **Handle errors** - Implement `processError` callback for subscription receivers
@@ -240,5 +231,13 @@ const receiver = client.createReceiver("my-queue", { receiveMode: "receiveAndDel
 
 For detailed patterns, see:
 
-- [Queues vs Topics Patterns](references/queues-topics.md) - Queue/topic patterns, sessions, receive modes, message settlement
-- [Error Handling and Reliability](references/error-handling.md) - ServiceBusError codes, DLQ handling, lock renewal, graceful shutdown
+- Queues vs Topics Patterns - Queue/topic patterns, sessions, receive modes, message settlement
+- Error Handling and Reliability - ServiceBusError codes, DLQ handling, lock renewal, graceful shutdown
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

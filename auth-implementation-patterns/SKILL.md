@@ -1,83 +1,47 @@
 ---
 name: auth-implementation-patterns
-description: Master authentication and authorization patterns including JWT, OAuth2, session management, and RBAC to build secure, scalable access control systems. Use when implementing auth systems, securing APIs, or debugging security issues.
+description: "Build secure, scalable authentication and authorization systems using industry-standard patterns and modern best practices."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Authentication & Authorization Implementation Patterns
 
 Build secure, scalable authentication and authorization systems using industry-standard patterns and modern best practices.
 
-## When to Use This Skill
+## Use this skill when
 
 - Implementing user authentication systems
 - Securing REST or GraphQL APIs
-- Adding OAuth2/social login
-- Implementing role-based access control (RBAC)
-- Designing session management
-- Migrating authentication systems
-- Debugging auth issues
-- Implementing SSO or multi-tenancy
+- Adding OAuth2/social login or SSO
+- Designing session management or RBAC
+- Debugging authentication or authorization issues
 
-## Core Concepts
+## Do not use this skill when
 
-### 1. Authentication vs Authorization
+- You only need UI copy or login page styling
+- The task is infrastructure-only without identity concerns
+- You cannot change auth policies or credential storage
 
-**Authentication (AuthN)**: Who are you?
+## Instructions
 
-- Verifying identity (username/password, OAuth, biometrics)
-- Issuing credentials (sessions, tokens)
-- Managing login/logout
+- Define users, tenants, flows, and threat model constraints.
+- Choose auth strategy (session, JWT, OIDC) and token lifecycle.
+- Design authorization model and policy enforcement points.
+- Plan secrets storage, rotation, logging, and audit requirements.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
 
-**Authorization (AuthZ)**: What can you do?
+## Safety
 
-- Permission checking
-- Role-based access control (RBAC)
-- Resource ownership validation
-- Policy enforcement
+- Never log secrets, tokens, or credentials.
+- Enforce least privilege and secure storage for keys.
 
-### 2. Authentication Strategies
+## Resources
 
-**Session-Based:**
+- `resources/implementation-playbook.md` for detailed patterns and examples.
 
-- Server stores session state
-- Session ID in cookie
-- Traditional, simple, stateful
-
-**Token-Based (JWT):**
-
-- Stateless, self-contained
-- Scales horizontally
-- Can store claims
-
-**OAuth2/OpenID Connect:**
-
-- Delegate authentication
-- Social login (Google, GitHub)
-- Enterprise SSO
-
-## Detailed patterns and worked examples
-
-Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
-
-## Best Practices
-
-1. **Never Store Plain Passwords**: Always hash with bcrypt/argon2
-2. **Use HTTPS**: Encrypt data in transit
-3. **Short-Lived Access Tokens**: 15-30 minutes max
-4. **Secure Cookies**: httpOnly, secure, sameSite flags
-5. **Validate All Input**: Email format, password strength
-6. **Rate Limit Auth Endpoints**: Prevent brute force attacks
-7. **Implement CSRF Protection**: For session-based auth
-8. **Rotate Secrets Regularly**: JWT secrets, session secrets
-9. **Log Security Events**: Login attempts, failed auth
-10. **Use MFA When Possible**: Extra security layer
-
-## Common Pitfalls
-
-- **Weak Passwords**: Enforce strong password policies
-- **JWT in localStorage**: Vulnerable to XSS, use httpOnly cookies
-- **No Token Expiration**: Tokens should expire
-- **Client-Side Auth Checks Only**: Always validate server-side
-- **Insecure Password Reset**: Use secure tokens with expiration
-- **No Rate Limiting**: Vulnerable to brute force
-- **Trusting Client Data**: Always validate on server
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

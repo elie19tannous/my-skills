@@ -1,13 +1,9 @@
 ---
 name: azure-ai-contentunderstanding-py
-description: |
-  Azure AI Content Understanding SDK for Python. Use for multimodal content extraction from documents, images, audio, and video.
-  Triggers: "azure-ai-contentunderstanding", "ContentUnderstandingClient", "multimodal analysis", "document extraction", "video analysis", "audio transcription".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-ai-contentunderstanding
+description: Azure AI Content Understanding SDK for Python. Use for multimodal content extraction from documents, images, audio, and video.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure AI Content Understanding SDK for Python
@@ -23,36 +19,19 @@ pip install azure-ai-contentunderstanding
 ## Environment Variables
 
 ```bash
-CONTENTUNDERSTANDING_ENDPOINT=https://<resource>.cognitiveservices.azure.com/  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+CONTENTUNDERSTANDING_ENDPOINT=https://<resource>.cognitiveservices.azure.com/
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
 import os
 from azure.ai.contentunderstanding import ContentUnderstandingClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 
 endpoint = os.environ["CONTENTUNDERSTANDING_ENDPOINT"]
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-with ContentUnderstandingClient(endpoint=endpoint, credential=credential) as client:
-    analyzers = list(client.list_analyzers())
+credential = DefaultAzureCredential()
+client = ContentUnderstandingClient(endpoint=endpoint, credential=credential)
 ```
 
 ## Core Workflow
@@ -82,21 +61,22 @@ from azure.ai.contentunderstanding.models import AnalyzeInput
 from azure.identity import DefaultAzureCredential
 
 endpoint = os.environ["CONTENTUNDERSTANDING_ENDPOINT"]
-with ContentUnderstandingClient(
+client = ContentUnderstandingClient(
     endpoint=endpoint,
     credential=DefaultAzureCredential()
-) as client:
-    # Analyze document from URL
-    poller = client.begin_analyze(
-        analyzer_id="prebuilt-documentSearch",
-        inputs=[AnalyzeInput(url="https://example.com/document.pdf")]
-    )
+)
 
-    result = poller.result()
+# Analyze document from URL
+poller = client.begin_analyze(
+    analyzer_id="prebuilt-documentSearch",
+    inputs=[AnalyzeInput(url="https://example.com/document.pdf")]
+)
 
-    # Access markdown content (contents is a list)
-    content = result.contents[0]
-    print(content.markdown)
+result = poller.result()
+
+# Access markdown content (contents is a list)
+content = result.contents[0]
+print(content.markdown)
 ```
 
 ## Access Document Content Details
@@ -237,18 +217,19 @@ from azure.identity.aio import DefaultAzureCredential
 
 async def analyze_document():
     endpoint = os.environ["CONTENTUNDERSTANDING_ENDPOINT"]
-    async with DefaultAzureCredential() as credential:
-        async with ContentUnderstandingClient(
-            endpoint=endpoint,
-            credential=credential
-        ) as client:
-            poller = await client.begin_analyze(
-                analyzer_id="prebuilt-documentSearch",
-                inputs=[AnalyzeInput(url="https://example.com/doc.pdf")]
-            )
-            result = await poller.result()
-            content = result.contents[0]
-            return content.markdown
+    credential = DefaultAzureCredential()
+    
+    async with ContentUnderstandingClient(
+        endpoint=endpoint,
+        credential=credential
+    ) as client:
+        poller = await client.begin_analyze(
+            analyzer_id="prebuilt-documentSearch",
+            inputs=[AnalyzeInput(url="https://example.com/doc.pdf")]
+        )
+        result = await poller.result()
+        content = result.contents[0]
+        return content.markdown
 
 asyncio.run(analyze_document())
 ```
@@ -283,12 +264,18 @@ from azure.ai.contentunderstanding.models import (
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.ai.contentunderstanding` sync clients with `azure.ai.contentunderstanding.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with ContentUnderstandingClient(...) as client:` (sync) or `async with ContentUnderstandingClient(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `begin_analyze` with `AnalyzeInput`** — this is the correct method signature
-4. **Access results via `result.contents[0]`** — results are returned as a list
-5. **Use prebuilt analyzers** for common scenarios (document/image/audio/video search)
-6. **Create custom analyzers** only for domain-specific field extraction
-7. **Use async client** for high-throughput scenarios with `azure.identity.aio` credentials
-8. **Handle long-running operations** — video/audio analysis can take minutes
-9. **Use URL sources** when possible to avoid upload overhead
+1. **Use `begin_analyze` with `AnalyzeInput`** — this is the correct method signature
+2. **Access results via `result.contents[0]`** — results are returned as a list
+3. **Use prebuilt analyzers** for common scenarios (document/image/audio/video search)
+4. **Create custom analyzers** only for domain-specific field extraction
+5. **Use async client** for high-throughput scenarios with `azure.identity.aio` credentials
+6. **Handle long-running operations** — video/audio analysis can take minutes
+7. **Use URL sources** when possible to avoid upload overhead
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

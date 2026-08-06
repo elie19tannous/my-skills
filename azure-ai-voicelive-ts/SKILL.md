@@ -1,12 +1,9 @@
 ---
 name: azure-ai-voicelive-ts
-description: |
-  Azure AI Voice Live SDK for JavaScript/TypeScript. Build real-time voice AI applications with bidirectional WebSocket communication. Use for voice assistants, conversational AI, real-time speech-to-speech, and voice-enabled chatbots in Node.js or browser environments. Triggers: "voice live", "real-time voice", "VoiceLiveClient", "VoiceLiveSession", "voice assistant TypeScript", "bidirectional audio", "speech-to-speech JavaScript".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/ai-voicelive'
+description: Azure AI Voice Live SDK for JavaScript/TypeScript. Build real-time voice AI applications with bidirectional WebSocket communication.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # @azure/ai-voicelive (JavaScript/TypeScript)
@@ -35,22 +32,17 @@ AZURE_VOICELIVE_ENDPOINT=https://<resource>.cognitiveservices.azure.com
 AZURE_VOICELIVE_API_KEY=<your-api-key>
 # Optional: Logging
 AZURE_LOG_LEVEL=info
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
-### Microsoft Entra Token Credential (Recommended)
+### Microsoft Entra ID (Recommended)
 
 ```typescript
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 import { VoiceLiveClient } from "@azure/ai-voicelive";
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+const credential = new DefaultAzureCredential();
 const endpoint = "https://your-resource.cognitiveservices.azure.com";
 
 const client = new VoiceLiveClient(endpoint, credential);
@@ -86,7 +78,7 @@ VoiceLiveClient
 import { DefaultAzureCredential } from "@azure/identity";
 import { VoiceLiveClient } from "@azure/ai-voicelive";
 
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
+const credential = new DefaultAzureCredential();
 const endpoint = process.env.AZURE_VOICELIVE_ENDPOINT!;
 
 // Create client and start session
@@ -457,7 +449,7 @@ const audioContext = new AudioContext({ sampleRate: 24000 });
 
 ## Best Practices
 
-1. **Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production** — Never hardcode API keys
+1. **Always use `DefaultAzureCredential`** — Never hardcode API keys
 2. **Set both modalities** — Include `["text", "audio"]` for voice assistants
 3. **Use Azure Semantic VAD** — Better turn detection than basic server VAD
 4. **Handle all error types** — Connection, auth, and protocol errors
@@ -472,3 +464,11 @@ const audioContext = new AudioContext({ sampleRate: 24000 });
 | GitHub Source | https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/ai/ai-voicelive |
 | Samples | https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/ai/ai-voicelive/samples |
 | API Reference | https://learn.microsoft.com/javascript/api/@azure/ai-voicelive |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

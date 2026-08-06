@@ -1,11 +1,9 @@
 ---
 name: azure-ai-projects-py
-description: Build AI applications using the Azure AI Projects Python SDK (azure-ai-projects). Use when working with Foundry project clients, creating versioned agents with PromptAgentDefinition, running evaluations, managing connections/deployments/datasets/indexes, or using OpenAI-compatible clients. This is the high-level Foundry SDK - for low-level agent operations, use azure-ai-agents-python skill.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-ai-projects
+description: "Build AI applications on Microsoft Foundry using the azure-ai-projects SDK."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Projects Python SDK (Foundry SDK)
@@ -21,39 +19,22 @@ pip install azure-ai-projects azure-identity
 ## Environment Variables
 
 ```bash
-AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"  # Required for all auth methods
-AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
 import os
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-with AIProjectClient(
+credential = DefaultAzureCredential()
+client = AIProjectClient(
     endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
     credential=credential,
-) as client:
-    deployments = list(client.deployments.list())
+)
 ```
 
 ## Client Operations Overview
@@ -75,16 +56,17 @@ with AIProjectClient(
 ```python
 from azure.ai.projects import AIProjectClient
 
-with AIProjectClient(
+client = AIProjectClient(
     endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
     credential=DefaultAzureCredential(),
-) as client:
-    # Use Foundry-native operations
-    agent = client.agents.create_agent(
-        model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
-        name="my-agent",
-        instructions="You are helpful.",
-    )
+)
+
+# Use Foundry-native operations
+agent = client.agents.create_agent(
+    model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
+    name="my-agent",
+    instructions="You are helpful.",
+)
 ```
 
 ### 2. OpenAI-Compatible Client
@@ -142,7 +124,7 @@ agent_version = client.agents.create_version(
 )
 ```
 
-See [references/agents.md](references/agents.md) for detailed agent patterns.
+See references/agents.md for detailed agent patterns.
 
 ## Tools Overview
 
@@ -158,7 +140,7 @@ See [references/agents.md](references/agents.md) for detailed agent patterns.
 | Memory Search | `MemorySearchTool` | Search agent memory stores |
 | SharePoint | `SharepointGroundingTool` | Search SharePoint content |
 
-See [references/tools.md](references/tools.md) for all tool patterns.
+See references/tools.md for all tool patterns.
 
 ## Thread and Message Flow
 
@@ -199,7 +181,7 @@ for conn in connections:
 connection = client.connections.get(connection_name="my-search-connection")
 ```
 
-See [references/connections.md](references/connections.md) for connection patterns.
+See references/connections.md for connection patterns.
 
 ## Deployments
 
@@ -210,7 +192,7 @@ for deployment in deployments:
     print(f"{deployment.name}: {deployment.model}")
 ```
 
-See [references/deployments.md](references/deployments.md) for deployment patterns.
+See references/deployments.md for deployment patterns.
 
 ## Datasets and Indexes
 
@@ -222,7 +204,7 @@ datasets = client.datasets.list()
 indexes = client.indexes.list()
 ```
 
-See [references/datasets-indexes.md](references/datasets-indexes.md) for data operations.
+See references/datasets-indexes.md for data operations.
 
 ## Evaluation
 
@@ -245,7 +227,7 @@ eval_run = openai_client.evals.runs.create(
 )
 ```
 
-See [references/evaluation.md](references/evaluation.md) for evaluation patterns.
+See references/evaluation.md for evaluation patterns.
 
 ## Async Client
 
@@ -260,7 +242,7 @@ async with AIProjectClient(
     # ... async operations
 ```
 
-See [references/async-patterns.md](references/async-patterns.md) for async patterns.
+See references/async-patterns.md for async patterns.
 
 ## Memory Stores
 
@@ -281,12 +263,11 @@ agent = client.agents.create_agent(
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.ai.projects` sync clients with `azure.ai.projects.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with AIProjectClient(...) as client:` (sync) or `async with AIProjectClient(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Clean up agents** when done: `client.agents.delete_agent(agent.id)`
-4. **Use `create_and_process`** for simple runs, **streaming** for real-time UX
-5. **Use versioned agents** for production deployments
-6. **Prefer connections** for external service integration (AI Search, Bing, etc.)
+1. **Use context managers** for async client: `async with AIProjectClient(...) as client:`
+2. **Clean up agents** when done: `client.agents.delete_agent(agent.id)`
+3. **Use `create_and_process`** for simple runs, **streaming** for real-time UX
+4. **Use versioned agents** for production deployments
+5. **Prefer connections** for external service integration (AI Search, Bing, etc.)
 
 ## SDK Comparison
 
@@ -303,14 +284,22 @@ agent = client.agents.create_agent(
 
 ## Reference Files
 
-- [references/agents.md](references/agents.md): Agent operations with PromptAgentDefinition
-- [references/tools.md](references/tools.md): All agent tools with examples
-- [references/evaluation.md](references/evaluation.md): Evaluation operations overview
-- [references/built-in-evaluators.md](references/built-in-evaluators.md): Complete built-in evaluator reference
-- [references/custom-evaluators.md](references/custom-evaluators.md): Code and prompt-based evaluator patterns
-- [references/connections.md](references/connections.md): Connection operations
-- [references/deployments.md](references/deployments.md): Deployment enumeration
-- [references/datasets-indexes.md](references/datasets-indexes.md): Dataset and index operations
-- [references/async-patterns.md](references/async-patterns.md): Async client usage
-- [references/api-reference.md](references/api-reference.md): Complete API reference for all 373 SDK exports (v2.0.0b4)
-- [scripts/run_batch_evaluation.py](scripts/run_batch_evaluation.py): CLI tool for batch evaluations
+- references/agents.md: Agent operations with PromptAgentDefinition
+- references/tools.md: All agent tools with examples
+- references/evaluation.md: Evaluation operations overview
+- references/built-in-evaluators.md: Complete built-in evaluator reference
+- references/custom-evaluators.md: Code and prompt-based evaluator patterns
+- references/connections.md: Connection operations
+- references/deployments.md: Deployment enumeration
+- references/datasets-indexes.md: Dataset and index operations
+- references/async-patterns.md: Async client usage
+- references/api-reference.md: Complete API reference for all 373 SDK exports (v2.0.0b4)
+- scripts/run_batch_evaluation.py: CLI tool for batch evaluations
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

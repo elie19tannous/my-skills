@@ -1,31 +1,7 @@
 ---
 name: brandkit
-description: |
-  Premium brand-kit image generation skill for creating high-end brand-guidelines boards, logo systems, identity decks, and visual-world presentations. Trained for minimalist, cinematic, editorial, dark-tech, luxury, cultural, security, gaming, developer-tool, and consumer-app brand systems. Optimized for intentional logo concepting, refined composition, sparse typography, strong symbolic meaning, premium mockups, art-directed imagery, and flexible grid layouts.
-triggers:
-  - "brand kit"
-  - "brand guidelines board"
-  - "logo system"
-  - "identity board"
-od:
-  mode: image
-  surface: image
-  platform: desktop
-  scenario: design
-  category: image-generation
-  upstream: "https://github.com/Leonxlnx/taste-skill"
-  preview:
-    type: markdown
-  design_system:
-    requires: false
-  craft:
-    requires:
-      - typography
-      - color
-  example_prompt: |
-    Create a premium brand-kit overview image for this product: logo direction, palette, typography, applications, and a coherent visual world.
+description: Premium brand-kit image generation skill for creating high-end brand-guidelines boards, logo systems, identity decks, and visual-world presentations. Trained for minimalist, cinematic, editorial, dark-tech, luxury, cultural, security, gaming, developer-tool, and consumer-app brand systems. Optimized for intentional logo concepting, refined composition, sparse typography, strong symbolic meaning, premium mockups, art-directed imagery, and flexible grid layouts.
 ---
-
 
 # BRANDKIT IMAGE GENERATION SKILL
 
@@ -43,8 +19,8 @@ The output must feel:
 - brand-system driven
 - presentation-ready
 
-Do not generate generic logos.
-Do not generate random mockups.
+Do not generate generic logos.  
+Do not generate random mockups.  
 Do not generate messy AI moodboards.
 
 Create a complete brand world in one image.
@@ -73,7 +49,7 @@ The desired visual quality is inspired by premium brand-guidelines decks with:
 - logo repeated across multiple touchpoints
 - one strong brand idea per board
 
-The references are not a fixed style.
+The references are not a fixed style.  
 They define the quality bar, restraint, and presentation logic.
 
 ---
@@ -196,7 +172,7 @@ Examples:
 - `S` + sound wave / speech flow
 - `A` + ascent / architecture / momentum
 
-Do not make a boring letter icon.
+Do not make a boring letter icon.  
 Use negative space, cuts, folds, or geometry.
 
 ---
@@ -298,20 +274,20 @@ The board should have rhythm:
 Use this if no layout is specified:
 
 ## 1. Logo Cover
-Large logo and wordmark.
-Minimal title.
+Large logo and wordmark.  
+Minimal title.  
 Strong negative space.
 
 ## 2. Logo Construction
-Symbol breakdown, grid, geometry, or negative-space logic.
+Symbol breakdown, grid, geometry, or negative-space logic.  
 Show why the mark exists.
 
 ## 3. Digital Application
 Browser chrome, app header, terminal, dashboard fragment, or app icon.
 
 ## 4. Brand Essence
-One short tagline.
-Large readable typography.
+One short tagline.  
+Large readable typography.  
 Sparse composition.
 
 ## 5. Color System

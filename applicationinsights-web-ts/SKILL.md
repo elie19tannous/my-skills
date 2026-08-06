@@ -1,14 +1,20 @@
 ---
 name: applicationinsights-web-ts
-description: Instrument browser/web apps with the Application Insights JavaScript SDK (@microsoft/applicationinsights-web). Use for Real User Monitoring (RUM) — page views, clicks, AJAX/fetch dependencies, exceptions, custom events, and browser-side GenAI agent traces correlated to backend OpenTelemetry traces. Covers SDK Loader Script and npm setup, framework extensions (React, React Native, Angular), Click Analytics, telemetry initializers, and OTel GenAI semantic conventions for agent/tool/model spans emitted from the browser.
+description: Instrument browser/web apps with the Application Insights JavaScript SDK (@microsoft/applicationinsights-web). Use for Real User Monitoring (RUM) — page views, clicks, AJAX/fetch dependencies, exceptions, custom events, and browser-side GenAI agent traces correlated to backend...
+risk: critical
+source: https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts
+source_repo: microsoft/skills
+source_type: official
+date_added: 2026-07-01
 license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: "@microsoft/applicationinsights-web"
+license_source: https://github.com/microsoft/skills/blob/main/LICENSE
 ---
 
 # Application Insights JavaScript SDK (Web) for TypeScript
+## When to Use
+
+Use this skill when you need instrument browser/web apps with the Application Insights JavaScript SDK (@microsoft/applicationinsights-web). Use for Real User Monitoring (RUM) — page views, clicks, AJAX/fetch dependencies, exceptions, custom events, and browser-side GenAI agent traces correlated to backend...
+
 
 Real User Monitoring (RUM) for browser apps with `@microsoft/applicationinsights-web`. Auto-collects page views, AJAX/fetch dependencies, unhandled exceptions, and (with the Click Analytics plugin) clicks. Supports custom events, metrics, and **GenAI agent traces** that follow OpenTelemetry GenAI semantic conventions and correlate to backend spans via W3C Trace Context.
 
@@ -159,7 +165,7 @@ appInsights.addTelemetryInitializer((item: ITelemetryItem) => {
 
   // Scrub query-string secrets
   if (item.baseData?.uri) {
-    item.baseData.uri = item.baseData.uri.replace(/([?&](token|sig|key)=)[^&]+/gi, "$1REDACTED");
+    item.baseData.uri = item.baseData.uri.replace(/([?&](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/token|sig|key)=)[^&]+/gi, "$1REDACTED");
   }
 });
 ```
@@ -192,7 +198,7 @@ Mark elements with `data-ai-*` attributes; clicks are emitted as Custom Events w
 ## SPA Route Tracking
 
 - **Built-in:** set `enableAutoRouteTracking: true`. Hooks `history.pushState/replaceState` and `popstate`.
-- **React Router:** use `@microsoft/applicationinsights-react-js` `withAITracking` HOC (see [references/framework-extensions.md](references/framework-extensions.md)).
+- **React Router:** use `@microsoft/applicationinsights-react-js` `withAITracking` HOC (see [references/framework-extensions.md](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/references/framework-extensions.md)).
 - **Manual:** call `appInsights.trackPageView({ name, uri })` in your router's `useEffect` on route change. Disable `enableAutoRouteTracking` to avoid double counting.
 
 ## Distributed Tracing (correlate to backend)
@@ -305,7 +311,7 @@ try {
 
 The browser's `traceparent` is automatically attached to outbound `fetch` (when `distributedTracingMode: 2`), so downstream Azure OpenAI / agent backend spans hang under the same operation_Id in App Insights.
 
-For the full attribute reference, well-known values, and content-capture guidance, see [references/agent-traces.md](references/agent-traces.md).
+For the full attribute reference, well-known values, and content-capture guidance, see [references/agent-traces.md](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/references/agent-traces.md).
 
 ### KQL: query GenAI traces in App Insights
 
@@ -323,7 +329,7 @@ dependencies
 
 ## React (TypeScript)
 
-See [references/framework-extensions.md](references/framework-extensions.md) for full React, React Native, Angular, Next.js, and Vite recipes.
+See [references/framework-extensions.md](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/references/framework-extensions.md) for full React, React Native, Angular, Next.js, and Vite recipes.
 
 ```typescript
 import { ApplicationInsights } from "@microsoft/applicationinsights-web";
@@ -457,9 +463,15 @@ import {
 
 ## References
 
-- [references/agent-traces.md](references/agent-traces.md) — Full OTel GenAI semconv distilled (agent / model / tool spans, attributes, content capture).
-- [references/framework-extensions.md](references/framework-extensions.md) — React, React Native, Angular, Next.js, Vite recipes.
-- [references/configuration.md](references/configuration.md) — Full `IConfiguration` reference and tuning guide.
+- [references/agent-traces.md](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/references/agent-traces.md) — Full OTel GenAI semconv distilled (agent / model / tool spans, attributes, content capture).
+- [references/framework-extensions.md](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/references/framework-extensions.md) — React, React Native, Angular, Next.js, Vite recipes.
+- [references/configuration.md](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/applicationinsights-web-ts/references/configuration.md) — Full `IConfiguration` reference and tuning guide.
 - Microsoft Learn: <https://learn.microsoft.com/azure/azure-monitor/app/javascript-sdk>
 - ApplicationInsights-JS source: <https://github.com/microsoft/ApplicationInsights-JS>
 - OTel GenAI semantic conventions: <https://opentelemetry.io/docs/specs/semconv/gen-ai/>
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

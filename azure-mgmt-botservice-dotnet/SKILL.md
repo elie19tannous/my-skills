@@ -1,12 +1,9 @@
 ---
 name: azure-mgmt-botservice-dotnet
-description: |
-  Azure Resource Manager SDK for Bot Service in .NET. Management plane operations for creating and managing Azure Bot resources, channels (Teams, DirectLine, Slack), and connection settings. Triggers: "Bot Service", "BotResource", "Azure Bot", "DirectLine channel", "Teams channel", "bot management .NET", "create bot".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.ResourceManager.BotService
+description: Azure Resource Manager SDK for Bot Service in .NET. Management plane operations for creating and managing Azure Bot resources, channels (Teams, DirectLine, Slack), and connection settings.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure.ResourceManager.BotService (.NET)
@@ -25,11 +22,11 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
-AZURE_TENANT_ID=<tenant-id> # For service principal auth (optional)
-AZURE_CLIENT_ID=<client-id> # For service principal auth (optional)
-AZURE_CLIENT_SECRET=<client-secret> # For service principal auth (optional)
+AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+# For service principal auth (optional)
+AZURE_TENANT_ID=<tenant-id>
+AZURE_CLIENT_ID=<client-id>
+AZURE_CLIENT_SECRET=<client-secret>
 ```
 
 ## Authentication
@@ -39,13 +36,8 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.BotService;
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
+// Authenticate using DefaultAzureCredential
+var credential = new DefaultAzureCredential();
 ArmClient armClient = new ArmClient(credential);
 
 // Get subscription and resource group
@@ -295,7 +287,7 @@ await bot.DeleteAsync(WaitUntil.Completed);
 
 ## Best Practices
 
-1. **Use `DefaultAzureCredential`** — supports multiple auth methods
+1. **Always use `DefaultAzureCredential`** — supports multiple auth methods
 2. **Use `WaitUntil.Completed`** for synchronous operations
 3. **Handle `RequestFailedException`** for API errors
 4. **Use async methods** (`*Async`) for all operations
@@ -341,3 +333,11 @@ catch (RequestFailedException ex)
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.resourcemanager.botservice |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/botservice/Azure.ResourceManager.BotService |
 | Azure Bot Service Docs | https://learn.microsoft.com/azure/bot-service/ |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

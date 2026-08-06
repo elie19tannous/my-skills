@@ -1,85 +1,47 @@
 ---
 name: backtesting-frameworks
-description: Build robust backtesting systems for trading strategies with proper handling of look-ahead bias, survivorship bias, and transaction costs. Use when developing trading algorithms, validating strategies, or building backtesting infrastructure.
+description: "Build robust, production-grade backtesting systems that avoid common pitfalls and produce reliable strategy performance estimates."
+risk: safe
+source: community
+date_added: "2026-02-27"
 ---
 
 # Backtesting Frameworks
 
 Build robust, production-grade backtesting systems that avoid common pitfalls and produce reliable strategy performance estimates.
 
-## When to Use This Skill
+## Use this skill when
 
 - Developing trading strategy backtests
 - Building backtesting infrastructure
-- Validating strategy performance
+- Validating strategy performance and robustness
 - Avoiding common backtesting biases
 - Implementing walk-forward analysis
-- Comparing strategy alternatives
 
-## Core Concepts
+## Do not use this skill when
 
-### 1. Backtesting Biases
+- You need live trading execution or investment advice
+- Historical data quality is unknown or incomplete
+- The task is only a quick performance summary
 
-| Bias             | Description               | Mitigation              |
-| ---------------- | ------------------------- | ----------------------- |
-| **Look-ahead**   | Using future information  | Point-in-time data      |
-| **Survivorship** | Only testing on survivors | Use delisted securities |
-| **Overfitting**  | Curve-fitting to history  | Out-of-sample testing   |
-| **Selection**    | Cherry-picking strategies | Pre-registration        |
-| **Transaction**  | Ignoring trading costs    | Realistic cost models   |
+## Instructions
 
-### 2. Proper Backtest Structure
+- Define hypothesis, universe, timeframe, and evaluation criteria.
+- Build point-in-time data pipelines and realistic cost models.
+- Implement event-driven simulation and execution logic.
+- Use train/validation/test splits and walk-forward testing.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
 
-```
-Historical Data
-      │
-      ▼
-┌─────────────────────────────────────────┐
-│              Training Set               │
-│  (Strategy Development & Optimization)  │
-└─────────────────────────────────────────┘
-      │
-      ▼
-┌─────────────────────────────────────────┐
-│             Validation Set              │
-│  (Parameter Selection, No Peeking)      │
-└─────────────────────────────────────────┘
-      │
-      ▼
-┌─────────────────────────────────────────┐
-│               Test Set                  │
-│  (Final Performance Evaluation)         │
-└─────────────────────────────────────────┘
-```
+## Safety
 
-### 3. Walk-Forward Analysis
+- Do not present backtests as guarantees of future performance.
+- Avoid providing financial or investment advice.
 
-```
-Window 1: [Train──────][Test]
-Window 2:     [Train──────][Test]
-Window 3:         [Train──────][Test]
-Window 4:             [Train──────][Test]
-                                     ─────▶ Time
-```
+## Resources
 
-## Detailed worked examples and patterns
+- `resources/implementation-playbook.md` for detailed patterns and examples.
 
-Detailed sections (starting with `## Implementation Patterns`) live in `references/details.md`. Read that file when the navigation summary above is insufficient.
-
-## Best Practices
-
-### Do's
-
-- **Use point-in-time data** - Avoid look-ahead bias
-- **Include transaction costs** - Realistic estimates
-- **Test out-of-sample** - Always reserve data
-- **Use walk-forward** - Not just train/test
-- **Monte Carlo analysis** - Understand uncertainty
-
-### Don'ts
-
-- **Don't overfit** - Limit parameters
-- **Don't ignore survivorship** - Include delisted
-- **Don't use adjusted data carelessly** - Understand adjustments
-- **Don't optimize on full history** - Reserve test set
-- **Don't ignore capacity** - Market impact matters
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

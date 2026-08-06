@@ -1,11 +1,9 @@
 ---
 name: azure-eventhub-ts
-description: Build event streaming applications using Azure Event Hubs SDK for JavaScript (@azure/event-hubs). Use when implementing high-throughput event ingestion, real-time analytics, IoT telemetry, or event-driven architectures with partitioned consumers.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/event-hubs'
+description: "High-throughput event streaming and real-time data ingestion."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Event Hubs SDK for TypeScript
@@ -30,22 +28,17 @@ EVENTHUB_NAMESPACE=<namespace>.servicebus.windows.net
 EVENTHUB_NAME=my-eventhub
 STORAGE_ACCOUNT_NAME=<storage-account>
 STORAGE_CONTAINER_NAME=checkpoints
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
 ```typescript
 import { EventHubProducerClient, EventHubConsumerClient } from "@azure/event-hubs";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 
 const fullyQualifiedNamespace = process.env.EVENTHUB_NAMESPACE!;
 const eventHubName = process.env.EVENTHUB_NAME!;
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+const credential = new DefaultAzureCredential();
 
 // Producer
 const producer = new EventHubProducerClient(fullyQualifiedNamespace, eventHubName, credential);
@@ -275,3 +268,11 @@ consumer.subscribe({
 5. **Handle errors gracefully** - Don't checkpoint on processing failures
 6. **Close clients** - Always close producer/consumer when done
 7. **Monitor lag** - Track `lastEnqueuedSequenceNumber` vs processed sequence
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,11 +1,9 @@
 ---
 name: azure-ai-contentsafety-java
-description: Build content moderation applications with Azure AI Content Safety SDK for Java. Use when implementing text/image analysis, blocklist management, or harm detection for hate, violence, sexual content, and self-harm.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-ai-contentsafety
+description: "Build content moderation applications using the Azure AI Content Safety SDK for Java."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Content Safety SDK for Java
@@ -50,20 +48,10 @@ BlocklistClient blocklistClient = new BlocklistClientBuilder()
 ### With DefaultAzureCredential
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 ContentSafetyClient client = new ContentSafetyClientBuilder()
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .endpoint(endpoint)
     .buildClient();
 ```
@@ -273,9 +261,8 @@ try {
 ## Environment Variables
 
 ```bash
-CONTENT_SAFETY_ENDPOINT=https://<resource>.cognitiveservices.azure.com/ # Required for all auth methods
-CONTENT_SAFETY_KEY=<your-api-key> # Only required for AzureKeyCredential auth
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+CONTENT_SAFETY_ENDPOINT=https://<resource>.cognitiveservices.azure.com/
+CONTENT_SAFETY_KEY=<your-api-key>
 ```
 
 ## Best Practices
@@ -295,3 +282,11 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 - "blocklist management"
 - "hate speech detection"
 - "harmful content filter"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

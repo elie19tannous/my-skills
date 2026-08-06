@@ -1,12 +1,9 @@
 ---
 name: azure-compute-batch-java
-description: |-
-  Azure Batch SDK for Java. Run large-scale parallel and HPC batch jobs with pools, jobs, tasks, and compute nodes.
-  Triggers: "BatchClient java", "azure batch java", "batch pool java", "batch job java", "HPC java", "parallel computing java".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
+description: Azure Batch SDK for Java. Run large-scale parallel and HPC batch jobs with pools, jobs, tasks, and compute nodes.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Batch SDK for Java
@@ -32,10 +29,9 @@ Client library for running large-scale parallel and high-performance computing (
 ## Environment Variables
 
 ```bash
-AZURE_BATCH_ENDPOINT=https://<account>.<region>.batch.azure.com  # Required for all auth methods
-AZURE_BATCH_ACCOUNT=<account-name>  # Only required for shared key auth
-AZURE_BATCH_ACCESS_KEY=<account-key>  # Only required for shared key auth
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_BATCH_ENDPOINT=https://<account>.<region>.batch.azure.com
+AZURE_BATCH_ACCOUNT=<account-name>
+AZURE_BATCH_ACCESS_KEY=<account-key>
 ```
 
 ## Client Creation
@@ -45,21 +41,10 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 ```java
 import com.azure.compute.batch.BatchClient;
 import com.azure.compute.batch.BatchClientBuilder;
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 BatchClient batchClient = new BatchClientBuilder()
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .endpoint(System.getenv("AZURE_BATCH_ENDPOINT"))
     .buildClient();
 ```
@@ -70,7 +55,7 @@ BatchClient batchClient = new BatchClientBuilder()
 import com.azure.compute.batch.BatchAsyncClient;
 
 BatchAsyncClient batchAsyncClient = new BatchClientBuilder()
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .endpoint(System.getenv("AZURE_BATCH_ENDPOINT"))
     .buildAsyncClient();
 ```
@@ -393,3 +378,11 @@ try {
 | Product Docs | https://learn.microsoft.com/azure/batch/ |
 | REST API | https://learn.microsoft.com/rest/api/batchservice/ |
 | Samples | https://github.com/azure/azure-batch-samples |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

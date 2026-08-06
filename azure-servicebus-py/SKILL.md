@@ -1,13 +1,9 @@
 ---
 name: azure-servicebus-py
-description: |
-  Azure Service Bus SDK for Python messaging. Use for queues, topics, subscriptions, and enterprise messaging patterns.
-  Triggers: "service bus", "ServiceBusClient", "queue", "topic", "subscription", "message broker".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-servicebus
+description: Azure Service Bus SDK for Python messaging. Use for queues, topics, subscriptions, and enterprise messaging patterns.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Service Bus SDK for Python
@@ -23,43 +19,25 @@ pip install azure-servicebus azure-identity
 ## Environment Variables
 
 ```bash
-SERVICEBUS_FULLY_QUALIFIED_NAMESPACE=<namespace>.servicebus.windows.net  # Required for all auth methods
-SERVICEBUS_QUEUE_NAME=myqueue  # Required for queue operations
-SERVICEBUS_TOPIC_NAME=mytopic  # Required for topic operations
-SERVICEBUS_SUBSCRIPTION_NAME=mysubscription  # Required for subscription operations
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+SERVICEBUS_FULLY_QUALIFIED_NAMESPACE=<namespace>.servicebus.windows.net
+SERVICEBUS_QUEUE_NAME=myqueue
+SERVICEBUS_TOPIC_NAME=mytopic
+SERVICEBUS_SUBSCRIPTION_NAME=mysubscription
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.servicebus import ServiceBusClient
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
+credential = DefaultAzureCredential()
 namespace = "<namespace>.servicebus.windows.net"
 
-with ServiceBusClient(
+client = ServiceBusClient(
     fully_qualified_namespace=namespace,
     credential=credential
-) as client:
-    # Use client here (see following sections for operations)
-    ...
+)
 ```
 
 ## Client Types
@@ -272,20 +250,26 @@ with ServiceBusClient(
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async) for proper cleanup. For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for portable auth across local dev and Azure (avoid connection strings / API keys when possible).
-4. **Use async client** for production workloads
-5. **Complete messages** after successful processing
-6. **Use dead-letter queue** for poison messages
-7. **Use sessions** for ordered, FIFO processing
-8. **Use message batches** for high-throughput scenarios
-9. **Set `max_wait_time`** to avoid infinite blocking
+1. **Use async client** for production workloads
+2. **Use context managers** (`async with`) for proper cleanup
+3. **Complete messages** after successful processing
+4. **Use dead-letter queue** for poison messages
+5. **Use sessions** for ordered, FIFO processing
+6. **Use message batches** for high-throughput scenarios
+7. **Set `max_wait_time`** to avoid infinite blocking
 
 ## Reference Files
 
 | File | Contents |
 |------|----------|
-| [references/patterns.md](references/patterns.md) | Competing consumers, sessions, retry patterns, request-response, transactions |
-| [references/dead-letter.md](references/dead-letter.md) | DLQ handling, poison messages, reprocessing strategies |
-| [scripts/setup_servicebus.py](scripts/setup_servicebus.py) | CLI for queue/topic/subscription management and DLQ monitoring |
+| references/patterns.md | Competing consumers, sessions, retry patterns, request-response, transactions |
+| references/dead-letter.md | DLQ handling, poison messages, reprocessing strategies |
+| scripts/setup_servicebus.py | CLI for queue/topic/subscription management and DLQ monitoring |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

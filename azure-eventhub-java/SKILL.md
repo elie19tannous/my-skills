@@ -1,11 +1,9 @@
 ---
 name: azure-eventhub-java
-description: Build real-time streaming applications with Azure Event Hubs SDK for Java. Use when implementing event streaming, high-throughput data ingestion, or building event-driven architectures.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-messaging-eventhubs
+description: "Build real-time streaming applications with Azure Event Hubs SDK for Java. Use when implementing event streaming, high-throughput data ingestion, or building event-driven architectures."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Event Hubs SDK for Java
@@ -51,23 +49,12 @@ EventHubProducerClient producer = new EventHubClientBuilder()
 ### With DefaultAzureCredential
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 EventHubProducerClient producer = new EventHubClientBuilder()
     .fullyQualifiedNamespace("<namespace>.servicebus.windows.net")
     .eventHubName("<event-hub-name>")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildProducerClient();
 ```
 
@@ -347,10 +334,9 @@ try (EventHubProducerClient producer = new EventHubClientBuilder()
 ## Environment Variables
 
 ```bash
-EVENT_HUBS_CONNECTION_STRING=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=...  # Alternative to Entra ID auth
-EVENT_HUBS_NAME=<event-hub-name>  # Required for event hub name
-STORAGE_CONNECTION_STRING=<for-checkpointing>  # Alternative to Entra ID auth for checkpointing
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+EVENT_HUBS_CONNECTION_STRING=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=...
+EVENT_HUBS_NAME=<event-hub-name>
+STORAGE_CONNECTION_STRING=<for-checkpointing>
 ```
 
 ## Best Practices
@@ -370,3 +356,11 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 - "EventProcessorClient"
 - "event hub producer consumer"
 - "partition processing"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

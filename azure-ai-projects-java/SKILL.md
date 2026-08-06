@@ -1,13 +1,9 @@
 ---
 name: azure-ai-projects-java
-description: |
-  Azure AI Projects SDK for Java. High-level SDK for Azure AI Foundry project management including connections, datasets, indexes, and evaluations.
-  Triggers: "AIProjectClient java", "azure ai projects java", "Foundry project java", "ConnectionsClient", "DatasetsClient", "IndexesClient".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-ai-projects
+description: Azure AI Projects SDK for Java. High-level SDK for Azure AI Foundry project management including connections, datasets, indexes, and evaluations.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure AI Projects SDK for Java
@@ -27,29 +23,18 @@ High-level SDK for Azure AI Foundry project management with access to connection
 ## Environment Variables
 
 ```bash
-PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project> # Required for project configuration
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
 ```
 
 ## Authentication
 
 ```java
 import com.azure.ai.projects.AIProjectClientBuilder;
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 AIProjectClientBuilder builder = new AIProjectClientBuilder()
     .endpoint(System.getenv("PROJECT_ENDPOINT"))
-    .credential(credential);
+    .credential(new DefaultAzureCredentialBuilder().build());
 ```
 
 ## Client Hierarchy
@@ -165,3 +150,11 @@ try {
 | API Reference | https://learn.microsoft.com/rest/api/aifoundry/aiprojects/ |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/ai/azure-ai-projects |
 | Samples | https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/ai/azure-ai-projects/src/samples |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

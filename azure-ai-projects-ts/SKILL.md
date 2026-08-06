@@ -1,11 +1,9 @@
 ---
 name: azure-ai-projects-ts
-description: Build AI applications using Azure AI Projects SDK for JavaScript (@azure/ai-projects). Use when working with Foundry project clients, agents, connections, deployments, datasets, indexes, evaluations, or getting OpenAI clients.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/ai-projects'
+description: "High-level SDK for Azure AI Foundry projects with agents, connections, deployments, and evaluations."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Projects SDK for TypeScript
@@ -28,24 +26,17 @@ npm install @azure/monitor-opentelemetry @opentelemetry/api
 ```bash
 AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
 MODEL_DEPLOYMENT_NAME=gpt-4o
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
 ```typescript
 import { AIProjectClient } from "@azure/ai-projects";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+import { DefaultAzureCredential } from "@azure/identity";
 
 const client = new AIProjectClient(
   process.env.AZURE_AI_PROJECT_ENDPOINT!,
-  credential
+  new DefaultAzureCredential()
 );
 ```
 
@@ -298,3 +289,11 @@ import {
 3. **Clean up resources** - Delete agents, conversations when done
 4. **Use connections** - Get credentials from project connections, don't hardcode
 5. **Filter deployments** - Use `modelPublisher` filter to find specific models
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

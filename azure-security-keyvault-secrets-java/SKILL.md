@@ -1,11 +1,9 @@
 ---
 name: azure-security-keyvault-secrets-java
-description: Azure Key Vault Secrets Java SDK for secret management. Use when storing, retrieving, or managing passwords, API keys, connection strings, or other sensitive configuration data.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-security-keyvault-secrets
+description: "Azure Key Vault Secrets Java SDK for secret management. Use when storing, retrieving, or managing passwords, API keys, connection strings, or other sensitive configuration data."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Key Vault Secrets (Java)
@@ -25,31 +23,20 @@ Securely store and manage secrets like passwords, API keys, and connection strin
 ## Client Creation
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
 import com.azure.security.keyvault.secrets.SecretClient;
 import com.azure.security.keyvault.secrets.SecretClientBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
+import com.azure.identity.DefaultAzureCredentialBuilder;
 
 // Sync client
 SecretClient secretClient = new SecretClientBuilder()
     .vaultUrl("https://<vault-name>.vault.azure.net")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildClient();
 
 // Async client
 SecretAsyncClient secretAsyncClient = new SecretClientBuilder()
     .vaultUrl("https://<vault-name>.vault.azure.net")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildAsyncClient();
 ```
 
@@ -321,8 +308,7 @@ try {
 ## Environment Variables
 
 ```bash
-AZURE_KEYVAULT_URL=https://<vault-name>.vault.azure.net  # Required for vault URL
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_KEYVAULT_URL=https://<vault-name>.vault.azure.net
 ```
 
 ## Best Practices
@@ -370,3 +356,11 @@ secretClient.setSecret(new KeyVaultSecret("cert-password", "CertP@ss!")
 - "store password", "store API key", "connection string"
 - "retrieve secret", "rotate secret"
 - "Azure secrets", "vault secrets"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

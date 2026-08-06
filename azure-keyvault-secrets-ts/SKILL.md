@@ -1,11 +1,9 @@
 ---
 name: azure-keyvault-secrets-ts
-description: Manage secrets using Azure Key Vault Secrets SDK for JavaScript (@azure/keyvault-secrets). Use when storing and retrieving application secrets or configuration values.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/keyvault-secrets'
+description: "Manage secrets using Azure Key Vault Secrets SDK for JavaScript (@azure/keyvault-secrets). Use when storing and retrieving application secrets or configuration values."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Key Vault Secrets SDK for TypeScript
@@ -25,20 +23,15 @@ npm install @azure/keyvault-secrets @azure/identity
 KEY_VAULT_URL=https://<vault-name>.vault.azure.net
 # Or
 AZURE_KEYVAULT_NAME=<vault-name>
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
 ```typescript
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 import { SecretClient } from "@azure/keyvault-secrets";
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+const credential = new DefaultAzureCredential();
 const vaultUrl = `https://${process.env.AZURE_KEYVAULT_NAME}.vault.azure.net`;
 
 const keyClient = new KeyClient(vaultUrl, credential);
@@ -270,9 +263,17 @@ try {
 
 ## Best Practices
 
-1. **Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production**
+1. **Use DefaultAzureCredential** - Works across dev and production
 2. **Enable soft-delete** - Required for production vaults
 3. **Set expiration dates** - On both keys and secrets
 4. **Use key rotation policies** - Automate key rotation
 5. **Limit key operations** - Only grant needed operations (encrypt, sign, etc.)
 6. **Browser not supported** - These SDKs are Node.js only
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

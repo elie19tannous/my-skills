@@ -1,13 +1,9 @@
 ---
 name: azure-search-documents-py
-description: |
-  Azure AI Search SDK for Python. Use for vector search, hybrid search, semantic ranking, indexing, and skillsets.
-  Triggers: "azure-search-documents", "SearchClient", "SearchIndexClient", "vector search", "hybrid search", "semantic search".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-search-documents
+description: Azure AI Search SDK for Python. Use for vector search, hybrid search, semantic ranking, indexing, and skillsets.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure AI Search SDK for Python
@@ -23,59 +19,37 @@ pip install azure-search-documents
 ## Environment Variables
 
 ```bash
-AZURE_SEARCH_ENDPOINT=https://<service-name>.search.windows.net  # Required for all auth methods
-AZURE_SEARCH_INDEX_NAME=<your-index-name>  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
-AZURE_SEARCH_API_KEY=<your-api-key>  # Only required for the legacy API-key auth path below
+AZURE_SEARCH_ENDPOINT=https://<service-name>.search.windows.net
+AZURE_SEARCH_API_KEY=<your-api-key>
+AZURE_SEARCH_INDEX_NAME=<your-index-name>
 ```
 
-## Authentication & Lifecycle
+## Authentication
 
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+### API Key
 
 ```python
-import os
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.search.documents import SearchClient
-
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
-with SearchClient(
-    endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
-    index_name=os.environ["AZURE_SEARCH_INDEX_NAME"],
-    credential=credential,
-) as client:
-    results = list(client.search(search_text="*", top=5))
-```
-
-### Legacy: API Key (existing keyed deployments)
-
-New code should use `DefaultAzureCredential` above. Use `AzureKeyCredential` only if you have an existing keyed deployment that hasn't been migrated to Entra ID yet — for example, regulated environments still completing their Entra rollout. The same `AzureKeyCredential` works with `SearchIndexClient` and `SearchIndexerClient` for admin operations.
-
-```python
-import os
 from azure.core.credentials import AzureKeyCredential
-from azure.search.documents import SearchClient
 
-with SearchClient(
+client = SearchClient(
     endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
     index_name=os.environ["AZURE_SEARCH_INDEX_NAME"],
-    credential=AzureKeyCredential(os.environ["AZURE_SEARCH_API_KEY"]),
-) as client:
-    results = list(client.search(search_text="*", top=5))
+    credential=AzureKeyCredential(os.environ["AZURE_SEARCH_API_KEY"])
+)
+```
+
+### Entra ID (Recommended)
+
+```python
+from azure.search.documents import SearchClient
+from azure.identity import DefaultAzureCredential
+
+client = SearchClient(
+    endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
+    index_name=os.environ["AZURE_SEARCH_INDEX_NAME"],
+    credential=DefaultAzureCredential()
+)
 ```
 
 ## Client Types
@@ -100,6 +74,8 @@ from azure.search.documents.indexes.models import (
     SearchableField,
     SimpleField
 )
+
+index_client = SearchIndexClient(endpoint, AzureKeyCredential(key))
 
 fields = [
     SimpleField(name="id", type=SearchFieldDataType.String, key=True),
@@ -132,14 +108,15 @@ index = SearchIndex(
     vector_search=vector_search
 )
 
-with SearchIndexClient(endpoint, DefaultAzureCredential()) as index_client:
-    index_client.create_or_update_index(index)
+index_client.create_or_update_index(index)
 ```
 
 ## Upload Documents
 
 ```python
 from azure.search.documents import SearchClient
+
+client = SearchClient(endpoint, "my-index", AzureKeyCredential(key))
 
 documents = [
     {
@@ -150,9 +127,8 @@ documents = [
     }
 ]
 
-with SearchClient(endpoint, "my-index", DefaultAzureCredential()) as client:
-    result = client.upload_documents(documents)
-    print(f"Uploaded {len(result)} documents")
+result = client.upload_documents(documents)
+print(f"Uploaded {len(result)} documents")
 ```
 
 ## Keyword Search
@@ -286,100 +262,98 @@ from azure.search.documents.indexes.models import (
     OutputFieldMappingEntry
 )
 
-with SearchIndexerClient(endpoint, DefaultAzureCredential()) as indexer_client:
-    # Use managed identity (search service must have RBAC role on the storage account). Avoid storage connection strings with embedded keys.
-    data_source = SearchIndexerDataSourceConnection(
-        name="my-datasource",
-        type="azureblob",
-        connection_string="ResourceId=/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<acct>",
-        container={"name": "documents"}
-    )
-    indexer_client.create_or_update_data_source_connection(data_source)
+indexer_client = SearchIndexerClient(endpoint, AzureKeyCredential(key))
 
-    # Create skillset
-    skillset = SearchIndexerSkillset(
-        name="my-skillset",
-        skills=[
-            EntityRecognitionSkill(
-                inputs=[InputFieldMappingEntry(name="text", source="/document/content")],
-                outputs=[OutputFieldMappingEntry(name="organizations", target_name="organizations")]
-            )
-        ]
-    )
-    indexer_client.create_or_update_skillset(skillset)
+# Create data source
+data_source = SearchIndexerDataSourceConnection(
+    name="my-datasource",
+    type="azureblob",
+    connection_string=connection_string,
+    container={"name": "documents"}
+)
+indexer_client.create_or_update_data_source_connection(data_source)
 
-    # Create indexer
-    indexer = SearchIndexer(
-        name="my-indexer",
-        data_source_name="my-datasource",
-        target_index_name="my-index",
-        skillset_name="my-skillset"
-    )
-    indexer_client.create_or_update_indexer(indexer)
+# Create skillset
+skillset = SearchIndexerSkillset(
+    name="my-skillset",
+    skills=[
+        EntityRecognitionSkill(
+            inputs=[InputFieldMappingEntry(name="text", source="/document/content")],
+            outputs=[OutputFieldMappingEntry(name="organizations", target_name="organizations")]
+        )
+    ]
+)
+indexer_client.create_or_update_skillset(skillset)
+
+# Create indexer
+indexer = SearchIndexer(
+    name="my-indexer",
+    data_source_name="my-datasource",
+    target_index_name="my-index",
+    skillset_name="my-skillset"
+)
+indexer_client.create_or_update_indexer(indexer)
 ```
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use hybrid search** for best relevance combining vector and keyword
-4. **Enable semantic ranking** for natural language queries
-5. **Index in batches** of 100-1000 documents for efficiency
-6. **Use filters** to narrow results before ranking
-7. **Configure vector dimensions** to match your embedding model
-8. **Use HNSW algorithm** for large-scale vector search
-9. **Create suggesters** at index creation time (cannot add later)
+1. **Use hybrid search** for best relevance combining vector and keyword
+2. **Enable semantic ranking** for natural language queries
+3. **Index in batches** of 100-1000 documents for efficiency
+4. **Use filters** to narrow results before ranking
+5. **Configure vector dimensions** to match your embedding model
+6. **Use HNSW algorithm** for large-scale vector search
+7. **Create suggesters** at index creation time (cannot add later)
 
 ## Reference Files
 
 | File | Contents |
 |------|----------|
-| [references/vector-search.md](references/vector-search.md) | HNSW configuration, integrated vectorization, multi-vector queries |
-| [references/semantic-ranking.md](references/semantic-ranking.md) | Semantic configuration, captions, answers, hybrid patterns |
-| [scripts/setup_vector_index.py](scripts/setup_vector_index.py) | CLI script to create vector-enabled search index |
+| references/vector-search.md | HNSW configuration, integrated vectorization, multi-vector queries |
+| references/semantic-ranking.md | Semantic configuration, captions, answers, hybrid patterns |
+| scripts/setup_vector_index.py | CLI script to create vector-enabled search index |
 
 
 ---
 
 ## Additional Azure AI Search Patterns
 
-# Azure AI Search Python SDK
+### Additional SDK Focus
 
 Write clean, idiomatic Python code for Azure AI Search using `azure-search-documents`.
 
-## Installation
+## Installation for Additional Patterns
 
 ```bash
 pip install azure-search-documents azure-identity
 ```
 
-## Environment Variables
+## Environment Variables for Additional Patterns
 
 ```bash
-AZURE_SEARCH_ENDPOINT=https://<search-service>.search.windows.net  # Required for all auth methods
-AZURE_SEARCH_INDEX_NAME=<index-name>  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_SEARCH_ENDPOINT=https://<search-service>.search.windows.net
+AZURE_SEARCH_INDEX_NAME=<index-name>
+# For API key auth (not recommended for production)
+AZURE_SEARCH_API_KEY=<api-key>
 ```
 
-## Authentication
+## Authentication for Additional Patterns
 
+**DefaultAzureCredential (preferred)**:
 ```python
-import os
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.search.documents import SearchClient
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
+credential = DefaultAzureCredential()
+client = SearchClient(endpoint, index_name, credential)
+```
 
-with SearchClient(
-    endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
-    index_name=os.environ["AZURE_SEARCH_INDEX_NAME"],
-    credential=credential,
-) as client:
-    results = list(client.search(search_text="*", top=5))
+**API Key**:
+```python
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
+
+client = SearchClient(endpoint, index_name, AzureKeyCredential(api_key))
 ```
 
 ## Client Selection
@@ -438,8 +412,8 @@ index = SearchIndex(
     )
 )
 
-with SearchIndexClient(endpoint, credential) as index_client:
-    index_client.create_or_update_index(index)
+index_client = SearchIndexClient(endpoint, credential)
+index_client.create_or_update_index(index)
 ```
 
 ## Document Operations
@@ -452,11 +426,11 @@ with SearchIndexingBufferedSender(endpoint, index_name, credential) as sender:
     sender.upload_documents(documents)
 
 # Direct operations via SearchClient
-with SearchClient(endpoint, index_name, credential) as search_client:
-    search_client.upload_documents(documents)      # Add new
-    search_client.merge_documents(documents)       # Update existing
-    search_client.merge_or_upload_documents(documents)  # Upsert
-    search_client.delete_documents(documents)      # Remove
+search_client = SearchClient(endpoint, index_name, credential)
+search_client.upload_documents(documents)      # Add new
+search_client.merge_documents(documents)       # Update existing
+search_client.merge_or_upload_documents(documents)  # Upsert
+search_client.delete_documents(documents)      # Remove
 ```
 
 ## Search Patterns
@@ -496,7 +470,7 @@ results = search_client.search(
 
 ## Agentic Retrieval (Knowledge Bases)
 
-For LLM-powered Q&A with answer synthesis, see [references/agentic-retrieval.md](references/agentic-retrieval.md).
+For LLM-powered Q&A with answer synthesis, see references/agentic-retrieval.md.
 
 Key concepts:
 - **Knowledge Source**: Points to a search index
@@ -514,10 +488,10 @@ async with SearchClient(endpoint, index_name, credential) as client:
         print(result["title"])
 ```
 
-## Best Practices
+## Best Practices for Additional Patterns
 
 1. **Use environment variables** for endpoints, keys, and deployment names
-2. **Use `DefaultAzureCredential`** for code that runs locally (instead of API keys). Use a specific token credential for code that runs in Azure.
+2. **Prefer `DefaultAzureCredential`** over API keys for production
 3. **Use `SearchIndexingBufferedSender`** for batch uploads (handles batching/retries)
 4. **Always define semantic configuration** for agentic retrieval indexes
 5. **Use `create_or_update_index`** for idempotent index creation
@@ -552,3 +526,11 @@ except ResourceNotFoundError:
 except HttpResponseError as e:
     print(f"Search error: {e.message}")
 ```
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

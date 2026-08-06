@@ -1,13 +1,9 @@
 ---
 name: azure-appconfiguration-java
-description: |
-  Azure App Configuration SDK for Java. Centralized application configuration management with key-value settings, feature flags, and snapshots.
-  Triggers: "ConfigurationClient java", "app configuration java", "feature flag java", "configuration setting java", "azure config java".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-data-appconfiguration
+description: Azure App Configuration SDK for Java. Centralized application configuration management with key-value settings, feature flags, and snapshots.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure App Configuration SDK for Java
@@ -55,9 +51,8 @@ Or use Azure SDK BOM:
 ## Environment Variables
 
 ```bash
-AZURE_APPCONFIG_CONNECTION_STRING=Endpoint=https://<store>.azconfig.io;Id=<id>;Secret=<secret>  # Alternative to Entra ID auth
-AZURE_APPCONFIG_ENDPOINT=https://<store>.azconfig.io  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_APPCONFIG_CONNECTION_STRING=Endpoint=https://<store>.azconfig.io;Id=<id>;Secret=<secret>
+AZURE_APPCONFIG_ENDPOINT=https://<store>.azconfig.io
 ```
 
 ## Client Creation
@@ -86,21 +81,10 @@ ConfigurationAsyncClient asyncClient = new ConfigurationClientBuilder()
 ### With Entra ID (Recommended)
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 ConfigurationClient configClient = new ConfigurationClientBuilder()
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .endpoint(System.getenv("AZURE_APPCONFIG_ENDPOINT"))
     .buildClient();
 ```
@@ -484,3 +468,11 @@ try {
 | Product Docs | https://learn.microsoft.com/azure/azure-app-configuration |
 | Samples | https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/appconfiguration/azure-data-appconfiguration/src/samples |
 | Troubleshooting | https://github.com/Azure/azure-sdk-for-java/blob/main/sdk/appconfiguration/azure-data-appconfiguration/TROUBLESHOOTING.md |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

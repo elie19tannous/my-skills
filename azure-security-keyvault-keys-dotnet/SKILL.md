@@ -1,12 +1,9 @@
 ---
 name: azure-security-keyvault-keys-dotnet
-description: |
-  Azure Key Vault Keys SDK for .NET. Client library for managing cryptographic keys in Azure Key Vault and Managed HSM. Use for key creation, rotation, encryption, decryption, signing, and verification. Triggers: "Key Vault keys", "KeyClient", "CryptographyClient", "RSA key", "EC key", "encrypt decrypt .NET", "key rotation", "HSM".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.Security.KeyVault.Keys
+description: Azure Key Vault Keys SDK for .NET. Client library for managing cryptographic keys in Azure Key Vault and Managed HSM. Use for key creation, rotation, encryption, decryption, signing, and verification.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure.Security.KeyVault.Keys (.NET)
@@ -25,9 +22,9 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-KEY_VAULT_NAME=<your-key-vault-name>  # Required: Key Vault name
-AZURE_KEYVAULT_URL=https://<vault-name>.vault.azure.net  # Optional: full Key Vault URL
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+KEY_VAULT_NAME=<your-key-vault-name>
+# Or full URI
+AZURE_KEYVAULT_URL=https://<vault-name>.vault.azure.net
 ```
 
 ## Client Hierarchy
@@ -53,7 +50,7 @@ KeyResolver (key resolution)
 
 ## Authentication
 
-### Microsoft Entra Token Credential
+### DefaultAzureCredential (Recommended)
 
 ```csharp
 using Azure.Identity;
@@ -62,14 +59,7 @@ using Azure.Security.KeyVault.Keys;
 var keyVaultName = Environment.GetEnvironmentVariable("KEY_VAULT_NAME");
 var kvUri = $"https://{keyVaultName}.vault.azure.net";
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
-var client = new KeyClient(new Uri(kvUri), credential);
+var client = new KeyClient(new Uri(kvUri), new DefaultAzureCredential());
 ```
 
 ### Service Principal
@@ -415,3 +405,11 @@ catch (RequestFailedException ex)
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.security.keyvault.keys |
 | Quickstart | https://learn.microsoft.com/azure/key-vault/keys/quick-create-net |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/keyvault/Azure.Security.KeyVault.Keys |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

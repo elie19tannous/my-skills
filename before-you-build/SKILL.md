@@ -1,50 +1,111 @@
 ---
 name: before-you-build
-description: Pre-build product and feature risk review for founders, product managers, and AI-assisted builders. Use this skill when the user is about to build a landing page, MVP, SaaS product, internal tool, agent workflow, or major feature and needs to check demand, positioning, monetization, retention, trust, distribution, and adoption risk before implementation starts.
+description: "Review product risk before coding by checking demand, alternatives, channels, switching costs, and failure signals."
+category: product
+risk: safe
+source: community
+source_repo: bin1874/before-you-build-skill
+source_type: community
+date_added: "2026-07-02"
+author: bin1874
+tags: [product-validation, planning, ai-coding, risk-review]
+tools: [claude, cursor, codex, gemini, antigravity]
+license: "MIT"
+license_source: "https://github.com/bin1874/before-you-build-skill/blob/main/LICENSE"
 ---
 
 # Before You Build
 
-Run a compact pre-mortem before implementation. The goal is not to block building; it is to identify the highest-risk assumption, the smallest validation step, and the build scope that should be delayed until evidence improves.
+## Overview
 
-## When To Use
+Before You Build helps an AI coding workflow pause before implementation and check whether the feature, product, or tool is worth building. It focuses on product risk rather than code structure: who needs the thing, what they use today, why they would switch, how distribution works, and what evidence would make the project safer to start.
 
-Use this skill when a user asks to build or ship:
+The upstream project ships a standalone skill repository and an `npx` installer for several coding assistants.
 
-- A new product, MVP, prototype, landing page, SaaS app, marketplace, content site, agent workflow, or internal tool
-- A major feature with unclear adoption, revenue, retention, trust, or distribution impact
-- A public launch asset where weak positioning could waste development or promotion effort
+## When to Use This Skill
 
-Skip this skill when the task is a narrow implementation fix, refactor, test repair, dependency update, or already-validated change with clear acceptance criteria.
+- Use when a user asks an AI coding assistant to build a new app, feature, internal tool, SaaS, or side project.
+- Use when the idea sounds plausible but the buyer, workflow, distribution path, or switching reason is still vague.
+- Use before writing code so the assistant can turn the request into sharper assumptions, risk checks, and validation steps.
 
-## Risk Checklist
+## How It Works
 
-Review the idea across these risks:
+### Step 1: Identify the Build Bet
 
-- **Demand:** Is there evidence that a specific buyer or user urgently wants this?
-- **Positioning:** Can the target user understand what it is and why it matters in one sentence?
-- **Monetization:** Is there a credible path to payment, budget, or strategic value?
-- **Retention:** Is there a reason users would return after the first try?
-- **Trust:** Does the product require credibility, data access, integrations, or behavior change that users may resist?
-- **Distribution:** Is there a repeatable way to reach the target user?
-- **Feature adoption:** For feature work, will the feature change user behavior or just add surface area?
+Restate the product or feature in one concrete sentence. Name the intended user, the job they are trying to finish, and the current workaround or competitor.
 
-If the verdict is not obvious, use `references/risk-checklist.md` for deeper questions.
+### Step 2: Check the Main Risks
 
-## Output Format
+Review the idea across demand, workflow fit, willingness to switch, distribution, pricing, data access, and operational burden. Prefer specific doubts over generic brainstorming.
 
-Keep the response short and decision-oriented:
+### Step 3: Decide the Next Small Test
 
-1. **Risk verdict:** Low, medium, or high risk, with one sentence explaining why.
-2. **Main assumption:** The single assumption most likely to break the project.
-3. **Evidence to find first:** The smallest useful signal before building more.
-4. **Do next:** One concrete validation step or reduced build scope.
-5. **Delay:** What not to build yet.
+Suggest the smallest useful validation step before implementation. This could be a buyer conversation, landing page test, manual concierge workflow, prototype, waitlist, paid pilot, or narrow internal trial.
 
-## Guidance
+### Step 4: Continue or Stop
 
-- Be direct about weak evidence, but avoid dismissing the user's idea.
-- Prefer smaller validation steps over large research plans.
-- Separate product risk from engineering difficulty.
-- If the idea is already validated, say what evidence makes it lower risk and suggest the smallest implementation slice.
-- If facts are missing, name the missing evidence instead of inventing market claims.
+If the risk is acceptable, move into implementation with the assumptions written down. If the risk is high or evidence is weak, recommend a smaller experiment instead of building the full version.
+
+## Examples
+
+### Example 1: SaaS Feature Request
+
+```text
+User: Build a dashboard for AI trend monitoring.
+
+Before coding, check:
+- Which role needs this dashboard every week?
+- What source do they use today?
+- What decision changes because of the dashboard?
+- Would they pay for alerts, reports, or workflow integration?
+- What is the smallest manual report that proves repeat use?
+```
+
+### Example 2: Internal Tool
+
+```text
+User: Build an internal CRM for our small team.
+
+Before coding, check:
+- What breaks in the current spreadsheet or existing CRM?
+- How many people will use it daily?
+- What data must be imported or kept in sync?
+- What process change is required after launch?
+- Can a no-code workflow prove the need first?
+```
+
+## Best Practices
+
+- ✅ Ask for the user, job, current alternative, and switching reason before implementation.
+- ✅ Separate product risk from engineering risk so the team does not solve the wrong problem well.
+- ✅ Recommend small validation steps when the idea has weak demand evidence.
+- ✅ Keep product names, numbers, and claims grounded in what the user provides.
+- ❌ Do not present a generic checklist as proof that an idea is validated.
+- ❌ Do not fabricate market size, revenue, competitor traction, or buyer quotes.
+
+## Limitations
+
+- This skill does not replace customer research, legal review, financial advice, or domain expert review.
+- It cannot prove demand by itself; it helps the assistant surface assumptions and choose a smaller validation step.
+- If the user already has strong evidence and a clear spec, keep the review short and move into implementation.
+
+## Security & Safety Notes
+
+- This skill is safe to run as a planning layer because it does not require credentials, external network access, or file mutation.
+- If paired with an installer or repository fetch, only install from the upstream repository or npm package you trust.
+
+## Common Pitfalls
+
+- **Problem:** The assistant repeats the product pitch instead of challenging the assumptions.
+  **Solution:** Ask for current alternatives, switching triggers, and a validation step before code.
+
+- **Problem:** The review becomes too broad and blocks progress.
+  **Solution:** Pick the riskiest assumption and test only that first.
+
+- **Problem:** The idea is treated as a startup even when it is a small internal workflow.
+  **Solution:** Scale the risk review to the project size and only ask questions that change the build decision.
+
+## Related Skills
+
+- `@saas-mvp-launcher` - Use when moving from validation into MVP planning and launch execution.
+- `@ux-research-methodology` - Use when the next step needs structured user research.

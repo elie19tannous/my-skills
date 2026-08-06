@@ -1,13 +1,9 @@
 ---
 name: azure-cosmos-py
-description: |
-  Azure Cosmos DB SDK for Python (NoSQL API). Use for document CRUD, queries, containers, and globally distributed data.
-  Triggers: "cosmos db", "CosmosClient", "container", "document", "NoSQL", "partition key".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: azure-cosmos
+description: Azure Cosmos DB SDK for Python (NoSQL API). Use for document CRUD, queries, containers, and globally distributed data.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Cosmos DB SDK for Python
@@ -23,41 +19,21 @@ pip install azure-cosmos azure-identity
 ## Environment Variables
 
 ```bash
-COSMOS_ENDPOINT=https://<account>.documents.azure.com:443/  # Required for all auth methods
-COSMOS_DATABASE=mydb  # Required for all auth methods
-COSMOS_CONTAINER=mycontainer  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+COSMOS_ENDPOINT=https://<account>.documents.azure.com:443/
+COSMOS_DATABASE=mydb
+COSMOS_CONTAINER=mycontainer
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-import os
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.cosmos import CosmosClient
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
+credential = DefaultAzureCredential()
 endpoint = "https://<account>.documents.azure.com:443/"
 
-with CosmosClient(url=endpoint, credential=credential) as client:
-    # Use client here (see following sections for operations)
-    ...
+client = CosmosClient(url=endpoint, credential=credential)
 ```
 
 ## Client Hierarchy
@@ -246,23 +222,24 @@ from azure.cosmos.aio import CosmosClient
 from azure.identity.aio import DefaultAzureCredential
 
 async def cosmos_operations():
-    async with DefaultAzureCredential() as credential:
-        async with CosmosClient(endpoint, credential=credential) as client:
-            database = client.get_database_client("mydb")
-            container = database.get_container_client("mycontainer")
-            
-            # Create
-            await container.create_item(body={"id": "1", "pk": "test"})
-            
-            # Read
-            item = await container.read_item(item="1", partition_key="test")
-            
-            # Query
-            async for item in container.query_items(
-                query="SELECT * FROM c",
-                partition_key="test"
-            ):
-                print(item)
+    credential = DefaultAzureCredential()
+    
+    async with CosmosClient(endpoint, credential=credential) as client:
+        database = client.get_database_client("mydb")
+        container = database.get_container_client("mycontainer")
+        
+        # Create
+        await container.create_item(body={"id": "1", "pk": "test"})
+        
+        # Read
+        item = await container.read_item(item="1", partition_key="test")
+        
+        # Query
+        async for item in container.query_items(
+            query="SELECT * FROM c",
+            partition_key="test"
+        ):
+            print(item)
 
 import asyncio
 asyncio.run(cosmos_operations())
@@ -286,21 +263,26 @@ except CosmosHttpResponseError as e:
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.cosmos` sync clients with `azure.cosmos.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with CosmosClient(...) as client:` (sync) or `async with CosmosClient(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for portable auth across local dev and Azure (avoid connection strings / API keys when possible).
-4. **Always specify partition key** for point reads and queries
-5. **Use parameterized queries** to prevent injection and improve caching
-6. **Avoid cross-partition queries** when possible
-7. **Use `upsert_item`** for idempotent writes
-8. **Use async client** for high-throughput scenarios
-9. **Design partition key** for even data distribution
-10. **Use `read_item`** instead of query for single document retrieval
+1. **Always specify partition key** for point reads and queries
+2. **Use parameterized queries** to prevent injection and improve caching
+3. **Avoid cross-partition queries** when possible
+4. **Use `upsert_item`** for idempotent writes
+5. **Use async client** for high-throughput scenarios
+6. **Design partition key** for even data distribution
+7. **Use `read_item`** instead of query for single document retrieval
 
 ## Reference Files
 
 | File | Contents |
 |------|----------|
-| [references/partitioning.md](references/partitioning.md) | Partition key strategies, hierarchical keys, hot partition detection and mitigation |
-| [references/query-patterns.md](references/query-patterns.md) | Query optimization, aggregations, pagination, transactions, change feed |
-| [scripts/setup_cosmos_container.py](scripts/setup_cosmos_container.py) | CLI tool for creating containers with partitioning, throughput, and indexing |
+| references/partitioning.md | Partition key strategies, hierarchical keys, hot partition detection and mitigation |
+| references/query-patterns.md | Query optimization, aggregations, pagination, transactions, change feed |
+| scripts/setup_cosmos_container.py | CLI tool for creating containers with partitioning, throughput, and indexing |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

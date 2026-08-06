@@ -1,12 +1,9 @@
 ---
 name: azure-mgmt-weightsandbiases-dotnet
-description: |
-  Azure Weights & Biases SDK for .NET. ML experiment tracking and model management via Azure Marketplace. Use for creating W&B instances, managing SSO, marketplace integration, and ML observability. Triggers: "Weights and Biases", "W&B", "WeightsAndBiases", "ML experiment tracking", "model registry", "experiment management", "wandb".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.ResourceManager.WeightsAndBiases
+description: Azure Weights & Biases SDK for .NET. ML experiment tracking and model management via Azure Marketplace. Use for creating W&B instances, managing SSO, marketplace integration, and ML observability.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure.ResourceManager.WeightsAndBiases (.NET)
@@ -26,10 +23,9 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
-AZURE_RESOURCE_GROUP=<your-resource-group> # Required: Azure resource group name
-AZURE_WANDB_INSTANCE_NAME=<your-wandb-instance> # Required: Weights & Biases instance name
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+AZURE_RESOURCE_GROUP=<your-resource-group>
+AZURE_WANDB_INSTANCE_NAME=<your-wandb-instance>
 ```
 
 ## Authentication
@@ -39,14 +35,7 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.WeightsAndBiases;
 
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-var credential = new DefaultAzureCredential(
-    DefaultAzureCredential.DefaultEnvironmentVariableName
-);
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
-// var credential = new ManagedIdentityCredential();
-ArmClient client = new ArmClient(credential);
+ArmClient client = new ArmClient(new DefaultAzureCredential());
 ```
 
 ## Resource Hierarchy
@@ -338,3 +327,11 @@ run.finish()
 | W&B Documentation | https://docs.wandb.ai/ |
 | Azure Marketplace | https://azuremarketplace.microsoft.com/marketplace/apps/wandb.wandb-pay-as-you-go |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/weightsandbiases |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,11 +1,9 @@
 ---
 name: azure-communication-callautomation-java
-description: Build call automation workflows with Azure Communication Services Call Automation Java SDK. Use when implementing IVR systems, call routing, call recording, DTMF recognition, text-to-speech, or AI-powered call flows.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-communication-callautomation
+description: "Build server-side call automation workflows including IVR systems, call routing, recording, and AI-powered interactions."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Communication Call Automation (Java)
@@ -27,23 +25,12 @@ Build server-side call automation workflows including IVR systems, call routing,
 ```java
 import com.azure.communication.callautomation.CallAutomationClient;
 import com.azure.communication.callautomation.CallAutomationClientBuilder;
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 // With DefaultAzureCredential
 CallAutomationClient client = new CallAutomationClientBuilder()
     .endpoint("https://<resource>.communication.azure.com")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildClient();
 
 // With connection string
@@ -255,10 +242,9 @@ try {
 ## Environment Variables
 
 ```bash
-AZURE_COMMUNICATION_ENDPOINT=https://<resource>.communication.azure.com  # Required for all auth methods
-AZURE_COMMUNICATION_CONNECTION_STRING=endpoint=https://...;accesskey=...  # Alternative to Entra ID auth
-CALLBACK_BASE_URL=https://your-app.com/api/callbacks  # Required for webhook callbacks
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_COMMUNICATION_ENDPOINT=https://<resource>.communication.azure.com
+AZURE_COMMUNICATION_CONNECTION_STRING=endpoint=https://...;accesskey=...
+CALLBACK_BASE_URL=https://your-app.com/api/callbacks
 ```
 
 ## Trigger Phrases
@@ -268,3 +254,11 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 - "text to speech call", "speech recognition call"
 - "answer incoming call", "transfer call Java"
 - "Azure Communication Services call automation"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

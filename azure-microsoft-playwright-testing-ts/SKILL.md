@@ -1,11 +1,9 @@
 ---
 name: azure-microsoft-playwright-testing-ts
-description: Run Playwright tests at scale using Azure Playwright Workspaces (formerly Microsoft Playwright Testing). Use when scaling browser tests across cloud-hosted browsers, integrating with CI/CD pipelines, or publishing test results to the Azure portal.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/playwright'
+description: "Run Playwright tests at scale with cloud-hosted browsers and integrated Azure portal reporting."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Playwright Workspaces SDK for TypeScript
@@ -34,12 +32,11 @@ npm install @azure/identity --save-dev
 
 ```bash
 PLAYWRIGHT_SERVICE_URL=wss://eastus.api.playwright.microsoft.com/playwrightworkspaces/{workspace-id}/browsers
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
-### Microsoft Entra Token Credential (Recommended)
+### Microsoft Entra ID (Recommended)
 
 ```bash
 # Sign in with Azure CLI
@@ -50,20 +47,14 @@ az login
 // playwright.service.config.ts
 import { defineConfig } from "@playwright/test";
 import { createAzurePlaywrightConfig, ServiceOS } from "@azure/playwright";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 import config from "./playwright.config";
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
 
 export default defineConfig(
   config,
   createAzurePlaywrightConfig(config, {
     os: ServiceOS.LINUX,
-    credential,
+    credential: new DefaultAzureCredential(),
   })
 );
 ```
@@ -99,7 +90,7 @@ export default defineConfig(
     os: ServiceOS.LINUX,
     connectTimeout: 30000,
     exposeNetwork: "<loopback>",
-    credential: new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]}),
+    credential: new DefaultAzureCredential(),
   })
 );
 ```
@@ -122,7 +113,7 @@ export default defineConfig(
   config,
   createAzurePlaywrightConfig(config, {
     os: ServiceOS.LINUX,
-    credential: new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]}),
+    credential: new DefaultAzureCredential(),
   }),
   {
     reporter: [
@@ -292,7 +283,7 @@ export default defineConfig(
   createAzurePlaywrightConfig(config, {
     os: ServiceOS.LINUX,
     connectTimeout: 30000,
-    credential: new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]}),
+    credential: new DefaultAzureCredential(),
   }),
   {
     reporter: [
@@ -305,9 +296,17 @@ export default defineConfig(
 
 ## Best Practices
 
-1. **Use Microsoft Entra Token Credential** — More secure than access tokens
-2. **Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production**
+1. **Use Entra ID auth** — More secure than access tokens
+2. **Provide explicit credential** — Always pass `credential: new DefaultAzureCredential()`
 3. **Enable artifacts** — Set `trace: "on-first-retry"`, `video: "retain-on-failure"` in config
 4. **Scale workers** — Use `--workers=20` or higher for parallel execution
 5. **Region selection** — Choose region closest to your test targets
 6. **HTML reporter first** — When using Azure reporter, list HTML reporter before Azure reporter
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,11 +1,9 @@
 ---
 name: azure-ai-vision-imageanalysis-java
-description: Build image analysis applications with Azure AI Vision SDK for Java. Use when implementing image captioning, OCR text extraction, object detection, tagging, or smart cropping.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-ai-vision-imageanalysis
+description: "Build image analysis applications with Azure AI Vision SDK for Java. Use when implementing image captioning, OCR text extraction, object detection, tagging, or smart cropping."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure AI Vision Image Analysis SDK for Java
@@ -54,21 +52,11 @@ ImageAnalysisAsyncClient asyncClient = new ImageAnalysisClientBuilder()
 ### With DefaultAzureCredential
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 ImageAnalysisClient client = new ImageAnalysisClientBuilder()
     .endpoint(endpoint)
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildClient();
 ```
 
@@ -278,9 +266,8 @@ try {
 ## Environment Variables
 
 ```bash
-VISION_ENDPOINT=https://<resource>.cognitiveservices.azure.com/ # Required for all auth methods
-VISION_KEY=<your-api-key> # Only required for AzureKeyCredential auth
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+VISION_ENDPOINT=https://<resource>.cognitiveservices.azure.com/
+VISION_KEY=<your-api-key>
 ```
 
 ## Image Requirements
@@ -302,3 +289,11 @@ Caption and Dense Captions require GPU-supported regions. Check [supported regio
 - "object detection image"
 - "smart crop thumbnail"
 - "detect people image"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,11 +1,9 @@
 ---
 name: azure-eventgrid-java
-description: Build event-driven applications with Azure Event Grid SDK for Java. Use when publishing events, implementing pub/sub patterns, or integrating with Azure services via events.
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: com.azure:azure-messaging-eventgrid
+description: "Build event-driven applications with Azure Event Grid SDK for Java. Use when publishing events, implementing pub/sub patterns, or integrating with Azure services via events."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Azure Event Grid SDK for Java
@@ -47,22 +45,11 @@ EventGridPublisherClient<CloudEvent> cloudClient = new EventGridPublisherClientB
 ### With DefaultAzureCredential
 
 ```java
-import com.azure.core.credential.TokenCredential;
-import com.azure.identity.AzureIdentityEnvVars;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-TokenCredential credential = new DefaultAzureCredentialBuilder()
-    .requireEnvVars(AzureIdentityEnvVars.AZURE_TOKEN_CREDENTIALS)
-    .build();
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/java/api/overview/azure/identity-readme?view=azure-java-stable#credential-classes
-// TokenCredential credential = new ManagedIdentityCredentialBuilder().build();
 
 EventGridPublisherClient<EventGridEvent> client = new EventGridPublisherClientBuilder()
     .endpoint("<topic-endpoint>")
-    .credential(credential)
+    .credential(new DefaultAzureCredentialBuilder().build())
     .buildEventGridEventPublisherClient();
 ```
 
@@ -298,9 +285,8 @@ try {
 ## Environment Variables
 
 ```bash
-EVENT_GRID_TOPIC_ENDPOINT=https://<topic-name>.<region>.eventgrid.azure.net/api/events  # Required for all auth methods
-EVENT_GRID_ACCESS_KEY=<your-access-key>  # Only required for AzureKeyCredential auth
-AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+EVENT_GRID_TOPIC_ENDPOINT=https://<topic-name>.<region>.eventgrid.azure.net/api/events
+EVENT_GRID_ACCESS_KEY=<your-access-key>
 ```
 
 ## Best Practices
@@ -319,3 +305,11 @@ AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used 
 - "event-driven messaging"
 - "pub/sub Azure"
 - "webhook events"
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,12 +1,9 @@
 ---
 name: azure-cosmos-ts
-description: |
-  Azure Cosmos DB JavaScript/TypeScript SDK (@azure/cosmos) for data plane operations. Use for CRUD operations on documents, queries, bulk operations, and container management. Triggers: "Cosmos DB", "@azure/cosmos", "CosmosClient", "document CRUD", "NoSQL queries", "bulk operations", "partition key", "container.items".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: '@azure/cosmos'
+description: Azure Cosmos DB JavaScript/TypeScript SDK (@azure/cosmos) for data plane operations. Use for CRUD operations on documents, queries, bulk operations, and container management.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # @azure/cosmos (TypeScript/JavaScript)
@@ -34,26 +31,19 @@ COSMOS_DATABASE=<database-name>
 COSMOS_CONTAINER=<container-name>
 # For key-based auth only (prefer AAD)
 COSMOS_KEY=<account-key>
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
-### Microsoft Entra Token Credential (Recommended)
+### AAD with DefaultAzureCredential (Recommended)
 
 ```typescript
 import { CosmosClient } from "@azure/cosmos";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
-
-// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
-// Or use a specific credential directly in production:
-// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
-// const credential = new ManagedIdentityCredential();
+import { DefaultAzureCredential } from "@azure/identity";
 
 const client = new CosmosClient({
   endpoint: process.env.COSMOS_ENDPOINT!,
-  aadCredentials: credential,
+  aadCredentials: new DefaultAzureCredential(),
 });
 ```
 
@@ -418,7 +408,7 @@ import {
 
 ## Best Practices
 
-1. **Use Microsoft Entra Token Credential** — Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production
+1. **Use AAD authentication** — Prefer `DefaultAzureCredential` over keys
 2. **Always use parameterized queries** — Prevents injection, improves plan caching
 3. **Specify partition key** — Avoid cross-partition queries when possible
 4. **Use bulk operations** — For multiple writes, use `executeBulkOperations`
@@ -480,3 +470,11 @@ export class ProductService {
 | `@azure/cosmos` | Data plane (this SDK) | `npm install @azure/cosmos` |
 | `@azure/arm-cosmosdb` | Management plane (ARM) | `npm install @azure/arm-cosmosdb` |
 | `@azure/identity` | Authentication | `npm install @azure/identity` |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

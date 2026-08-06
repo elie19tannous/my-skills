@@ -1,34 +1,32 @@
 ---
 name: azure-identity-dotnet
-description: |
-  Azure Identity library for .NET. Authentication library for Azure SDK clients using Microsoft Entra ID. Use for DefaultAzureCredential, managed identity, service principals, and developer credentials. Triggers: "Azure Identity", "DefaultAzureCredential", "ManagedIdentityCredential", "ClientSecretCredential", "authentication .NET", "Azure auth", "credential chain".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
-  package: Azure.Identity
+description: Azure Identity SDK for .NET. Authentication library for Azure SDK clients using Microsoft Entra ID. Use for DefaultAzureCredential, managed identity, service principals, and developer credentials.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
-# Azure Identity library for .NET
+# Azure.Identity (.NET)
 
-Authentication library for Azure SDK clients using Microsoft Entra ID.
+Authentication library for Azure SDK clients using Microsoft Entra ID (formerly Azure AD).
 
 ## Installation
 
 ```bash
 dotnet add package Azure.Identity
 
-# For ASP.NET Core integration
+# For ASP.NET Core
 dotnet add package Microsoft.Extensions.Azure
 
-# For brokered authentication and Visual Studio Code credential support
+# For brokered authentication (Windows)
 dotnet add package Azure.Identity.Broker
 ```
+
+**Current Versions**: Stable v1.17.1, Preview v1.18.0-beta.2
 
 ## Environment Variables
 
 ### Service Principal with Secret
-
 ```bash
 AZURE_CLIENT_ID=<application-client-id>
 AZURE_TENANT_ID=<directory-tenant-id>
@@ -36,7 +34,6 @@ AZURE_CLIENT_SECRET=<client-secret-value>
 ```
 
 ### Service Principal with Certificate
-
 ```bash
 AZURE_CLIENT_ID=<application-client-id>
 AZURE_TENANT_ID=<directory-tenant-id>
@@ -45,14 +42,25 @@ AZURE_CLIENT_CERTIFICATE_PASSWORD=<certificate-password>  # Optional
 ```
 
 ### Managed Identity
-
 ```bash
 AZURE_CLIENT_ID=<user-assigned-managed-identity-client-id>  # Only for user-assigned
 ```
 
 ## DefaultAzureCredential
 
-The recommended credential for most scenarios. Tries multiple authentication methods in order. See [DefaultAzureCredential overview](https://aka.ms/azsdk/net/identity/credential-chains#defaultazurecredential-overview) for the current credential chain order and defaults.
+The recommended credential for most scenarios. Tries multiple authentication methods in order:
+
+| Order | Credential | Enabled by Default |
+|-------|------------|-------------------|
+| 1 | EnvironmentCredential | Yes |
+| 2 | WorkloadIdentityCredential | Yes |
+| 3 | ManagedIdentityCredential | Yes |
+| 4 | VisualStudioCredential | Yes |
+| 5 | VisualStudioCodeCredential | Yes |
+| 6 | AzureCliCredential | Yes |
+| 7 | AzurePowerShellCredential | Yes |
+| 8 | AzureDeveloperCliCredential | Yes |
+| 9 | InteractiveBrowserCredential | **No** |
 
 ### Basic Usage
 
@@ -115,10 +123,6 @@ var credential = new ManagedIdentityCredential(
 // User-assigned by resource ID
 var credential = new ManagedIdentityCredential(
     ManagedIdentityId.FromUserAssignedResourceId("<resource-id>"));
-
-// User-assigned by object ID
-var credential = new ManagedIdentityCredential(
-    ManagedIdentityId.FromUserAssignedObjectId("<object-id>"));
 ```
 
 ### ClientSecretCredential
@@ -197,6 +201,7 @@ var credential = new DefaultAzureCredential(
 // AzureAuthorityHosts.AzurePublicCloud (default)
 // AzureAuthorityHosts.AzureGovernment
 // AzureAuthorityHosts.AzureChina
+// AzureAuthorityHosts.AzureGermany
 ```
 
 ## Credential Types Reference
@@ -228,8 +233,7 @@ var credential = new DefaultAzureCredential(
 var devCredential = new DefaultAzureCredential();
 
 // Production - use specific credential
-var prodCredential = new ManagedIdentityCredential(
-    ManagedIdentityId.FromUserAssignedClientId("<client-id>"));
+var prodCredential = new ManagedIdentityCredential("<client-id>");
 ```
 
 ### 2. Reuse Credential Instances
@@ -317,13 +321,13 @@ Supported Azure services:
 
 All credential implementations are thread-safe. A single credential instance can be safely shared across multiple clients and threads.
 
-## Related packages
+## Related SDKs
 
-| Package                      | Purpose                       | Install                                         |
-|------------------------------|-------------------------------|-------------------------------------------------|
-| `Azure.Identity`             | Authentication (this library) | `dotnet add package Azure.Identity`             |
-| `Microsoft.Extensions.Azure` | DI integration                | `dotnet add package Microsoft.Extensions.Azure` |
-| `Azure.Identity.Broker`      | Brokered auth                 | `dotnet add package Azure.Identity.Broker`      |
+| SDK | Purpose | Install |
+|-----|---------|---------|
+| `Azure.Identity` | Authentication (this SDK) | `dotnet add package Azure.Identity` |
+| `Microsoft.Extensions.Azure` | DI integration | `dotnet add package Microsoft.Extensions.Azure` |
+| `Azure.Identity.Broker` | Brokered auth (Windows) | `dotnet add package Azure.Identity.Broker` |
 
 ## Reference Links
 
@@ -331,6 +335,14 @@ All credential implementations are thread-safe. A single credential instance can
 |----------|-----|
 | NuGet Package | https://www.nuget.org/packages/Azure.Identity |
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.identity |
-| Credential Chains | https://aka.ms/azsdk/net/identity/credential-chains |
+| Credential Chains | https://learn.microsoft.com/dotnet/azure/sdk/authentication/credential-chains |
 | Best Practices | https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/identity/Azure.Identity |
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

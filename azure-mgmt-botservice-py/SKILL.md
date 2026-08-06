@@ -1,12 +1,9 @@
 ---
 name: azure-mgmt-botservice-py
-description: |-
-  Azure Bot Service Management SDK for Python. Use for creating, managing, and configuring Azure Bot Service resources.
-  Triggers: "azure-mgmt-botservice", "AzureBotService", "bot management", "conversational AI", "bot channels".
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
+description: Azure Bot Service Management SDK for Python. Use for creating, managing, and configuring Azure Bot Service resources.
+risk: critical
+source: community
+date_added: '2026-02-27'
 ---
 
 # Azure Bot Service Management SDK for Python
@@ -23,41 +20,22 @@ pip install azure-identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id>  # Required for all auth methods
-AZURE_RESOURCE_GROUP=<your-resource-group>  # Required for all auth methods
-AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+AZURE_RESOURCE_GROUP=<your-resource-group>
 ```
 
-## Authentication & Lifecycle
-
-> **🔑 Two rules apply to every code sample below:**
->
-> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
->    - Local dev: `DefaultAzureCredential` works as-is.
->    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
-> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
->    - Sync: `with <Client>(...) as client:`
->    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
->
-> Snippets may abbreviate this setup, but production code should always follow both rules.
+## Authentication
 
 ```python
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.mgmt.botservice import AzureBotService
 import os
 
-# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
-credential = DefaultAzureCredential(require_envvar=True)
-# Or use a specific credential directly in production:
-# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
-# credential = ManagedIdentityCredential()
-
-with AzureBotService(
+credential = DefaultAzureCredential()
+client = AzureBotService(
     credential=credential,
     subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"]
-) as client:
-    # Use `client` for all subsequent operations (see examples below)
-    ...
+)
 ```
 
 ## Create a Bot
@@ -68,30 +46,31 @@ from azure.mgmt.botservice.models import Bot, BotProperties, Sku
 from azure.identity import DefaultAzureCredential
 import os
 
+credential = DefaultAzureCredential()
+client = AzureBotService(
+    credential=credential,
+    subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"]
+)
+
 resource_group = os.environ["AZURE_RESOURCE_GROUP"]
 bot_name = "my-chat-bot"
 
-credential = DefaultAzureCredential()
-with AzureBotService(
-    credential=credential,
-    subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"]
-) as client:
-    bot = client.bots.create(
-        resource_group_name=resource_group,
-        resource_name=bot_name,
-        parameters=Bot(
-            location="global",
-            sku=Sku(name="F0"),  # Free tier
-            kind="azurebot",
-            properties=BotProperties(
-                display_name="My Chat Bot",
-                description="A conversational AI bot",
-                endpoint="https://my-bot-app.azurewebsites.net/api/messages",
-                msa_app_id="<your-app-id>",
-                msa_app_type="MultiTenant"
-            )
+bot = client.bots.create(
+    resource_group_name=resource_group,
+    resource_name=bot_name,
+    parameters=Bot(
+        location="global",
+        sku=Sku(name="F0"),  # Free tier
+        kind="azurebot",
+        properties=BotProperties(
+            display_name="My Chat Bot",
+            description="A conversational AI bot",
+            endpoint="https://my-bot-app.azurewebsites.net/api/messages",
+            msa_app_id="<your-app-id>",
+            msa_app_type="MultiTenant"
         )
     )
+)
 
 print(f"Bot created: {bot.name}")
 ```
@@ -268,6 +247,7 @@ if hasattr(keys.properties, 'properties'):
 ### Create Connection Setting
 
 ```python
+import os
 from azure.mgmt.botservice.models import (
     ConnectionSetting,
     ConnectionSettingProperties
@@ -281,7 +261,7 @@ connection = client.bot_connection.create(
         location="global",
         properties=ConnectionSettingProperties(
             client_id="<oauth-client-id>",
-            client_secret="<oauth-client-secret>",
+            client_secret=os.environ["BOT_OAUTH_CLIENT_SECRET"],
             scopes="User.Read",
             service_provider_id="<service-provider-id>"
         )
@@ -333,12 +313,18 @@ for conn in connections:
 
 ## Best Practices
 
-1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
-2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
-3. **Use `DefaultAzureCredential`** for code that runs locally. Use a specific token credential for code that runs in Azure.
-4. **Start with F0 SKU** for development, upgrade to S1 for production
-5. **Store MSA App ID/Secret securely** — use Key Vault
-6. **Enable only needed channels** — reduces attack surface
-7. **Rotate Direct Line keys** periodically
-8. **Use managed identity** when possible for bot connections
-9. **Configure proper CORS** for Web Chat channel
+1. **Use DefaultAzureCredential** for authentication
+2. **Start with F0 SKU** for development, upgrade to S1 for production
+3. **Store MSA App ID/Secret securely** — use Key Vault
+4. **Enable only needed channels** — reduces attack surface
+5. **Rotate Direct Line keys** periodically
+6. **Use managed identity** when possible for bot connections
+7. **Configure proper CORS** for Web Chat channel
+
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
