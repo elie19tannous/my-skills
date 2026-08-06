@@ -1,24 +1,82 @@
 ---
 name: create-pr
-description: Alias for sentry-skills:pr-writer. Use when users explicitly ask for "create-pr" or reference the legacy skill name. Redirects to the canonical PR writing workflow.
-risk: unknown
-source: community
+description: "Create a GitHub pull request with a drafted title and description. Use when the user asks to \"create a PR\", \"create a pull request\", \"open a PR\", or \"submit a PR\"."
 ---
 
-# Alias: create-pr
+# Create Pull Request
 
-This skill name is kept for compatibility.
+Draft a concise and descriptive title and a short paragraph for a PR. Explain the purpose of the changes, the problem they solve, and the general approach taken. When the changes involve clear runtime flows or state transitions, include Mermaid diagrams.
 
-## When to Use
-- The user explicitly asks for `create-pr` or refers to the legacy skill name.
-- You need to redirect pull request creation work to the canonical `sentry-skills:pr-writer` workflow.
-- The task is specifically about writing or updating a pull request rather than general git operations.
+## Step 1: Analyze Changes
 
-Use `sentry-skills:pr-writer` as the canonical skill for creating and editing pull requests.
+If git is in a feature branch, examine all commit messages and the full diff to understand the overall changes. Analyze the diff for diagram opportunities (see Diagrams section below).
 
-If invoked via `create-pr`, run the same workflow and conventions documented in `sentry-skills:pr-writer`.
+## Step 2: Run `/github-voice` Skill
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Run the `/github-voice` skill to load writing style rules.
+
+## Step 3: Draft Title and Description
+
+Draft a title and description, embedding any diagrams in the body. Output the drafted title and description as chat text so the user can review it.
+
+## Step 4: Confirm and Create
+
+Use `AskUserQuestion` for confirmation only. Generate a random tag so the body file is unique across sessions:
+
+```bash
+head -c 4 /dev/urandom | xxd -p
+```
+
+Write the drafted body to `.turbo/pr/<tag>-body.md` (using the printed tag) with the Write tool, then create the PR with `gh pr create --body-file`:
+
+```bash
+gh pr create --title "<TITLE>" --body-file .turbo/pr/<tag>-body.md
+```
+
+Do not set `--assignee` unless the user explicitly asks to assign someone.
+
+## Diagrams
+
+GitHub renders Mermaid natively in PR descriptions via ` ```mermaid ` code blocks. Include diagrams only when they add clarity a text description can't — skip for trivial changes or obvious flows.
+
+### Sequence Diagram
+
+Include when the changes introduce or modify a clear runtime flow: API endpoints, event handlers, pipelines, multi-service interactions, webhook flows.
+
+````markdown
+```mermaid
+sequenceDiagram
+  Client->>API: POST /payments
+  API->>PaymentService: processPayment()
+  PaymentService->>StripeClient: charge()
+  StripeClient-->>PaymentService: confirmation
+  PaymentService->>DB: save()
+```
+````
+
+### State Diagram
+
+Include when the changes add or modify entity states, status enums, workflow transitions, or lifecycle hooks.
+
+````markdown
+```mermaid
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> Pending: submit()
+  Pending --> Approved: approve()
+  Pending --> Rejected: reject()
+  Approved --> [*]
+```
+````
+
+### Rules
+
+- Only include when the diagram genuinely adds clarity
+- Keep diagrams focused — max ~10 nodes/transitions
+- Use descriptive labels on arrows (method names, HTTP verbs)
+- Place diagrams after the summary paragraph under a `## Flow` or `## State Machine` heading
+- One diagram per type max — don't include both unless the PR truly has both patterns
+
+## Rules
+
+- Don't reference `.turbo/` content (filenames, requirement IDs, shell references, headings) in the title or body. `.turbo/` is gitignored, so these references would be opaque to anyone reading without local copies.

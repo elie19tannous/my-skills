@@ -1,18 +1,16 @@
 ---
 name: differential-review
-description: "Security-focused code review for PRs, commits, and diffs."
-risk: unknown
-source: community
+description: >
+  Performs security-focused differential review of code changes (PRs, commits, diffs).
+  Adapts analysis depth to codebase size, uses git history for context, calculates
+  blast radius, checks test coverage, and generates comprehensive markdown reports.
+  Automatically detects and prevents security regressions.
+allowed-tools: Read Write Grep Glob Bash
 ---
 
 # Differential Security Review
 
 Security-focused code review for PRs, commits, and diffs.
-
-## When to Use
-- You need a security-focused review of a PR, commit range, or diff rather than a general code review.
-- The changes touch auth, crypto, external calls, value transfer, permissions, or other high-risk logic.
-- You need findings backed by code evidence, attack scenarios, and an explicit report artifact.
 
 ## Core Principles
 
@@ -78,8 +76,10 @@ Phase 3: Blast Radius → Phase 4: Deep Context → Phase 5: Adversarial → Pha
 │     (Pre-Analysis + Phases 0-4: triage, code analysis, test coverage, blast radius)
 │
 ├─ Analyzing HIGH RISK change?
-│  └─ Read: adversarial.md
-│     (Phase 5: Attacker modeling, exploit scenarios, exploitability rating)
+│  ├─ Read: adversarial.md
+│  │  (Phase 5: Attacker modeling, exploit scenarios, exploitability rating)
+│  └─ Or delegate to: adversarial-modeler agent
+│     (Autonomous attacker modeling with concrete exploit scenarios)
 │
 ├─ Writing the final report?
 │  └─ Read: reporting.md
@@ -92,6 +92,17 @@ Phase 3: Blast Radius → Phase 4: Deep Context → Phase 5: Adversarial → Pha
 └─ Quick triage only?
    └─ Use Quick Reference above, skip detailed docs
 ```
+
+---
+
+## Agents
+
+**`adversarial-modeler`** — Models attacker perspectives and builds exploit
+scenarios for HIGH RISK code changes. Follows the 5-step adversarial
+methodology (attacker model, attack vectors, exploitability rating, exploit
+scenario, baseline cross-reference) and produces structured vulnerability
+reports. Delegate to this agent when Phase 5 analysis is needed on high-risk
+changes.
 
 ---
 
@@ -205,18 +216,13 @@ These patterns require adversarial analysis even in quick triage.
 
 ## Supporting Documentation
 
-- **methodology.md** - Detailed phase-by-phase workflow (Phases 0-4)
-- **adversarial.md** - Attacker modeling and exploit scenarios (Phase 5)
-- **reporting.md** - Report structure and formatting (Phase 6)
-- **patterns.md** - Common vulnerability patterns reference
+- **[methodology.md](methodology.md)** - Detailed phase-by-phase workflow (Phases 0-4)
+- **[adversarial.md](adversarial.md)** - Attacker modeling and exploit scenarios (Phase 5)
+- **[reporting.md](reporting.md)** - Report structure and formatting (Phase 6)
+- **[patterns.md](patterns.md)** - Common vulnerability patterns reference
 
 ---
 
-**For first-time users:** Start with methodology.md to understand the complete workflow.
+**For first-time users:** Start with [methodology.md](methodology.md) to understand the complete workflow.
 
 **For experienced users:** Use this page's Quick Reference and Decision Tree to navigate directly to needed content.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

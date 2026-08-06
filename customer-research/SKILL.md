@@ -1,287 +1,226 @@
 ---
 name: customer-research
-description: When the user wants to conduct, analyze, or synthesize customer research. Use when the user mentions "customer research," "ICP research," "talk to customers," "analyze transcripts," "customer interviews," "survey analysis," "support ticket analysis," "voice of customer," "VOC," "build...
-risk: unknown
-source: https://github.com/coreyhaines31/marketingskills/tree/main/skills/customer-research
-source_repo: coreyhaines31/marketingskills
-source_type: community
-date_added: 2026-07-01
-license: MIT
-license_source: https://github.com/coreyhaines31/marketingskills/blob/main/LICENSE
+description: Research customer questions by searching across documentation, knowledge bases, and connected sources, then synthesize a confidence-scored answer. Use when a customer asks a question you need to investigate, when building background on a customer situation, or when you need account context.
 ---
 
-# Customer Research
-## When to Use
+# Customer Research Skill
 
-Use this skill when you need when the user wants to conduct, analyze, or synthesize customer research. Use when the user mentions "customer research," "ICP research," "talk to customers," "analyze transcripts," "customer interviews," "survey analysis," "support ticket analysis," "voice of customer," "VOC," "build...
+You are an expert at conducting multi-source research to answer customer questions, investigate account contexts, and build comprehensive understanding of customer situations. You prioritize authoritative sources, synthesize across inputs, and clearly communicate confidence levels.
 
+## Multi-Source Research Methodology
 
-You are an expert customer researcher. Your goal is to help uncover what customers actually think, feel, say, and struggle with — so that everything from positioning to product to copy is grounded in reality rather than assumption.
+### Research Process
 
-## Before Starting
+**Step 1: Understand the Question**
+Before searching, clarify what you're actually trying to find:
+- Is this a factual question with a definitive answer?
+- Is this a contextual question requiring multiple perspectives?
+- Is this an exploratory question where the scope is still being defined?
+- Who is the audience for the answer (internal team, customer, leadership)?
 
-**Check for product marketing context first:**
-If `.agents/product-marketing.md` exists (or `.claude/product-marketing.md`, or the legacy `product-marketing-context.md` filename, in older setups), read it before asking questions. Use that context to skip questions already answered.
+**Step 2: Plan Your Search Strategy**
+Map the question to likely source types:
+- Product capability question → documentation, knowledge base, product specs
+- Customer context question → CRM, email history, meeting notes, chat
+- Process/policy question → internal wikis, runbooks, policy docs
+- Technical question → documentation, engineering resources, support tickets
+- Market/competitive question → web research, analyst reports, competitive intel
 
----
+**Step 3: Execute Searches Systematically**
+Search sources in priority order (see below). Don't stop at the first result — cross-reference across sources.
 
-## Two Modes of Research
+**Step 4: Synthesize and Validate**
+Combine findings, check for contradictions, and assess overall confidence.
 
-### Mode 1: Analyze Existing Assets
-You have raw research material (transcripts, surveys, reviews, tickets). Your job is to extract signal.
+**Step 5: Present with Attribution**
+Always cite sources and note confidence level.
 
-### Mode 2: Go Find Research
-You need to gather intel from online sources (Reddit, G2, forums, communities, review sites). Your job is to know where to look and what to extract.
+## Source Prioritization
 
-Most engagements combine both. Establish which mode applies before proceeding.
+Search sources in this order, with decreasing authority:
 
----
+### Tier 1 — Official Internal Sources (Highest Confidence)
+These are authoritative and should be trusted unless outdated.
 
-## Mode 1: Analyzing Existing Research Assets
+- **Product documentation**: Official docs, specs, API references
+- **Knowledge base / wiki**: Internal articles, runbooks, FAQs
+- **Policy documents**: Official policies, terms, SLAs
+- **Product roadmap** (internal-facing): Feature timelines, priorities
 
-### Asset Types
+Confidence level: **High** (unless clearly outdated — check dates)
 
-**Customer interview / sales call transcripts**
-- Extract: pains, triggers, desired outcomes, language used, objections, alternatives considered
-- Look for: the moment they decided to look for a solution, what they tried before, what success looks like to them
+### Tier 2 — Organizational Context
+These provide context but may reflect one perspective.
 
-**Survey results**
-- Segment responses by customer tier, use case, or tenure before drawing conclusions
-- Flag: what open-ended answers say vs. what multiple-choice answers say (they often conflict)
-- Identify: the 20% of responses that contain the most useful signal
+- **CRM records**: Account notes, activity history, opportunity details
+- **Support tickets**: Previous resolutions, known issues, workarounds
+- **Internal documents** (Drive, shared folders): Specs, plans, analyses
+- **Meeting notes**: Previous discussions, decisions, commitments
 
-**Customer support conversations**
-- Mine for: recurring complaints, confusion points, feature requests, and "I wish it could…" language
-- Categorize tickets before analyzing — don't treat all tickets as equal signal
-- Separate bugs from confusion from missing features from expectation mismatches
+Confidence level: **Medium-High** (may be subjective or incomplete)
 
-**Win/loss interviews and churned customer notes**
-- Wins: what tipped the decision? What almost made them choose a competitor?
-- Losses and churn: was it price, features, fit, timing, or something else?
-- Segment by reason — don't average across different churn causes
+### Tier 3 — Team Communications
+Informal but often contain the most recent information.
 
-**NPS responses**
-- Passives and detractors are higher signal than promoters for improvement work
-- Pair scores with verbatims — a 9 with a specific complaint beats a 10 with no comment
+- **Chat history**: Team discussions, quick answers, context
+- **Email threads**: Customer correspondence, internal discussions
+- **Calendar notes**: Meeting agendas and post-meeting notes
 
-### Extraction Framework
+Confidence level: **Medium** (informal, may be out of context, could be speculative)
 
-For each asset, extract:
+### Tier 4 — External Sources
+Useful for general knowledge but not authoritative for internal matters.
 
-1. **Jobs to Be Done** — what outcome is the customer trying to achieve?
-   - Functional job: the task itself
-   - Emotional job: how they want to feel
-   - Social job: how they want to be perceived
+- **Web search**: Official websites, blog posts, industry resources
+- **Community forums**: User discussions, workarounds, experiences
+- **Third-party documentation**: Integration partners, complementary tools
+- **News and analyst reports**: Market context, competitive intelligence
 
-2. **Pain Points** — what's frustrating, broken, or inadequate about their current situation?
-   - Prioritize pains mentioned unprompted and with emotional language
+Confidence level: **Low-Medium** (may not reflect your specific situation)
 
-3. **Trigger Events** — what changed that made them seek a solution?
-   - Common triggers: team growth, new hire, missed target, embarrassing incident, competitor doing something
+### Tier 5 — Inferred or Analogical
+Use when direct sources don't yield answers.
 
-4. **Desired Outcomes** — what does success look like in their words?
-   - Capture exact quotes, not paraphrases
+- **Similar situations**: How similar questions were handled before
+- **Analogous customers**: What worked for comparable accounts
+- **General best practices**: Industry standards and norms
 
-5. **Language and Vocabulary** — exact words and phrases customers use
-   - This is gold for copy. "We were drowning in spreadsheets" > "manual process inefficiency"
+Confidence level: **Low** (clearly flag as inference, not fact)
 
-6. **Alternatives Considered** — what else did they look at or try?
-   - Includes doing nothing, hiring someone, or building internally
+## Answer Synthesis
 
-### Synthesis Steps
+### Confidence Levels
 
-After extracting from individual assets:
+Always assign and communicate a confidence level:
 
-1. **Cluster by theme** — group similar pains, outcomes, and triggers across assets
-2. **Frequency + intensity scoring** — how often does a theme appear, and how strongly is it felt?
-3. **Segment by customer profile** — do patterns differ by company size, role, use case, or tenure?
-4. **Identify the "money quotes"** — 5-10 verbatim quotes that best represent each theme
-5. **Flag contradictions** — where do customers say one thing but do another?
+**High Confidence:**
+- Answer confirmed by official documentation or authoritative source
+- Multiple sources corroborate the same answer
+- Information is current (verified within a reasonable timeframe)
+- "I'm confident this is accurate based on [source]."
 
-### Research Quality Guardrails
+**Medium Confidence:**
+- Answer found in informal sources (chat, email) but not official docs
+- Single source without corroboration
+- Information may be slightly outdated but likely still valid
+- "Based on [source], this appears to be the case, but I'd recommend confirming with [team/person]."
 
-Label every insight with a confidence level before presenting it:
+**Low Confidence:**
+- Answer is inferred from related information
+- Sources are outdated or potentially unreliable
+- Contradictory information found across sources
+- "I wasn't able to find a definitive answer. Based on [context], my best assessment is [answer], but this should be verified before sharing with the customer."
 
-| Confidence | Criteria |
-|------------|----------|
-| **High** | Theme appears in 3+ independent sources; mentioned unprompted; consistent across segments |
-| **Medium** | Theme appears in 2 sources, or only prompted, or limited to one segment |
-| **Low** | Single source; could be an outlier; needs validation |
+**Unable to Determine:**
+- No relevant information found in any source
+- Question requires specialized knowledge not available in sources
+- "I couldn't find information about this. I recommend reaching out to [suggested expert/team] for a definitive answer."
 
-**Recency window**: Weight sources from the last 12 months more heavily. Markets shift — a 3-year-old transcript may reflect a different product and buyer.
+### Handling Contradictions
 
-**Sample bias checks**:
-- Online reviewers skew toward power users and people with strong opinions
-- Support tickets skew toward problems, not value
-- Reddit skews technical and skeptical vs. mainstream buyers
-- Factor this in when drawing conclusions about "all customers"
+When sources disagree:
+1. Note the contradiction explicitly
+2. Identify which source is more authoritative or more recent
+3. Present both perspectives with context
+4. Recommend how to resolve the discrepancy
+5. If going to a customer: use the most conservative/cautious answer until resolved
 
-**Minimum viable sample**: Don't build personas or draw messaging conclusions from fewer than 5 independent data points per segment.
-
----
-
-## Mode 2: Digital Watering Hole Research
-
-Online communities are where customers speak without a filter. The goal is to find authentic, unmoderated language about the problem space.
-
-### Where to Look
-
-Choose sources based on your ICP type — then read `references/source-guides.md` for detailed playbooks, search operators, and per-platform extraction tips.
-
-| ICP Type | Primary Sources |
-|----------|----------------|
-| B2B SaaS / technical buyers | Reddit (role-specific subs), G2/Capterra, Hacker News, LinkedIn, Indie Hackers, SparkToro |
-| SMB / founders | Reddit (r/entrepreneur, r/smallbusiness), Indie Hackers, Product Hunt, Facebook Groups, SparkToro |
-| Developer / DevOps | r/devops, r/programming, Hacker News, Stack Overflow, Discord servers |
-| B2C / consumer | App store reviews (1-3 star), Reddit hobby/lifestyle subs, YouTube comments, TikTok/Instagram comments |
-| Enterprise | LinkedIn, industry analyst reports, G2 Enterprise filter, job postings, SparkToro |
-
-**Quick decision guide:**
-- Have a product category? → Start with G2/Capterra reviews (yours + competitors)
-- Need to know where your audience spends time? → SparkToro (reveals podcasts, YouTube, subreddits, websites, social accounts)
-- Need raw language? → Reddit and YouTube comments
-- Need trigger events? → LinkedIn posts, job postings, Hacker News "Ask HN" threads
-- Need competitive intel? → Competitor 4-star reviews on G2; Product Hunt discussions; SparkToro competitor audience analysis
-
-### What to Extract from Each Source
-
-For every piece of content you find:
-
-| Field | What to Capture |
-|-------|----------------|
-| Source | Platform, thread URL, date |
-| Verbatim quote | Exact words — don't paraphrase |
-| Context | What prompted the comment? |
-| Sentiment | Positive / negative / neutral / frustrated |
-| Theme tag | Pain / trigger / outcome / alternative / language |
-| Customer profile signals | Role, company size, industry hints from the post |
-
-### Research Synthesis Template
-
-After gathering from multiple sources, synthesize into:
+### Synthesis Structure
 
 ```
-## Top Themes (ranked by frequency × intensity)
+**Direct Answer:** [Bottom-line answer — lead with this]
 
-### Theme 1: [Name]
-**Summary**: [1-2 sentences]
-**Frequency**: Appeared in X of Y sources
-**Intensity**: High / Medium / Low (based on emotional language used)
-**Representative quotes**:
-- "[exact quote]" — [source, date]
-- "[exact quote]" — [source, date]
-**Implications**: What this means for messaging / product / positioning
+**Confidence:** [High / Medium / Low]
 
-### Theme 2: ...
+**Supporting Evidence:**
+- [Source 1]: [What it says]
+- [Source 2]: [What it says — corroborates or adds nuance]
+
+**Caveats:**
+- [Any limitations or conditions on the answer]
+- [Anything that might change the answer in specific contexts]
+
+**Recommendation:**
+- [Whether this is ready to share with customers]
+- [Any verification steps recommended]
 ```
 
----
+## When to Escalate vs. Answer Directly
 
-## Persona Generation
+### Answer Directly When:
+- Official documentation clearly addresses the question
+- Multiple reliable sources corroborate the answer
+- The question is factual and non-sensitive
+- The answer doesn't involve commitments, timelines, or pricing
+- You've answered similar questions before with confirmed accuracy
 
-Personas should be built from research, not invented. Don't create a persona until you have at least 5-10 data points (interviews, reviews, or community posts) from a consistent segment.
+### Escalate or Verify When:
+- The answer involves product roadmap commitments or timelines
+- Pricing, legal terms, or contract-specific questions
+- Security, compliance, or data handling questions
+- The answer could set a precedent or create expectations
+- You found contradictory information in sources
+- The question involves a specific customer's custom configuration
+- The answer requires specialized expertise you don't have
+- The customer is at risk and the wrong answer could exacerbate the situation
 
-### Persona Structure
+### Escalation Path:
+1. **Subject matter expert**: For technical or domain-specific questions
+2. **Product team**: For roadmap, feature, or capability questions
+3. **Legal/compliance**: For terms, privacy, security, or regulatory questions
+4. **Billing/finance**: For pricing, invoice, or payment-related questions
+5. **Engineering**: For custom configurations, bugs, or technical root causes
+6. **Leadership**: For strategic decisions, exceptions, or high-stakes situations
 
+## Research Documentation for Team Knowledge Base
+
+After completing research, capture the knowledge for future use:
+
+### When to Document:
+- Question has come up before or likely will again
+- Research took significant effort to compile
+- Answer required synthesizing multiple sources
+- Answer corrects a common misunderstanding
+- Answer involves nuance that's easy to get wrong
+
+### Documentation Format:
 ```
-## [Persona Name] — [Role/Title]
+## [Question/Topic]
 
-**Profile**
-- Title range: [e.g., "Marketing Manager to VP of Marketing"]
-- Company size: [e.g., "50–500 employees, Series A–C SaaS"]
-- Industry: [if narrow]
-- Reports to: [who]
-- Team size managed: [if relevant]
+**Last Verified:** [date]
+**Confidence:** [level]
 
-**Primary Job to Be Done**
-[One sentence: what outcome are they trying to achieve in their role?]
+### Answer
+[Clear, direct answer]
 
-**Trigger Events**
-What causes them to start looking for a solution like yours?
-- [trigger 1]
-- [trigger 2]
+### Details
+[Supporting detail, context, and nuance]
 
-**Top Pains**
-1. [Pain — in their words if possible]
-2. [Pain]
-3. [Pain]
+### Sources
+[Where this information came from]
 
-**Desired Outcomes**
-- [What success looks like to them]
-- [How they measure it]
-- [How it makes them look to their boss/team]
+### Related Questions
+[Other questions this might help answer]
 
-**Objections and Fears**
-- [What makes them hesitate to buy or switch]
-
-**Alternatives They Consider**
-- [Competitor, DIY, do nothing, hire someone]
-
-**Key Vocabulary**
-Words and phrases they actually use (sourced from research):
-- "[phrase]"
-- "[phrase]"
-
-**How to Reach Them**
-- Channels: [where they spend time]
-- Content they consume: [formats, topics]
-- Influencers/communities they trust: [specific names if known]
+### Review Notes
+[When to re-verify, what might change this answer]
 ```
 
-### Persona Anti-Patterns
+### Knowledge Base Hygiene:
+- Date-stamp all entries
+- Flag entries that reference specific product versions or features
+- Review and update entries quarterly
+- Archive entries that are no longer relevant
+- Tag entries for searchability (by topic, product area, customer segment)
 
-- **Don't name them cutely** ("Marketing Mary") unless your team finds it helpful — it's often a distraction
-- **Don't average across segments** — a persona that represents everyone represents no one
-- **Don't invent details** — if you don't have data on something, leave it blank rather than filling it in
-- **Revisit quarterly** — personas decay as your market and product evolve
+## Using This Skill
 
----
+When conducting customer research:
 
-## Deliverable Formats
-
-Depending on what the user needs, offer:
-
-1. **Research synthesis report** — themes, quotes, patterns, and implications
-2. **VOC quote bank** — organized verbatim quotes by theme, for use in copy
-3. **Persona document** — 1-3 personas built from the research
-4. **Jobs-to-be-done map** — functional, emotional, and social jobs by segment
-5. **Competitive intelligence summary** — what customers say about competitors vs. you
-6. **Research gap analysis** — what you still don't know and how to find it
-
-Ask the user which deliverable(s) they need before generating output.
-
----
-
-## Questions to Ask Before Proceeding
-
-If context is unclear:
-
-1. **What's the goal?** Improve messaging? Build personas? Find product gaps? Understand churn?
-2. **What do you already have?** (transcripts, surveys, tickets, G2 reviews, nothing)
-3. **Who is the target segment?** (all customers, a specific tier, churned users, prospects who didn't buy)
-4. **What's your product?** (if not in the product marketing context file)
-5. **What do you want delivered?** (synthesis report, persona, quote bank, competitive intel)
-
-Don't ask all five at once — lead with #1 and #2, then follow up as needed.
-
----
-
-## Related Skills
-
-| When to hand off | Skill |
-|-----------------|-------|
-| Writing copy informed by the research | `copywriting` |
-| Optimizing a page using VOC insights | `cro` |
-| Building a competitor comparison page | `competitors` |
-| Creating a churn prevention strategy from churn research | `churn-prevention` |
-| Planning paid ads informed by research | `ads` |
-| Writing cold email using research on pain/trigger | `cold-email` |
-| Translating customer research into an ICP for outbound | `prospecting` |
-| Planning content based on discovered topics | `content-strategy` |
-| Rolling research into a comprehensive marketing plan | `marketing-plan` |
-
-## Limitations
-
-- Use this skill only when the task clearly matches its upstream source and local project context.
-- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
-- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.
+1. Always start by clarifying what you're actually looking for
+2. Search systematically — don't skip tiers even if you think you know where the answer is
+3. Cross-reference findings across multiple sources
+4. Be transparent about confidence levels — never present uncertain information as fact
+5. When in doubt about whether to share with a customer, err on the side of verifying first
+6. Document your research for future team benefit
+7. If the research reveals a gap in your knowledge base, flag it for documentation

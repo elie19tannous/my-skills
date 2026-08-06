@@ -1,14 +1,16 @@
 ---
 name: discord-automation
 description: "Automate Discord tasks via Rube MCP (Composio): messages, channels, roles, webhooks, reactions. Always search tools first for current schemas."
-risk: critical
-source: community
-date_added: "2026-02-27"
+requires:
+  mcp: [rube]
+category: communication
 ---
 
 # Discord Automation via Rube MCP
 
 Automate Discord operations through Composio's Discord/Discordbot toolkits via Rube MCP.
+
+**Toolkit docs**: [composio.dev/toolkits/discord](https://composio.dev/toolkits/discord)
 
 ## Prerequisites
 
@@ -19,6 +21,7 @@ Automate Discord operations through Composio's Discord/Discordbot toolkits via R
 ## Setup
 
 **Get Rube MCP**: Add `https://rube.app/mcp` as an MCP server in your client configuration. No API keys needed — just add the endpoint and it works.
+
 
 1. Verify Rube MCP is available by confirming `RUBE_SEARCH_TOOLS` responds
 2. Call `RUBE_MANAGE_CONNECTIONS` with toolkit `discordbot` (bot operations) or `discord` (user operations)
@@ -186,10 +189,5 @@ Permissions are combined using bitwise OR:
 | Test auth | DISCORDBOT_TEST_AUTH | (none) |
 | Get channel | DISCORDBOT_GET_CHANNEL | channel_id |
 
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*
