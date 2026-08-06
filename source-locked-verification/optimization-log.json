@@ -1,0 +1,28 @@
+{
+  "skill": "source-locked-verification",
+  "cycles": [
+    {
+      "cycle": 1,
+      "date": "2026-07-09",
+      "from_version": "0.0.0",
+      "to_version": "1.0.0",
+      "editor": "finish-skill (subagent)",
+      "summary": "Authored the source-locked-verification skill to the standard Lawcal legal-tech package: SKILL.md (English), SKILL_HE.md (Hebrew mirror), two references (verification-workflow, claim-types), an offline stdlib-only claim/citation scanner, metadata.json, evidence.json, and this log. The skill's central discipline is anti-fabrication: a citation is never treated as proof of support, and unverifiable sources are graded as such rather than assumed supported. Ran the script self-check (--selftest: OK).",
+      "changes": [
+        {"type": "package", "id": "skill-md", "detail": "Authored SKILL.md: scope, atomic-claim extraction, citation matching, the Supported/Partial/Unsupported/Unverifiable/Misquoted grading rubric, unsourced-assertion report, anti-fabrication discipline, examples, gotchas, reference links, troubleshooting."},
+        {"type": "package", "id": "skill-he", "detail": "Added SKILL_HE.md: Hebrew RTL mirror of the instructions, examples, gotchas, and reference links."},
+        {"type": "package", "id": "references", "detail": "Added references/verification-workflow.md (end-to-end pass) and references/claim-types.md (what needs a source vs exempt, disguised-fact trap, quotation/quantity rules)."},
+        {"type": "package", "id": "metadata", "detail": "Added metadata.json (author, version 1.0.0, category, bilingual tags + display name/description, supported agents)."},
+        {"type": "package", "id": "evidence", "detail": "Added evidence.json documenting 5 claims sourced to the method references, ABA Model Rule 3.3, FTC substantiation guidance, and the local script self-check."},
+        {"type": "test", "id": "script-selftest", "detail": "Verified scripts/claim_scanner.py --selftest passes on python3.11 (stdlib only, no network)."}
+      ],
+      "deferrals": [
+        {
+          "id": "D1-source-support-grading",
+          "reason": "Judging whether a cited source actually supports a claim requires reading the source, which is outside a static scanner's ability. The script deliberately stops at first-pass citation detection and defers support grading to the human/agent with source access, per the anti-fabrication rule.",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

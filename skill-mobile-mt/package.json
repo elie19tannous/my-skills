@@ -1,0 +1,56 @@
+{
+  "name": "@buivietphi/skill-mobile-mt",
+  "version": "2.2.1",
+  "description": "Master Senior Mobile Engineer skill for AI agents. Pre-built patterns from 30+ production repos. React Native, Flutter, iOS, Android. Supports Claude, Cline, Cursor, Windsurf, Copilot, Codex, Gemini, Kimi, Kilo Code, Kiro, Antigravity.",
+  "author": "buivietphi",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "gemini",
+    "kimi",
+    "antigravity",
+    "cursor",
+    "agent-skills",
+    "mobile",
+    "react-native",
+    "flutter",
+    "ios",
+    "android",
+    "clean-architecture",
+    "code-review",
+    "prompt-engineering"
+  ],
+  "bin": {
+    "skill-mobile": "bin/install.mjs"
+  },
+  "files": [
+    "bin/",
+    "SKILL.md",
+    "AGENTS.md",
+    "react-native/",
+    "flutter/",
+    "ios/",
+    "android/",
+    "shared/",
+    "humanizer/"
+  ],
+  "scripts": {
+    "postinstall": "node bin/install.mjs --auto",
+    "install:claude": "node bin/install.mjs --claude",
+    "install:gemini": "node bin/install.mjs --gemini",
+    "install:kimi": "node bin/install.mjs --kimi",
+    "install:all": "node bin/install.mjs --all",
+    "init": "node bin/install.mjs --init",
+    "init:cursor": "node bin/install.mjs --init cursor",
+    "init:copilot": "node bin/install.mjs --init copilot",
+    "init:windsurf": "node bin/install.mjs --init windsurf",
+    "init:all": "node bin/install.mjs --init all"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/buivietphi/skill-mobile-mt"
+  }
+}

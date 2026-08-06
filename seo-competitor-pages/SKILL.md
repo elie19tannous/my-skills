@@ -4,29 +4,36 @@ description: >
   Generate SEO-optimized competitor comparison and alternatives pages. Covers
   "X vs Y" layouts, "alternatives to X" pages, feature matrices, schema markup,
   and conversion optimization. Use when user says "comparison page", "vs page",
-  "alternatives page", "competitor comparison", or "X vs Y".
-risk: unknown
-source: "https://github.com/AgriciDaniel/claude-seo"
-date_added: "2026-03-21"
+  "alternatives page", "competitor comparison", "X vs Y", "versus",
+  "compare competitors", or "alternative to".
 user-invokable: true
 argument-hint: "[url or generate] [competitor]"
-allowed-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - WebFetch
+license: MIT
+metadata:
+  author: AgriciDaniel
+  version: "1.9.6"
+  category: seo
 ---
 
 # Competitor Comparison & Alternatives Pages
+## Shared Data Cache
+
+**Step 0 -- Check shared data cache:**
+
+Before gathering, check `.seo-cache/` for reusable context from related SEO skills.
+Reference: `../seo/references/shared-data-cache.md` for schemas and dependency map.
+
+Check these cache files when present:
+- `.seo-cache/site-meta.json` for domain, business type, industry, and crawl context
+- `.seo-cache/audit-scores.json` for prior full-audit priorities
+- `.seo-cache/pages/{url-slug}/page-analysis.json` for page-level context when a URL is provided
+
+- If found: parse and use clearly valid fields (note "Using cached [X] from [date]")
+- If missing, corrupt, or irrelevant: continue with fresh evidence
+- If the user says "refresh" or "re-run": ignore cache reads and overwrite on write
 
 Create high-converting comparison and alternatives pages that target
 competitive intent keywords with accurate, structured content.
-
-## When to Use
-- Use when creating `X vs Y` comparison pages or alternatives pages.
-- Use when targeting competitor-intent keywords with SEO landing pages.
-- Use when the user needs structured comparison content, feature matrices, or conversion-oriented competitor pages.
 
 ## Page Types
 
@@ -227,7 +234,7 @@ competitive intent keywords with accurate, structured content.
 | Insufficient competitor data (pricing, features unavailable) | Flag missing data points clearly. Use "Not publicly available" in comparison tables rather than guessing. |
 | No product/service overlap found | Report that the products serve different markets. Suggest alternative competitors that share feature overlap, or pivot to a category roundup format. |
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+## Write to shared data cache
+
+After completing all work, write a concise JSON summary to `.seo-cache/` when the workflow produced durable findings.
+Use the schemas and naming rules in `../seo/references/shared-data-cache.md`; include at least `cache_type`, `analyzed_at`, source URL/domain, key findings, issues, recommendations, and tool limitations. Add `.seo-cache/` to `.gitignore` if it is missing.

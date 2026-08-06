@@ -1,112 +1,75 @@
 ---
 name: socialclaw
-description: "Agent-first social media publishing skill — schedule and publish posts across 13 platforms (X, LinkedIn, Instagram, Facebook Pages, TikTok, Discord, Telegram, YouTube, Reddit, WordPress, Pinterest) via a single workspace API key."
-category: marketing
-risk: critical
-source: community
-source_repo: ndesv21/socialclaw
-source_type: community
-date_added: "2026-05-25"
-author: ndesv21
-tags: [social-media, publishing, scheduling, marketing, twitter, linkedin, instagram, tiktok, discord, telegram, reddit, wordpress, pinterest]
-tools: [claude]
-license: "MIT"
-license_source: "https://github.com/ndesv21/socialclaw/blob/main/LICENSE"
-plugin:
-  targets:
-    codex: blocked
-    claude: blocked
+category: social-media
+description: Social media scheduling and publishing for AI agents. Use when the user wants to schedule posts, connect social accounts, upload media, or publish campaigns to X, LinkedIn, Instagram, Facebook Pages, TikTok, Discord, Telegram, YouTube, Reddit, WordPress, or Pinterest through SocialClaw.
+license: MIT
 ---
 
-# SocialClaw — Social Media Publisher
+# SocialClaw
 
-## Overview
+SocialClaw is a workspace-scoped social publishing service at `https://getsocialclaw.com`.
 
-SocialClaw is an agent-first social media publishing skill that lets you schedule and publish posts across 13 platforms using a single workspace API key. No per-platform OAuth setup required — one key covers everything.
+This skill teaches Claude Code how to:
+- Validate a workspace API key and confirm SocialClaw access
+- Connect and disconnect social accounts via browser OAuth
+- Upload media assets and get SocialClaw-hosted delivery URLs
+- Validate, preview, apply, and inspect scheduled posts and campaigns
+- Inspect account capabilities, publish settings, analytics, and workspace health
 
-## When to Use
+## Runtime Requirements
 
-- Use when the user wants to plan, schedule, or publish a social media campaign across multiple platforms.
-- Use when the user has a SocialClaw workspace API key and wants one workflow for X, LinkedIn, Instagram, Facebook, TikTok, Discord, Telegram, YouTube, Reddit, WordPress, or Pinterest.
-- Use when the user asks for social publishing automation that can validate schedules, attach media, and retrieve post performance metrics.
+- `SC_API_KEY` — workspace API key from the SocialClaw dashboard
+- CLI (optional): `npm install -g socialclaw`
+- Active trial or paid plan required for CLI/API execution
 
-## Supported Platforms
+## Quick Start
 
-- X (Twitter)
-- LinkedIn (Profile + Page)
-- Instagram (Business + Standalone)
-- Facebook Pages
-- TikTok
-- Discord
-- Telegram
-- YouTube
-- Reddit
-- WordPress
-- Pinterest
+```bash
+# Get a workspace API key
+open https://getsocialclaw.com/dashboard
 
-## Installation
+# Set it in your environment
+export SC_API_KEY="<workspace-key>"
+
+# Or use the CLI
+socialclaw login --api-key <workspace-key>
+
+# List connected accounts
+socialclaw accounts list --json
+
+# Upload media and schedule a post
+socialclaw assets upload --file ./image.png --json
+socialclaw validate -f schedule.json --json
+socialclaw apply -f schedule.json --json
+```
+
+## Supported Providers
+
+X, LinkedIn (profile + page), Instagram (Business + standalone), Facebook Pages, TikTok, Discord, Telegram, YouTube, Reddit, WordPress, Pinterest
+
+## Install as Skill
 
 ```bash
 npx skills add ndesv21/socialclaw
 ```
 
-Or install the npm package directly:
+## Key Commands
 
 ```bash
-npm install socialclaw@0.1.12
+socialclaw login                                          # Authenticate with workspace API key
+socialclaw accounts list --json                          # List connected accounts
+socialclaw accounts connect --provider x --open          # Connect X account
+socialclaw assets upload --file ./image.png --json       # Upload media
+socialclaw validate -f schedule.json --json              # Validate schedule
+socialclaw apply -f schedule.json --json                 # Apply schedule / create run
+socialclaw status --run-id <id> --json                   # Check run status
+socialclaw posts list --json                             # List posts
+socialclaw analytics post --post-id <id> --json          # Post analytics
+socialclaw workspace health --json                       # Workspace health
 ```
 
-## Configuration
+## Links
 
-Set your workspace API key:
-
-```bash
-export SOCIALCLAW_API_KEY=your_workspace_api_key
-```
-
-Get your API key at [getsocialclaw.com](https://getsocialclaw.com).
-
-## Workflow
-
-### Step 1: Create a Campaign
-
-Define your campaign with target platforms, content, and schedule.
-
-### Step 2: Upload Media (Optional)
-
-Upload images or videos to attach to posts.
-
-### Step 3: Validate Schedule
-
-Confirm platform-specific timing rules are met (e.g., rate limits, posting windows).
-
-### Step 4: Publish or Schedule
-
-Publish immediately or schedule for a future time across all selected platforms simultaneously.
-
-### Step 5: Analytics
-
-Retrieve post performance metrics after publishing.
-
-## Example Usage
-
-```
-/social-publishing
-
-Create a campaign for our product launch:
-- Platforms: X, LinkedIn, Instagram
-- Message: "Excited to announce our new feature! Check it out at example.com #launch #product"
-- Schedule: Tomorrow at 9am PST
-```
-
-## Source
-
-GitHub: [ndesv21/socialclaw](https://github.com/ndesv21/socialclaw)
-Website: [getsocialclaw.com](https://getsocialclaw.com)
-
-## Limitations
-
-- Requires a valid SocialClaw workspace API key; do not attempt publishing without explicit user-provided credentials.
-- Treat every publish, schedule, delete, or account-changing action as state-changing: show the target platforms, content, media, and timing, then wait for explicit user confirmation before calling the service.
-- Platform availability, rate limits, analytics fields, and scheduling behavior depend on the upstream SocialClaw service.
-- This skill describes the publishing workflow; it does not replace platform-specific compliance, brand review, or legal approval before posting.
+- GitHub: https://github.com/ndesv21/socialclaw
+- Dashboard: https://getsocialclaw.com/dashboard
+- npm: https://www.npmjs.com/package/socialclaw

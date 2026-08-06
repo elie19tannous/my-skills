@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "skill": "source-locked-verification",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "note": "This skill encodes a verification methodology, not jurisdiction-specific legal facts. Claims below are about the method and the authoritative professional/regulatory standards it aligns to, plus the local script self-check. No live document review was performed. The core discipline is anti-fabrication: a citation is never treated as proof of support.",
+  "claims": [
+    {
+      "claim_id": "citation-not-verification",
+      "claim": "A citation alone does not verify a claim; verification requires confirming the cited source actually supports the claim. Grading distinguishes Supported / Partial / Unsupported / Unverifiable / Misquoted.",
+      "source_url": "local:references/verification-workflow.md",
+      "raw_snippet": "Grade support by reading the source. No source access -> Unverifiable, never Supported. When unsure between two grades, grade DOWN.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "references/verification-workflow.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "candor-to-tribunal",
+      "claim": "Lawyers have a professional duty of candor toward the tribunal (not to knowingly make false statements of fact or law), which is the ethical backdrop for source-locking factual assertions in filings.",
+      "source_url": "https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_3_3_candor_toward_the_tribunal/",
+      "raw_snippet": "ABA Model Rule 3.3: a lawyer shall not knowingly make a false statement of fact or law to a tribunal.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Reference Links", "SKILL_HE.md קישורי מקור"]
+    },
+    {
+      "claim_id": "advertising-substantiation",
+      "claim": "Objective advertising/marketing claims generally require prior substantiation; unsubstantiated performance or comparative claims are a compliance risk, motivating a source-lock pass before publication.",
+      "source_url": "https://www.ftc.gov/business-guidance/advertising-marketing",
+      "raw_snippet": "FTC: objective product claims must be substantiated before they are disseminated.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Examples", "SKILL.md Reference Links", "SKILL_HE.md קישורי מקור"]
+    },
+    {
+      "claim_id": "quotations-verbatim",
+      "claim": "Direct quotations must match the source verbatim; an altered negation, added qualifier, or meaning-changing ellipsis is a high-severity defect even when the citation is correct.",
+      "source_url": "local:references/claim-types.md",
+      "raw_snippet": "Quotations are the strictest type: they must match the source verbatim. A dropped word or an ellipsis that changes meaning is a HIGH-severity defect even when the citation is correct.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["SKILL.md Step 4", "SKILL_HE.md שלב 4", "references/claim-types.md", "SKILL.md Gotchas"]
+    },
+    {
+      "claim_id": "local-script-selfcheck",
+      "claim": "The bundled claim_scanner.py is Python stdlib only (no network, no third-party deps) and ships an embedded self-check runnable via --selftest, which passes.",
+      "source_url": "local:scripts/claim_scanner.py",
+      "raw_snippet": "`python scripts/claim_scanner.py --selftest` prints 'selftest OK'. Verified 2026-07-09 on python3.11. First-pass sentence/citation scanner; does not judge source support.",
+      "fetched_at": "2026-07-09T00:00:00Z",
+      "appears_in": ["scripts/claim_scanner.py", "SKILL.md Bundled Resources"]
+    }
+  ]
+}

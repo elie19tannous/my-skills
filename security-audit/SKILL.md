@@ -1,222 +1,134 @@
 ---
 name: security-audit
-description: "Comprehensive security auditing workflow covering web application testing, API security, penetration testing, vulnerability scanning, and security hardening."
-category: workflow-bundle
-risk: safe
-source: personal
-date_added: "2026-02-27"
+description: Perform a comprehensive security audit of applications and infrastructure to identify vulnerabilities, assess risk, and recommend mitigations aligned with industry standards.
+license: MIT
+metadata:
+  author: awesome-ai-agent-skills
+  version: 1.0.0
 ---
 
-# Security Auditing Workflow Bundle
+# Security Audit
 
-## Overview
+This skill enables the agent to conduct a thorough security audit across web applications, APIs, cloud infrastructure, and backend services. The agent systematically examines authentication mechanisms, authorization controls, input validation, encryption practices, logging configurations, and deployment settings. Findings are mapped to industry frameworks such as the OWASP Top 10, CWE identifiers, and compliance standards including SOC 2 and PCI-DSS.
 
-Comprehensive security auditing workflow for web applications, APIs, and infrastructure. This bundle orchestrates skills for penetration testing, vulnerability assessment, security scanning, and remediation.
+## Workflow
 
-## When to Use This Workflow
+1. **Gather System Information** — Collect details about the target environment including the technology stack, architecture diagrams, network topology, deployment model, and third-party integrations. Review configuration files, environment variables, and infrastructure-as-code templates to build a complete picture of the attack surface.
 
-Use this workflow when:
-- Performing security audits on web applications
-- Testing API security
-- Conducting penetration tests
-- Scanning for vulnerabilities
-- Hardening application security
-- Compliance security assessments
+2. **Define Audit Scope and Compliance Targets** — Establish the boundaries of the audit by identifying which components, environments, and data flows are in scope. Map audit objectives to relevant compliance frameworks such as SOC 2 Type II, PCI-DSS, HIPAA, or internal security policies. Create a checklist derived from the OWASP Top 10 and CWE/SANS Top 25 to ensure systematic coverage.
 
-## Workflow Phases
+3. **Perform Automated Vulnerability Scanning** — Run automated scanners against the target to identify known vulnerabilities. Use tools like OWASP ZAP for web applications, Trivy or Grype for container images, and ScoutSuite or Prowler for cloud infrastructure. Aggregate raw findings for manual review.
 
-### Phase 1: Reconnaissance
+4. **Conduct Manual Security Review** — Manually inspect authentication flows, session management, role-based access controls, input sanitization routines, cryptographic implementations, error handling, and logging practices. Examine source code for hardcoded secrets, insecure deserialization, and business logic flaws that automated tools frequently miss.
 
-#### Skills to Invoke
-- `scanning-tools` - Security scanning
-- `shodan-reconnaissance` - Shodan searches
-- `top-web-vulnerabilities` - OWASP Top 10
+5. **Analyze and Classify Findings** — Assess each finding for severity (Critical, High, Medium, Low, Informational) using CVSS scoring. Assign CWE identifiers and map findings to the relevant OWASP Top 10 category. Evaluate exploitability, blast radius, and business impact to produce a prioritized risk ranking.
 
-#### Actions
-1. Identify target scope
-2. Gather intelligence
-3. Map attack surface
-4. Identify technologies
-5. Document findings
+6. **Generate Audit Report with Remediation Plan** — Produce a structured report containing an executive summary, detailed findings with evidence and reproduction steps, risk ratings, and specific remediation recommendations with estimated effort. Include a compliance gap analysis showing pass/fail status against the targeted framework controls.
 
-#### Copy-Paste Prompts
-```
-Use @scanning-tools to perform initial reconnaissance
-```
+## Supported Technologies
+
+- **Web Frameworks**: Express.js, Django, Flask, Spring Boot, Rails, ASP.NET
+- **Cloud Platforms**: AWS (IAM, S3, EC2, RDS, Lambda), GCP, Azure
+- **Container & Orchestration**: Docker, Kubernetes, ECS
+- **Scanning Tools**: OWASP ZAP, Prowler, ScoutSuite, Trivy, Grype, Checkov
+- **Compliance Frameworks**: OWASP Top 10, CWE/SANS Top 25, SOC 2, PCI-DSS, HIPAA, NIST 800-53
+
+## Usage
+
+Provide the agent with access to the application source code, infrastructure configuration, or a target URL along with the desired compliance scope. The agent will execute the full audit workflow and deliver a prioritized findings report.
+
+**Prompt example:**
 
 ```
-Use @shodan-reconnaissance to find exposed services
+Perform a security audit of the Node.js Express application in /app. Focus on OWASP Top 10 coverage and SOC 2 compliance. Include CWE IDs and remediation steps for every finding.
 ```
 
-### Phase 2: Vulnerability Scanning
+## Examples
 
-#### Skills to Invoke
-- `vulnerability-scanner` - Vulnerability analysis
-- `security-scanning-security-sast` - Static analysis
-- `security-scanning-security-dependencies` - Dependency scanning
+### Example 1: Auditing a Node.js Express Application
 
-#### Actions
-1. Run automated scanners
-2. Perform static analysis
-3. Scan dependencies
-4. Identify misconfigurations
-5. Document vulnerabilities
+**Target**: E-commerce API built with Express.js, Sequelize ORM, and JWT authentication.
 
-#### Copy-Paste Prompts
-```
-Use @vulnerability-scanner to scan for OWASP Top 10 vulnerabilities
-```
+**Findings Report (excerpt):**
 
-```
-Use @security-scanning-security-dependencies to audit dependencies
-```
+| # | Severity | Title | CWE | OWASP Category |
+|---|----------|-------|-----|----------------|
+| 1 | Critical | SQL injection in product search endpoint | CWE-89 | A03:2021 Injection |
+| 2 | High | JWT secret stored in plaintext in `.env` committed to repo | CWE-798 | A07:2021 Identification and Authentication Failures |
+| 3 | High | Missing rate limiting on `/api/login` | CWE-307 | A07:2021 Identification and Authentication Failures |
+| 4 | Medium | Verbose error messages expose stack traces in production | CWE-209 | A04:2021 Insecure Design |
+| 5 | Medium | CORS policy allows wildcard origin with credentials | CWE-942 | A05:2021 Security Misconfiguration |
+| 6 | Low | HTTP security headers missing (X-Content-Type-Options, CSP) | CWE-693 | A05:2021 Security Misconfiguration |
 
-### Phase 3: Web Application Testing
+**Remediation for Finding #1:**
 
-#### Skills to Invoke
-- `top-web-vulnerabilities` - OWASP vulnerabilities
-- `sql-injection-testing` - SQL injection
-- `xss-html-injection` - XSS testing
-- `broken-authentication` - Authentication testing
-- `idor-testing` - IDOR testing
-- `file-path-traversal` - Path traversal
-- `burp-suite-testing` - Burp Suite testing
+```javascript
+// BEFORE — vulnerable to SQL injection
+app.get('/api/products', async (req, res) => {
+  const results = await sequelize.query(
+    `SELECT * FROM products WHERE name LIKE '%${req.query.search}%'`
+  );
+  res.json(results);
+});
 
-#### Actions
-1. Test for injection flaws
-2. Test authentication mechanisms
-3. Test session management
-4. Test access controls
-5. Test input validation
-6. Test security headers
-
-#### Copy-Paste Prompts
-```
-Use @sql-injection-testing to test for SQL injection vulnerabilities
+// AFTER — parameterized query
+app.get('/api/products', async (req, res) => {
+  const results = await sequelize.query(
+    'SELECT * FROM products WHERE name LIKE :search',
+    { replacements: { search: `%${req.query.search}%` }, type: QueryTypes.SELECT }
+  );
+  res.json(results);
+});
 ```
 
-```
-Use @xss-html-injection to test for cross-site scripting
-```
+### Example 2: Auditing AWS Infrastructure
 
-```
-Use @broken-authentication to test authentication security
-```
+**Target**: Production AWS account running a three-tier web application.
 
-### Phase 4: API Security Testing
+**Prowler scan command:**
 
-#### Skills to Invoke
-- `api-fuzzing-bug-bounty` - API fuzzing
-- `api-security-best-practices` - API security
-
-#### Actions
-1. Enumerate API endpoints
-2. Test authentication/authorization
-3. Test rate limiting
-4. Test input validation
-5. Test error handling
-6. Document API vulnerabilities
-
-#### Copy-Paste Prompts
-```
-Use @api-fuzzing-bug-bounty to fuzz API endpoints
+```bash
+prowler aws --compliance soc2 pci_dss --output-formats json html --output-directory ./audit-report
 ```
 
-### Phase 5: Penetration Testing
+**Findings Report (excerpt):**
 
-#### Skills to Invoke
-- `pentest-commands` - Penetration testing commands
-- `pentest-checklist` - Pentest planning
-- `ethical-hacking-methodology` - Ethical hacking
-- `metasploit-framework` - Metasploit
+| # | Severity | Finding | AWS Service | Compliance Control |
+|---|----------|---------|-------------|-------------------|
+| 1 | Critical | S3 bucket `prod-user-uploads` has public read access enabled | S3 | PCI-DSS 7.1, SOC 2 CC6.1 |
+| 2 | High | IAM user `deploy-bot` has inline AdministratorAccess policy | IAM | SOC 2 CC6.3 |
+| 3 | High | RDS instance `prod-db` has encryption at rest disabled | RDS | PCI-DSS 3.4, SOC 2 CC6.1 |
+| 4 | Medium | CloudTrail logging is not enabled for all regions | CloudTrail | SOC 2 CC7.2 |
+| 5 | Medium | Security group `sg-0abc123` allows SSH (port 22) from 0.0.0.0/0 | EC2 | PCI-DSS 1.3 |
 
-#### Actions
-1. Plan penetration test
-2. Execute attack scenarios
-3. Exploit vulnerabilities
-4. Document proof of concept
-5. Assess impact
+**Remediation for Finding #2:**
 
-#### Copy-Paste Prompts
-```
-Use @pentest-checklist to plan penetration test
-```
-
-```
-Use @pentest-commands to execute penetration testing
-```
-
-### Phase 6: Security Hardening
-
-#### Skills to Invoke
-- `security-scanning-security-hardening` - Security hardening
-- `auth-implementation-patterns` - Authentication
-- `api-security-best-practices` - API security
-
-#### Actions
-1. Implement security controls
-2. Configure security headers
-3. Set up authentication
-4. Implement authorization
-5. Configure logging
-6. Apply patches
-
-#### Copy-Paste Prompts
-```
-Use @security-scanning-security-hardening to harden application security
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ecr:GetAuthorizationToken", "ecs:UpdateService", "ecs:DescribeServices"],
+      "Resource": "arn:aws:ecs:us-east-1:123456789012:service/prod-cluster/web-service"
+    }
+  ]
+}
 ```
 
-### Phase 7: Reporting
+## Best Practices
 
-#### Skills to Invoke
-- `reporting-standards` - Security reporting
+- **Audit regularly on a schedule** — perform audits quarterly at minimum and after every major release or infrastructure change, not just annually.
+- **Combine automated and manual testing** — automated scanners catch known vulnerability patterns, but manual review is essential for business logic flaws, authorization bypasses, and chained attack scenarios.
+- **Use CWE and CVSS consistently** — assign CWE identifiers and CVSS scores to every finding so that stakeholders can compare severity across audits and track remediation trends.
+- **Verify remediation with retesting** — after fixes are deployed, re-run the relevant audit checks to confirm the vulnerability is resolved and no regressions were introduced.
+- **Maintain an audit trail** — store all audit reports, evidence, and remediation records in a centralized repository to support compliance reviews and incident investigations.
+- **Scope audits to include third-party integrations** — payment gateways, OAuth providers, and SaaS APIs introduce risk that is easy to overlook when auditing only first-party code.
 
-#### Actions
-1. Document findings
-2. Assess risk levels
-3. Provide remediation steps
-4. Create executive summary
-5. Generate technical report
+## Edge Cases
 
-## Security Testing Checklist
-
-### OWASP Top 10
-- [ ] Injection (SQL, NoSQL, OS, LDAP)
-- [ ] Broken Authentication
-- [ ] Sensitive Data Exposure
-- [ ] XML External Entities (XXE)
-- [ ] Broken Access Control
-- [ ] Security Misconfiguration
-- [ ] Cross-Site Scripting (XSS)
-- [ ] Insecure Deserialization
-- [ ] Using Components with Known Vulnerabilities
-- [ ] Insufficient Logging & Monitoring
-
-### API Security
-- [ ] Authentication mechanisms
-- [ ] Authorization checks
-- [ ] Rate limiting
-- [ ] Input validation
-- [ ] Error handling
-- [ ] Security headers
-
-## Quality Gates
-
-- [ ] All planned tests executed
-- [ ] Vulnerabilities documented
-- [ ] Proof of concepts captured
-- [ ] Risk assessments completed
-- [ ] Remediation steps provided
-- [ ] Report generated
-
-## Related Workflow Bundles
-
-- `development` - Secure development practices
-- `wordpress` - WordPress security
-- `cloud-devops` - Cloud security
-- `testing-qa` - Security testing
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- **Microservices with inconsistent security postures** — one service may enforce authentication while another internal service trusts all traffic. Audit inter-service communication and verify that zero-trust principles are applied even within the private network.
+- **Legacy systems without source code access** — when source code is unavailable, rely on black-box testing, traffic analysis, and configuration review. Document the reduced coverage explicitly in the audit report.
+- **Serverless and event-driven architectures** — Lambda functions, Step Functions, and event triggers have ephemeral execution contexts. Audit IAM execution roles, event source permissions, and ensure sensitive data is not logged to CloudWatch in plaintext.
+- **Multi-tenant applications** — verify that tenant isolation is enforced at the data layer, API layer, and infrastructure layer. Test for horizontal privilege escalation between tenant accounts.
+- **Applications behind WAF or CDN** — automated scanners may only test the WAF-filtered surface. Where possible, also test the origin directly to identify vulnerabilities the WAF is masking rather than fixing.

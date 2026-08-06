@@ -1,6 +1,13 @@
 ---
 name: security-and-hardening
 description: Hardens code against vulnerabilities. Use when handling user input, authentication, data storage, or external integrations. Use when building any feature that accepts untrusted data, manages user sessions, or interacts with third-party services.
+risk: critical
+source: https://github.com/addyosmani/agent-skills/tree/main/skills/security-and-hardening
+source_repo: addyosmani/agent-skills
+source_type: community
+date_added: 2026-07-01
+license: MIT
+license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
 ---
 
 # Security and Hardening
@@ -68,7 +75,7 @@ If you can't name the trust boundaries for a feature, you're not ready to secure
 - **Never log sensitive data** (passwords, tokens, full credit card numbers)
 - **Never trust client-side validation** as a security boundary
 - **Never disable security headers** for convenience
-- **Never use `eval()` or `innerHTML`** with user-provided data
+- **Never use `eval()` or `innerHTML`** with user-provided data <!-- security-allowlist: defensive hardening guidance -->
 - **Never store sessions in client-accessible storage** (localStorage for auth tokens)
 - **Never expose stack traces** or internal error details to users
 
@@ -459,3 +466,9 @@ After implementing security-relevant code:
 - [ ] Rate limiting active on auth endpoints
 - [ ] Server-side URL fetches validated against an allowlist (no SSRF)
 - [ ] LLM/model output validated and encoded before use (if AI features present)
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

@@ -4,29 +4,35 @@ description: >
   Content quality and E-E-A-T analysis with AI citation readiness assessment.
   Use when user says "content quality", "E-E-A-T", "content analysis",
   "readability check", "thin content", or "content audit".
-risk: unknown
-source: "https://github.com/AgriciDaniel/claude-seo"
-date_added: "2026-03-21"
 user-invokable: true
 argument-hint: "[url]"
-allowed-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - WebFetch
+license: MIT
+metadata:
+  author: AgriciDaniel
+  version: "1.9.6"
+  category: seo
 ---
 
 # Content Quality & E-E-A-T Analysis
+## Shared Data Cache
 
-## When to Use
-- Use when auditing content quality, readability, thin content risk, or E-E-A-T signals.
-- Use when the user wants a content-focused SEO review rather than a full technical audit.
-- Use when checking whether content is structured and trustworthy enough for search and AI citation.
+**Step 0 -- Check shared data cache:**
+
+Before gathering, check `.seo-cache/` for reusable context from related SEO skills.
+Reference: `../seo/references/shared-data-cache.md` for schemas and dependency map.
+
+Check these cache files when present:
+- `.seo-cache/site-meta.json` for domain, business type, industry, and crawl context
+- `.seo-cache/audit-scores.json` for prior full-audit priorities
+- `.seo-cache/pages/{url-slug}/page-analysis.json` for page-level context when a URL is provided
+
+- If found: parse and use clearly valid fields (note "Using cached [X] from [date]")
+- If missing, corrupt, or irrelevant: continue with fresh evidence
+- If the user says "refresh" or "re-run": ignore cache reads and overwrite on write
 
 ## E-E-A-T Framework (updated Sept 2025 QRG)
 
-Read `seo/references/eeat-framework.md` for full criteria.
+Read `skills/seo/references/eeat-framework.md` for full criteria.
 
 ### Experience (first-hand signals)
 - Original research, case studies, before/after results
@@ -184,7 +190,11 @@ If DataForSEO MCP tools are available, use `kw_data_google_ads_search_volume` fo
 | Content behind paywall (402/403, login wall) | Report that the content is not publicly accessible. Analyze only the visible portion (meta tags, headers) and note the limitation. |
 | Thin content (fewer than 100 words retrievable) | Report the findings as-is rather than guessing. Flag the page as potentially JavaScript-rendered or gated, and suggest the user provide the full text directly. |
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+## FLOW Framework Integration
+
+For prompt-guided content optimization, use `/seo flow optimize <url>` and `/seo flow win <url>` — FLOW's optimize and win prompts provide structured E-E-A-T improvement and BOFU conversion workflows.
+
+## Write to shared data cache
+
+After completing all work, write a concise JSON summary to `.seo-cache/` when the workflow produced durable findings.
+Use the schemas and naming rules in `../seo/references/shared-data-cache.md`; include at least `cache_type`, `analyzed_at`, source URL/domain, key findings, issues, recommendations, and tool limitations. Add `.seo-cache/` to `.gitignore` if it is missing.

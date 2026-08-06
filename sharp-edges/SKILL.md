@@ -1,13 +1,7 @@
 ---
 name: sharp-edges
-description: sharp-edges
-risk: unknown
-source: community
----
-
----
-name: sharp-edges
-description: "Identifies error-prone APIs, dangerous configurations, and footgun designs that enable security mistakes. Use when reviewing API designs, configuration schemas, cryptographic library ergonomics, or evaluating whether code follows 'secure by...
+description: "Identifies error-prone APIs, dangerous configurations, and footgun designs that enable security mistakes. Use when reviewing API designs, configuration schemas, cryptographic library ergonomics, or evaluating whether code follows 'secure by default' and 'pit of success' principles. Triggers: footgun, misuse-resistant, secure defaults, API usability, dangerous configuration."
+allowed-tools: Read Grep Glob
 ---
 
 # Sharp Edges Analysis
@@ -15,6 +9,7 @@ description: "Identifies error-prone APIs, dangerous configurations, and footgun
 Evaluates whether APIs, configurations, and interfaces are resistant to developer misuse. Identifies designs where the "easy path" leads to insecurity.
 
 ## When to Use
+
 - Reviewing API or library design decisions
 - Auditing configuration schemas for dangerous options
 - Evaluating cryptographic API ergonomics
@@ -26,6 +21,10 @@ Evaluates whether APIs, configurations, and interfaces are resistant to develope
 - Implementation bugs (use standard code review)
 - Business logic flaws (use domain-specific analysis)
 - Performance optimization (different concern)
+
+## Agent
+
+The `sharp-edges-analyzer` agent runs the full sharp edges analysis workflow autonomously. Use it when you want a dedicated analysis of APIs, configurations, or interfaces for misuse resistance and footgun potential. The agent follows the four-phase workflow (Surface Identification, Edge Case Probing, Threat Modeling, Validate Findings) and reads language-specific references on demand.
 
 ## Core Principle
 
@@ -152,7 +151,7 @@ public function __construct(
 ) {}
 ```
 
-See config-patterns.md for detailed patterns.
+See [config-patterns.md](references/config-patterns.md#unvalidated-constructor-parameters) for detailed patterns.
 
 ### 5. Silent Failures
 
@@ -257,28 +256,28 @@ If a finding seems questionable, return to Phase 2 and probe more edge cases.
 
 **By category:**
 
-- **Cryptographic APIs**: See references/crypto-apis.md
-- **Configuration Patterns**: See references/config-patterns.md
-- **Authentication/Session**: See references/auth-patterns.md
-- **Real-World Case Studies**: See references/case-studies.md (OpenSSL, GMP, etc.)
+- **Cryptographic APIs**: See [references/crypto-apis.md](references/crypto-apis.md)
+- **Configuration Patterns**: See [references/config-patterns.md](references/config-patterns.md)
+- **Authentication/Session**: See [references/auth-patterns.md](references/auth-patterns.md)
+- **Real-World Case Studies**: See [references/case-studies.md](references/case-studies.md) (OpenSSL, GMP, etc.)
 
 **By language** (general footguns, not crypto-specific):
 
 | Language | Guide |
 |----------|-------|
-| C/C++ | references/lang-c.md |
-| Go | references/lang-go.md |
-| Rust | references/lang-rust.md |
-| Swift | references/lang-swift.md |
-| Java | references/lang-java.md |
-| Kotlin | references/lang-kotlin.md |
-| C# | references/lang-csharp.md |
-| PHP | references/lang-php.md |
-| JavaScript/TypeScript | references/lang-javascript.md |
-| Python | references/lang-python.md |
-| Ruby | references/lang-ruby.md |
+| C/C++ | [references/lang-c.md](references/lang-c.md) |
+| Go | [references/lang-go.md](references/lang-go.md) |
+| Rust | [references/lang-rust.md](references/lang-rust.md) |
+| Swift | [references/lang-swift.md](references/lang-swift.md) |
+| Java | [references/lang-java.md](references/lang-java.md) |
+| Kotlin | [references/lang-kotlin.md](references/lang-kotlin.md) |
+| C# | [references/lang-csharp.md](references/lang-csharp.md) |
+| PHP | [references/lang-php.md](references/lang-php.md) |
+| JavaScript/TypeScript | [references/lang-javascript.md](references/lang-javascript.md) |
+| Python | [references/lang-python.md](references/lang-python.md) |
+| Ruby | [references/lang-ruby.md](references/lang-ruby.md) |
 
-See also references/language-specific.md for a combined quick reference.
+See also [references/language-specific.md](references/language-specific.md) for a combined quick reference.
 
 ## Quality Checklist
 
@@ -291,9 +290,4 @@ Before concluding analysis:
 - [ ] Considered all three adversary types
 - [ ] Verified error paths don't bypass security
 - [ ] Checked configuration validation
-- [ ] Constructor params validated (not just defaulted) - see config-patterns.md
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- [ ] Constructor params validated (not just defaulted) - see [config-patterns.md](references/config-patterns.md#unvalidated-constructor-parameters)

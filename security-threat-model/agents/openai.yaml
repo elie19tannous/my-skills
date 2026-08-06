@@ -1,4 +1,4 @@
 interface:
   display_name: "Security Threat Model"
-  short_description: "Repo-grounded threat modeling and abuse-path analysis"
-  default_prompt: "Create a repository-grounded threat model for this codebase with prioritized abuse paths and mitigations."
+  short_description: "Model threats and secure risky changes"
+  default_prompt: "Use $security-threat-model to threat-model a feature, secrets flow, permissions boundary, or supply-chain change."

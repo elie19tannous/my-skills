@@ -1,94 +1,159 @@
 ---
 name: rust-best-practices
-description: >
-  Guide for writing idiomatic Rust code based on Apollo GraphQL's best practices handbook. Use this skill when:
-  (1) writing new Rust code or functions,
-  (2) reviewing or refactoring existing Rust code,
-  (3) deciding between borrowing vs cloning or ownership patterns,
-  (4) implementing error handling with Result types,
-  (5) optimizing Rust code for performance,
-  (6) writing tests or documentation for Rust projects.
-license: MIT
-compatibility: Rust 1.70+, Cargo
-metadata:
-  author: apollographql
-  version: "1.1.0"
-allowed-tools: Bash(cargo:*) Bash(rustc:*) Bash(rustfmt:*) Bash(clippy:*) Read Write Edit Glob Grep
+description: Use when writing, modifying, or reviewing Rust code. ALWAYS invoke before Rust edits; covers Microsoft Pragmatic Rust guidance for error handling, API design, performance, and idiomatic patterns.
 ---
-
 # Rust Best Practices
 
-Apply these guidelines when writing or reviewing Rust code. Based on Apollo GraphQL's [Rust Best Practices Handbook](https://github.com/apollographql/rust-best-practices).
+Based on Microsoft Pragmatic Rust Guidelines and Rust community standards.
 
-## Best Practices Reference
+## Core Principles
 
-Before reviewing, familiarize yourself with Apollo's Rust best practices. Read ALL relevant chapters in the same turn in parallel. Reference these files when providing feedback:
+1. **Leverage the type system** — Use types to make invalid states unrepresentable
+2. **Embrace ownership** — Work with the borrow checker, not against it
+3. **Explicit over implicit** — Be clear about fallibility, mutability, and lifetimes
+4. **Zero-cost abstractions** — Use iterators, generics, and traits without runtime cost
+5. **Fail fast, recover gracefully** — Validate early, handle errors explicitly
 
-- [Chapter 1 - Coding Styles and Idioms](references/chapter_01.md): Borrowing vs cloning, Copy trait, Option/Result handling, iterators, comments
-- [Chapter 2 - Clippy and Linting](references/chapter_02.md): Clippy configuration, important lints, workspace lint setup
-- [Chapter 3 - Performance Mindset](references/chapter_03.md): Profiling, avoiding redundant clones, stack vs heap, zero-cost abstractions
-- [Chapter 4 - Error Handling](references/chapter_04.md): Result vs panic, thiserror vs anyhow, error hierarchies
-- [Chapter 5 - Automated Testing](references/chapter_05.md): Test naming, one assertion per test, snapshot testing
-- [Chapter 6 - Generics and Dispatch](references/chapter_06.md): Static vs dynamic dispatch, trait objects
-- [Chapter 7 - Type State Pattern](references/chapter_07.md): Compile-time state safety, when to use it
-- [Chapter 8 - Comments vs Documentation](references/chapter_08.md): When to comment, doc comments, rustdoc
-- [Chapter 9 - Understanding Pointers](references/chapter_09.md): Thread safety, Send/Sync, pointer types
+---
 
-## Quick Reference
+## Error Handling
 
-### Borrowing & Ownership
-- Prefer `&T` over `.clone()` unless ownership transfer is required
-- Use `&str` over `String`, `&[T]` over `Vec<T>` in function parameters
-- Small `Copy` types (≤24 bytes) can be passed by value
-- Use `Cow<'_, T>` when ownership is ambiguous
-
-### Error Handling
-- Return `Result<T, E>` for fallible operations; avoid `panic!` in production
-- Never use `unwrap()`/`expect()` outside tests
-- Use `thiserror` for library errors, `anyhow` for binaries only
-- Prefer `?` operator over match chains for error propagation
-
-### Performance
-- Always benchmark with `--release` flag
-- Run `cargo clippy -- -D clippy::perf` for performance hints
-- Avoid cloning in loops; use `.iter()` instead of `.into_iter()` for Copy types
-- Prefer iterators over manual loops; avoid intermediate `.collect()` calls
-
-### Linting
-Run regularly: `cargo clippy --all-targets --all-features --locked -- -D warnings`
-
-Key lints to watch:
-- `redundant_clone` - unnecessary cloning
-- `large_enum_variant` - oversized variants (consider boxing)
-- `needless_collect` - premature collection
-
-Use `#[expect(clippy::lint)]` over `#[allow(...)]` with justification comment.
-
-### Testing
-- Name tests descriptively: `process_should_return_error_when_input_empty()`
-- One assertion per test when possible
-- Use doc tests (`///`) for public API examples
-- Consider `cargo insta` for snapshot testing generated output
-
-### Generics & Dispatch
-- Prefer generics (static dispatch) for performance-critical code
-- Use `dyn Trait` only when heterogeneous collections are needed
-- Box at API boundaries, not internally
-
-### Type State Pattern
-Encode valid states in the type system to catch invalid operations at compile time:
+### Use `thiserror` for Libraries
 ```rust
-struct Connection<State> { /* ... */ _state: PhantomData<State> }
-struct Disconnected;
-struct Connected;
+use thiserror::Error;
 
-impl Connection<Connected> {
-    fn send(&self, data: &[u8]) { /* only connected can send */ }
+#[derive(Error, Debug)]
+pub enum MyError {
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Parse error at line {line}: {message}")]
+    Parse { line: usize, message: String },
+    #[error("Not found: {0}")]
+    NotFound(String),
 }
 ```
 
-### Documentation
-- `//` comments explain *why* (safety, workarounds, design rationale)
-- `///` doc comments explain *what* and *how* for public APIs
-- Every `TODO` needs a linked issue: `// TODO(#42): ...`
-- Enable `#![deny(missing_docs)]` for libraries
+### Use `anyhow` for Applications
+```rust
+use anyhow::{Context, Result};
+
+fn main() -> Result<()> {
+    let config = load_config()
+        .context("Failed to load configuration")?;
+    run_app(config)?;
+    Ok(())
+}
+```
+
+### Never Panic in Libraries
+```rust
+// ❌ BAD
+pub fn get_item(index: usize) -> &Item {
+    &self.items[index]  // Panics on out-of-bounds
+}
+
+// ✅ GOOD
+pub fn get_item(&self, index: usize) -> Option<&Item> {
+    self.items.get(index)
+}
+
+// ✅ GOOD - when you need Result
+pub fn get_item(&self, index: usize) -> Result<&Item, Error> {
+    self.items.get(index).ok_or(Error::NotFound(index))
+}
+```
+
+---
+
+## API Design
+
+### Use Builder Pattern for Complex Configs
+```rust
+pub struct Client {
+    url: String,
+    timeout: Duration,
+    retries: u32,
+}
+
+impl Client {
+    pub fn builder(url: impl Into<String>) -> ClientBuilder {
+        ClientBuilder {
+            url: url.into(),
+            timeout: Duration::from_secs(30),
+            retries: 3,
+        }
+    }
+}
+
+pub struct ClientBuilder {
+    url: String,
+    timeout: Duration,
+    retries: u32,
+}
+
+impl ClientBuilder {
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn retries(mut self, retries: u32) -> Self {
+        self.retries = retries;
+        self
+    }
+
+    pub fn build(self) -> Client {
+        Client {
+            url: self.url,
+            timeout: self.timeout,
+            retries: self.retries,
+        }
+    }
+}
+```
+
+### Use Newtype Pattern
+```rust
+// ❌ BAD - primitive obsession
+fn create_user(name: String, email: String, age: u32) -> User { ... }
+
+// ✅ GOOD - newtype wrappers
+pub struct Username(String);
+pub struct Email(String);
+pub struct Age(u32);
+
+impl Email {
+    pub fn new(email: impl Into<String>) -> Result<Self, ValidationError> {
+        let email = email.into();
+        if email.contains('@') {
+            Ok(Self(email))
+        } else {
+            Err(ValidationError::InvalidEmail)
+        }
+    }
+}
+
+fn create_user(name: Username, email: Email, age: Age) -> User { ... }
+```
+
+### Accept `impl Trait` for Flexibility
+```rust
+// ❌ BAD - overly specific
+pub fn process(items: Vec<String>) { ... }
+
+// ✅ GOOD - accept any iterable
+pub fn process(items: impl IntoIterator<Item = impl AsRef<str>>) {
+    for item in items {
+        println!("{}", item.as_ref());
+    }
+}
+```
+
+---
+
+## References
+
+- [Microsoft Pragmatic Rust Guidelines](https://microsoft.github.io/rust-guidelines/)
+- [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
+- [The Rust Book](https://doc.rust-lang.org/book/)
+- [references/advanced.md](references/advanced.md) — performance, async, testing, and anti-pattern examples

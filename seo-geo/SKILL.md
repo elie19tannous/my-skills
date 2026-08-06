@@ -1,25 +1,38 @@
 ---
 name: seo-geo
-description: "Optimize content for AI Overviews, ChatGPT, Perplexity, and other AI search systems. Use when improving GEO, AI citations, llms.txt readiness, crawler accessibility, and passage-level citability."
-risk: unknown
-source: "https://github.com/AgriciDaniel/claude-seo"
-date_added: "2026-03-21"
+description: >
+  Optimize content for AI Overviews (formerly SGE), ChatGPT web search,
+  Perplexity, and other AI-powered search experiences. Generative Engine
+  Optimization (GEO) analysis including brand mention signals, AI crawler
+  accessibility, llms.txt compliance, passage-level citability scoring, and
+  platform-specific optimization. Use when user says "AI Overviews", "SGE",
+  "GEO", "AI search", "LLM optimization", "Perplexity", "AI citations",
+  "ChatGPT search", or "AI visibility".
 user-invokable: true
 argument-hint: "[url]"
-allowed-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - WebFetch
+license: MIT
+metadata:
+  author: AgriciDaniel
+  version: "1.9.6"
+  category: seo
 ---
 
 # AI Search / GEO Optimization (February 2026)
+## Shared Data Cache
 
-## When to Use
-- Use when improving visibility in AI Overviews, ChatGPT, Perplexity, or similar AI search systems.
-- Use when evaluating llms.txt readiness, AI crawler access, or citation-oriented content structure.
-- Use when the user asks about GEO, AI SEO, LLM visibility, or AI citations.
+**Step 0 -- Check shared data cache:**
+
+Before gathering, check `.seo-cache/` for reusable context from related SEO skills.
+Reference: `../seo/references/shared-data-cache.md` for schemas and dependency map.
+
+Check these cache files when present:
+- `.seo-cache/site-meta.json` for domain, business type, industry, and crawl context
+- `.seo-cache/audit-scores.json` for prior full-audit priorities
+- `.seo-cache/pages/{url-slug}/page-analysis.json` for page-level context when a URL is provided
+
+- If found: parse and use clearly valid fields (note "Using cached [X] from [date]")
+- If missing, corrupt, or irrelevant: continue with fresh evidence
+- If the user says "refresh" or "re-run": ignore cache reads and overwrite on write
 
 ## Key Statistics
 
@@ -158,8 +171,8 @@ The emerging **llms.txt** standard provides AI crawlers with structured content 
 > Brief description
 
 ## Main sections
-- `Page title -> https://example.com/page`: Description
-- `Another page -> https://example.com/another-page`: Description
+- [Page title](url): Description
+- [Another page](url): Description
 
 ## Optional: Key facts
 - Fact 1
@@ -252,7 +265,11 @@ If DataForSEO MCP tools are available, use `ai_optimization_chat_gpt_scraper` to
 | No llms.txt found | Note the absence and provide a ready-to-use llms.txt template based on the site's content structure. |
 | No structured data detected | Report the gap and provide specific schema recommendations (Article, Organization, Person) for improving AI discoverability. |
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+## FLOW Framework Integration
+
+For prompt-guided AI content optimization, use `/seo flow optimize <url>` — FLOW's 21 optimize-stage prompts complement GEO's citability and structure analysis with evidence-led AI prompts.
+
+## Write to shared data cache
+
+After completing all work, write a concise JSON summary to `.seo-cache/` when the workflow produced durable findings.
+Use the schemas and naming rules in `../seo/references/shared-data-cache.md`; include at least `cache_type`, `analyzed_at`, source URL/domain, key findings, issues, recommendations, and tool limitations. Add `.seo-cache/` to `.gitignore` if it is missing.

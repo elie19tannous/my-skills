@@ -1,312 +1,308 @@
 ---
 name: security-review
-description: Security code review for vulnerabilities. Use when asked to "security review", "find vulnerabilities", "check for security issues", "audit security", "OWASP review", or review code for injection, XSS, authentication, authorization, cryptography issues. Provides systematic review with confidence-based reporting.
-allowed-tools: Read, Grep, Glob, Bash, Task
-license: LICENSE
+description: >-
+  Runs a guided, end-to-end security review of a Power Pages site and
+  consolidates every finding into one HTML report covering source code
+  and dependencies, the live site, browser headers, firewall,
+  authentication, and role-based permissions. Use when the user wants a
+  full security review, a release-readiness check before publishing, a
+  code-and-config check during development, live site monitoring, or
+  asks open-ended questions like "review my site security", "is my site
+  safe to ship", "do a security check", "monitor my site" — even if they
+  do not name the individual checks.
+user-invocable: true
+argument-hint: "[optional natural-language hint about the goal]"
+allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, Skill, Agent
+model: opus
 ---
 
-<!--
-Reference material based on OWASP Cheat Sheet Series (CC BY-SA 4.0)
-https://cheatsheetseries.owasp.org/
--->
+> **Plugin check**: Run `node "${PLUGIN_ROOT}/scripts/check-version.js"` — if it outputs a message, show it to the user before proceeding.
 
-# Security Review Skill
+# Review Security
 
-Identify exploitable security vulnerabilities in code. Report only **HIGH CONFIDENCE** findings—clear vulnerable patterns with attacker-controlled input.
+Guide the user through a full security review of their Power Pages site. Runs the matching focused skills and assembles every finding into a single HTML report.
 
-## Scope: Research vs. Reporting
+The skill never asks the user technical questions. The conversation stays in plain language.
 
-**CRITICAL DISTINCTION:**
+**Initial request:** $ARGUMENTS
 
-- **Report on**: Only the specific file, diff, or code provided by the user
-- **Research**: The ENTIRE codebase to build confidence before reporting
+## Workflow
 
-Before flagging any issue, you MUST research the codebase to understand:
-- Where does this input actually come from? (Trace data flow)
-- Is there validation/sanitization elsewhere?
-- How is this configured? (Check settings, config files, middleware)
-- What framework protections exist?
+The skill has six phases. Phases 2–5 each map to one conversation beat with the user; phases 1 and 6 are silent setup and cleanup. See `references/flow.md` for the rationale behind each beat.
 
-**Do NOT report issues based solely on pattern matching.** Investigate first, then report only what you're confident is exploitable.
+| Phase | What happens | User-facing beat |
+|-------|--------------|------------------|
+| 1 — Prerequisites | Locate project, set up working folders | (silent setup) |
+| 2 — Scope | Capture goal — one question, three answers, plain language | Ask the goal |
+| 3 — Skills | Run the matching skills, surface progress | Scan in progress |
+| 4 — Report | Build the consolidated report — totals + per-section findings | Results summary + Findings |
+| 5 — Present | Present results, offer remediation follow-ups | Next steps and guidance |
+| 6 — Cleanup | Remove temporary files | (silent cleanup) |
 
-## Confidence Levels
+## Task Tracking
 
-| Level | Criteria | Action |
-|-------|----------|--------|
-| **HIGH** | Vulnerable pattern + attacker-controlled input confirmed | **Report** with severity |
-| **MEDIUM** | Vulnerable pattern, input source unclear | **Note** as "Needs verification" |
-| **LOW** | Theoretical, best practice, defense-in-depth | **Do not report** |
+Create tasks in three groups. Mark each `in_progress` when starting, `completed` when done.
 
-## Do Not Flag
+**Group 1 — create at the start of prerequisites:**
 
-### General Rules
-- Test files (unless explicitly reviewing test security)
-- Dead code, commented code, documentation strings
-- Patterns using **constants** or **server-controlled configuration**
-- Code paths that require prior authentication to reach (note the auth requirement instead)
+| Task subject | activeForm |
+|--------------|------------|
+| Check prerequisites | Checking prerequisites |
 
-### Server-Controlled Values (NOT Attacker-Controlled)
+Only this one task. Do not create any other tasks until prerequisites complete.
 
-These are configured by operators, not controlled by attackers:
+**Group 2 — create after prerequisites complete:**
 
-| Source | Example | Why It's Safe |
-|--------|---------|---------------|
-| Django settings | `settings.API_URL`, `settings.ALLOWED_HOSTS` | Set via config/env at deployment |
-| Environment variables | `os.environ.get('DATABASE_URL')` | Deployment configuration |
-| Config files | `config.yaml`, `app.config['KEY']` | Server-side files |
-| Framework constants | `django.conf.settings.*` | Not user-modifiable |
-| Hardcoded values | `BASE_URL = "https://api.internal"` | Compile-time constants |
+| Task subject | activeForm |
+|--------------|------------|
+| Capture goal | Capturing goal |
 
-**SSRF Example - NOT a vulnerability:**
-```python
-# SAFE: URL comes from Django settings (server-controlled)
-response = requests.get(f"{settings.SEER_AUTOFIX_URL}{path}")
-```
+**Group 3 — create after the goal is captured:**
 
-**SSRF Example - IS a vulnerability:**
-```python
-# VULNERABLE: URL comes from request (attacker-controlled)
-response = requests.get(request.GET.get('url'))
-```
-
-### Framework-Mitigated Patterns
-Check language guides before flagging. Common false positives:
-
-| Pattern | Why It's Usually Safe |
-|---------|----------------------|
-| Django `{{ variable }}` | Auto-escaped by default |
-| React `{variable}` | Auto-escaped by default |
-| Vue `{{ variable }}` | Auto-escaped by default |
-| `User.objects.filter(id=input)` | ORM parameterizes queries |
-| `cursor.execute("...%s", (input,))` | Parameterized query |
-| `innerHTML = "<b>Loading...</b>"` | Constant string, no user input |
-
-**Only flag these when:**
-- Django: `{{ var|safe }}`, `{% autoescape off %}`, `mark_safe(user_input)`
-- React: `dangerouslySetInnerHTML={{__html: userInput}}`
-- Vue: `v-html="userInput"`
-- ORM: `.raw()`, `.extra()`, `RawSQL()` with string interpolation
-
-## Review Process
-
-### 1. Detect Context
-
-What type of code am I reviewing?
-
-| Code Type | Load These References |
-|-----------|----------------------|
-| API endpoints, routes | `authorization.md`, `authentication.md`, `injection.md` |
-| Frontend, templates | `xss.md`, `csrf.md` |
-| File handling, uploads | `file-security.md` |
-| Crypto, secrets, tokens | `cryptography.md`, `data-protection.md` |
-| Data serialization | `deserialization.md` |
-| External requests | `ssrf.md` |
-| Business workflows | `business-logic.md` |
-| GraphQL, REST design | `api-security.md` |
-| Config, headers, CORS | `misconfiguration.md` |
-| CI/CD, dependencies | `supply-chain.md` |
-| Error handling | `error-handling.md` |
-| Audit, logging | `logging.md` |
-
-### 2. Load Language Guide
-
-Based on file extension or imports:
-
-| Indicators | Guide |
-|------------|-------|
-| `.py`, `django`, `flask`, `fastapi` | `languages/python.md` |
-| `.js`, `.ts`, `express`, `react`, `vue`, `next` | `languages/javascript.md` |
-| `.go`, `go.mod` | `languages/go.md` |
-| `.rs`, `Cargo.toml` | `languages/rust.md` |
-| `.java`, `spring`, `@Controller` | `languages/java.md` |
-
-### 3. Load Infrastructure Guide (if applicable)
-
-| File Type | Guide |
-|-----------|-------|
-| `Dockerfile`, `.dockerignore` | `infrastructure/docker.md` |
-| K8s manifests, Helm charts | `infrastructure/kubernetes.md` |
-| `.tf`, Terraform | `infrastructure/terraform.md` |
-| GitHub Actions, `.gitlab-ci.yml` | `infrastructure/ci-cd.md` |
-| AWS/GCP/Azure configs, IAM | `infrastructure/cloud.md` |
-
-### 4. Research Before Flagging
-
-**For each potential issue, research the codebase to build confidence:**
-
-- Where does this value actually come from? Trace the data flow.
-- Is it configured at deployment (settings, env vars) or from user input?
-- Is there validation, sanitization, or allowlisting elsewhere?
-- What framework protections apply?
-
-Only report issues where you have HIGH confidence after understanding the broader context.
-
-### 5. Verify Exploitability
-
-For each potential finding, confirm:
-
-**Is the input attacker-controlled?**
-
-| Attacker-Controlled (Investigate) | Server-Controlled (Usually Safe) |
-|-----------------------------------|----------------------------------|
-| `request.GET`, `request.POST`, `request.args` | `settings.X`, `app.config['X']` |
-| `request.json`, `request.data`, `request.body` | `os.environ.get('X')` |
-| `request.headers` (most headers) | Hardcoded constants |
-| `request.cookies` (unsigned) | Internal service URLs from config |
-| URL path segments: `/users/<id>/` | Database content from admin/system |
-| File uploads (content and names) | Signed session data |
-| Database content from other users | Framework settings |
-| WebSocket messages | |
-
-**Does the framework mitigate this?**
-- Check language guide for auto-escaping, parameterization
-- Check for middleware/decorators that sanitize
-
-**Is there validation upstream?**
-- Input validation before this code
-- Sanitization libraries (DOMPurify, bleach, etc.)
-
-### 6. Report HIGH Confidence Only
-
-Skip theoretical issues. Report only what you've confirmed is exploitable after research.
+| Task subject | activeForm |
+|--------------|------------|
+| Run skills | Running checks |
+| Build the report | Building the report |
+| Present findings | Presenting findings |
+| Clean up | Cleaning up |
 
 ---
 
-## Severity Classification
+## 1. Prerequisites
 
-| Severity | Impact | Examples |
-|----------|--------|----------|
-| **Critical** | Direct exploit, severe impact, no auth required | RCE, SQL injection to data, auth bypass, hardcoded secrets |
-| **High** | Exploitable with conditions, significant impact | Stored XSS, SSRF to metadata, IDOR to sensitive data |
-| **Medium** | Specific conditions required, moderate impact | Reflected XSS, CSRF on state-changing actions, path traversal |
-| **Low** | Defense-in-depth, minimal direct impact | Missing headers, verbose errors, weak algorithms in non-critical context |
+### 1.1 Locate the project
 
----
+Use `Glob` to find `**/powerpages.config.json`. If none is found, tell the user the site needs to be created first with `/create-site`, then stop.
 
-## Quick Patterns Reference
+For the `monitor` and `release` goals (any goal that delegates to `scan-site` or `manage-firewall`), also confirm that `.powerpages-site/website.yml` exists. If it does not, the site has not been deployed yet — tell the user (in plain language) the site needs to be deployed once before a live security review can run, recommend `/deploy-site`, then stop. Do **not** try to identify the site by name or URL — different sites can share the same name.
 
-### Always Flag (Critical)
-```
-eval(user_input)           # Any language
-exec(user_input)           # Any language
-pickle.loads(user_data)    # Python
-yaml.load(user_data)       # Python (not safe_load)
-unserialize($user_data)    # PHP
-deserialize(user_data)     # Java ObjectInputStream
-shell=True + user_input    # Python subprocess
-child_process.exec(user)   # Node.js
-```
+For the `code-config` goal, the deploy check is not required: source code, dependencies, authentication, web roles, and table permissions are read from local files alone.
 
-### Always Flag (High)
-```
-innerHTML = userInput              # DOM XSS
-dangerouslySetInnerHTML={user}     # React XSS
-v-html="userInput"                 # Vue XSS
-f"SELECT * FROM x WHERE {user}"    # SQL injection
-`SELECT * FROM x WHERE ${user}`    # SQL injection
-os.system(f"cmd {user_input}")     # Command injection
-```
+### 1.2 Prepare a temporary working folder
 
-### Always Flag (Secrets)
-```
-password = "hardcoded"
-api_key = "sk-..."
-AWS_SECRET_ACCESS_KEY = "..."
-private_key = "-----BEGIN"
-```
+Create a fresh working directory: `<SYSTEM_TEMP>/security-review/`. The folder holds JSON data files emitted by each skill in **review mode**. The folder is removed in the cleanup step.
 
-### Check Context First (MUST Investigate Before Flagging)
-```
-# SSRF - ONLY if URL is from user input, NOT from settings/config
-requests.get(request.GET['url'])     # FLAG: User-controlled URL
-requests.get(settings.API_URL)       # SAFE: Server-controlled config
-requests.get(f"{settings.BASE}/{x}") # CHECK: Is 'x' user input?
+If the folder already exists from a previous interrupted run, delete its contents (not the folder itself) before continuing.
 
-# Path traversal - ONLY if path is from user input
-open(request.GET['file'])            # FLAG: User-controlled path
-open(settings.LOG_PATH)              # SAFE: Server-controlled config
-open(f"{BASE_DIR}/{filename}")       # CHECK: Is 'filename' user input?
+### 1.3 Determine the docs output path
 
-# Open redirect - ONLY if URL is from user input
-redirect(request.GET['next'])        # FLAG: User-controlled redirect
-redirect(settings.LOGIN_URL)         # SAFE: Server-controlled config
-
-# Weak crypto - ONLY if used for security purposes
-hashlib.md5(file_content)            # SAFE: File checksums, caching
-hashlib.md5(password)                # FLAG: Password hashing
-random.random()                      # SAFE: Non-security uses (UI, sampling)
-random.random() for token            # FLAG: Security tokens need secrets module
-```
+The final HTML always lives at `<PROJECT_ROOT>/docs/security-review-<YYYY-MM-DD-HHMMSS>.html` using the local timestamp at the start of the run (e.g. `security-review-2026-05-14-053805.html`). Always include the timestamp — do not use a bare `security-review.html` name. This keeps each run's report distinct.
 
 ---
 
-## Output Format
+## 2. Capture goal
 
-```markdown
-## Security Review: [File/Component Name]
+### 2.1 Ask the goal
 
-### Summary
-- **Findings**: X (Y Critical, Z High, ...)
-- **Risk Level**: Critical/High/Medium/Low
-- **Confidence**: High/Mixed
+<!-- gate: security-review:2.1.goal | category=plan | cancel-leaves=nothing -->
 
-### Findings
+> 🚦 **Gate (plan · security-review:2.1.goal):** Capture the review goal — choice branches into one of three sub-skill sets (`code-config` / `release` / `monitor`).
+>
+> **Trigger:** Phase 2.1 entry, unless `$ARGUMENTS` already answers it.
+> **Why we ask:** Auto-picking `release` runs ALL sub-skills (slow; possibly hits scan/firewall endpoints unnecessarily); auto-picking the wrong goal mis-scopes the review.
+> **Cancel leaves:** Nothing — no sub-skills invoked yet.
 
-#### [VULN-001] [Vulnerability Type] (Severity)
-- **Location**: `file.py:123`
-- **Confidence**: High
-- **Issue**: [What the vulnerability is]
-- **Impact**: [What an attacker could do]
-- **Evidence**:
-  ```python
-  [Vulnerable code snippet]
-  ```
-- **Fix**: [How to remediate]
+Ask the user with a single `AskUserQuestion` call. If the user's initial request already answers it, skip and continue.
 
-### Needs Verification
+**Question — What to review?**
 
-#### [VERIFY-001] [Potential Issue]
-- **Location**: `file.py:456`
-- **Question**: [What needs to be verified]
-```
+| Label | Description |
+|-------|-------------|
+| Code & config | Check source code, dependencies, authentication, web roles, and table permissions. Works on local files only. |
+| Release readiness | Full review before publishing — checks everything. (Recommended) |
+| Deployed site | Check the live site for issues. Requires deployment. |
 
-If no vulnerabilities found, state: "No high-confidence vulnerabilities identified."
+Goal mapping (internal):
+
+| Label | Goal id | Skills |
+|-------|---------|------------|
+| Code & config | `code-config` | scan-code, audit-permissions, setup-auth (read-only) |
+| Release readiness | `release` | scan-code, scan-site, manage-headers, manage-firewall, audit-permissions, setup-auth (read-only) |
+| Deployed site | `monitor` | scan-site |
+
+### 2.2 Capture the chosen skill set
+
+Build a `selectedSkills` list based on the answer. Always include the read-only check of `setup-auth` for the `code-config` and `release` goals (it consists of reading existing YAML, not running the skill itself — see § 3.2 below). This is the **Access & Data Security Validation** component.
 
 ---
 
-## Reference Files
+## 3. Run the matching skills
 
-### Core Vulnerabilities (`references/`)
-| File | Covers |
-|------|--------|
-| `injection.md` | SQL, NoSQL, OS command, LDAP, template injection |
-| `xss.md` | Reflected, stored, DOM-based XSS |
-| `authorization.md` | Authorization, IDOR, privilege escalation |
-| `authentication.md` | Sessions, credentials, password storage |
-| `cryptography.md` | Algorithms, key management, randomness |
-| `deserialization.md` | Pickle, YAML, Java, PHP deserialization |
-| `file-security.md` | Path traversal, uploads, XXE |
-| `ssrf.md` | Server-side request forgery |
-| `csrf.md` | Cross-site request forgery |
-| `data-protection.md` | Secrets exposure, PII, logging |
-| `api-security.md` | REST, GraphQL, mass assignment |
-| `business-logic.md` | Race conditions, workflow bypass |
-| `modern-threats.md` | Prototype pollution, LLM injection, WebSocket |
-| `misconfiguration.md` | Headers, CORS, debug mode, defaults |
-| `error-handling.md` | Fail-open, information disclosure |
-| `supply-chain.md` | Dependencies, build security |
-| `logging.md` | Audit failures, log injection |
+Spawn each selected skill as a background subagent via the `Agent` tool. Each subagent invokes its skill with the argument `--review <SYSTEM_TEMP>/security-review/`. Each skill handles its own authentication, error reporting, and progress.
 
-### Language Guides (`languages/`)
-- `python.md` - Django, Flask, FastAPI patterns
-- `javascript.md` - Node, Express, React, Vue, Next.js
-- `go.md` - Go-specific security patterns
-- `rust.md` - Rust unsafe blocks, FFI security
-- `java.md` - Spring, Java EE patterns
+### 3.1 Skill invocation via subagents
 
-### Infrastructure (`infrastructure/`)
-- `docker.md` - Container security
-- `kubernetes.md` - K8s RBAC, secrets, policies
-- `terraform.md` - IaC security
-- `ci-cd.md` - Pipeline security
-- `cloud.md` - AWS/GCP/Azure security
+Skills run as **parallel subagents** using the `Agent` tool.
+
+**Default — launch every Agent-eligible skill in one parallel batch.** Spawn all selected subagents in a single message with multiple `Agent` tool calls so they start concurrently. Each subagent runs with `run_in_background: true`. The Agent-eligible set is `scan-code`, `scan-site`, `manage-headers`, `manage-firewall` — these all support `--review` mode. `scan-site` (server-side scan, several minutes) and `scan-code` (local static analysis + dependency scan, up to minutes on large projects) are the slowest; the others typically finish within seconds.
+
+**Fallback — staggered launch.** If the harness rejects a parallel-batch call for any reason, launch `scan-code` and `scan-site` first (the long-running ones) and then the remaining skills in a follow-up message. This is a tool-affordance fallback, not the preferred path.
+
+**Inline checks (run while subagents work).** `audit-permissions` and `setup-auth` do not support `--review` and MUST NOT be launched via `Agent` — handle them inline as described in § 3.2.
+
+Wait for all subagents to complete before proceeding to the report-building step.
+
+### 3.1.1 Subagent prompt pattern
+
+Each subagent receives a self-contained prompt that includes:
+
+1. The skill to invoke and the `--review` argument with the temp directory path
+2. The project root path so the skill can locate site files
+3. Any scope/depth parameters captured in the scope capture step
+
+Example subagent call:
+
+```
+Agent({
+  description: "Run scan-site",
+  prompt: "Invoke the skill `scan-site` with argument `--review <SYSTEM_TEMP>/security-review/`. The Power Pages project root is <PROJECT_ROOT>. <any additional scope parameters>. Write the **transform script stdout verbatim** to <SYSTEM_TEMP>/security-review/scan-site.json. Do NOT synthesize, augment, or re-classify the findings. If the skill fails, write { \"status\": \"skipped\", \"reason\": \"<plain-language reason>\" } instead.",
+  run_in_background: true
+})
+```
+
+**Verbatim rule:** the subagent's output JSON must contain only the findings emitted by the skill's transform script. The orchestrator must not append findings, rewrite titles, add severity, or otherwise editorialize.
+
+### 3.1.2 Expected output
+
+After all subagents complete, expect JSON files at `<SYSTEM_TEMP>/security-review/<skill-name>.json`. Each file has the shape `{ status, findings, details? }` produced by the skill's transform script:
+
+```text
+<SYSTEM_TEMP>/security-review/
+├── scan-code.json           (when invoked)
+├── scan-site.json
+├── manage-headers.json
+├── manage-firewall.json
+└── audit-permissions.json   (when invoked)
+```
+
+If a skill's subagent fails or is skipped, write a placeholder file with shape `{ "status": "skipped", "reason": "<plain-language reason>" }`. The report-building step renders this as a single non-severity finding for that section (no `severity` field, to stay consistent with § 3.1.3).
+
+### 3.1.3 Severity policy
+
+Only findings that come from a tool that genuinely outputs severity may carry a `severity` field:
+
+| Section | Source | Severity allowed? |
+|---------|--------|-------------------|
+| `scan-code` | opengrep, trivy | Yes |
+| `scan-site` | deep-scan (ZAP) | Yes |
+| `manage-headers` | `transform-headers.js` (inventory) | **No** |
+| `manage-firewall` | `transform-firewall.js` (inventory) | **No** |
+| `audit-permissions` | Web roles & table permissions audit | **No** |
+| `setup-auth` | Site settings & auth-related source code audit | **No** |
+
+For inventory sections, do **not** add `severity` to findings — not even `info`. The subagent and orchestrator must write the transform output **verbatim** without inserting opinionated severity-bearing findings. The `tag` field is **also** off-limits as a severity workaround: it is reserved for short mechanical identifiers from tools (e.g. ZAP rule ids, CWE codes) and MUST NOT carry severity-equivalent strings (`critical`, `warning`, `info`), since the report template renders it as a visible chip next to the title.
+
+### 3.1.4 Annotations policy (plain-language text)
+
+The transform scripts for `manage-firewall` and `manage-headers` produce only structured raw data — they do **not** hardcode plain-language descriptions. The subagent must generate an annotations JSON file and pass it to the transform via `--annotations`. The annotations supply:
+
+- Plain-language description per rule / per header
+- Optional suggested fix when a genuine issue is present
+
+See each skill's `SKILL.md` § 5.1 for the annotation file shape. The agent's job is to write accurate, terse descriptions based on the raw data — not to invent severities or fabricate issues.
+
+### 3.2 Skills without `--review` mode
+
+`audit-permissions` and `setup-auth` do not support `--review`. Handle them inline (not as background subagents):
+
+- **audit-permissions** — invoke via the `Skill` tool (not `Agent`). The skill audits **both web roles and table permissions** — capture both in its output. After it completes, read its output and write `<SYSTEM_TEMP>/security-review/audit-permissions.json` in the unified `{ status, findings, details? }` shape (mapping each audit finding into the common finding fields: `id`, `title`, `location`, `details`, `fix`).
+- **setup-auth** — do not invoke as a skill. Instead, read `.powerpages-site/site-settings/` YAML files directly and check for:
+  - identity provider configured? (`Authentication/OpenIdConnect/*/Authority`)
+  - profile redirect disabled? (`Authentication/Registration/ProfileRedirectEnabled = false`)
+  - cookie SameSite setting? (`HTTP/SameSite/Default`)
+
+Write the resulting findings to `<SYSTEM_TEMP>/security-review/setup-auth.json` in the same format.
+
+**Field policy for both sections** — these are inventory sections, not tool-output severities (see § 3.1.3):
+
+- **Do NOT include a `severity` field** on any finding.
+- **Do NOT include a `tag` field.** The `tag` field is reserved for short mechanical identifiers from tools (`HTTP/X-Frame-Options`, ZAP rule id `10055`, CWE codes). It MUST NOT carry severity-equivalent strings (`critical`, `warning`, `info`) — the report template renders `tag` as a visible chip next to the title, so stashing LLM-judged severity there would visually re-introduce the severity bucketing this section explicitly forbids.
+
+### 3.3 Status updates
+
+Tell the user that all checks are running in parallel. As each subagent completes, give a short progress line (e.g., "Code check finished — 2 important issues, 4 smaller ones."). Avoid technical jargon. Do not narrate skill internal steps. Once all subagents have finished, confirm that all checks are complete before moving to the report-building step.
+
+---
+
+## 4. Build the consolidated report
+
+### 4.1 Consolidate
+
+Write up to four plain-language next-step recommendations as a JSON string array to `<SYSTEM_TEMP>/security-review/next-steps.json`. Compose a 2–4 sentence plain-language `summary` of the overall state.
+
+```bash
+node "${PLUGIN_ROOT}/scripts/build-review-data.js" \
+  --reportName "Security Review" \
+  --inputDir "<SYSTEM_TEMP>/security-review/" \
+  --siteName "<SITE_NAME>" \
+  --goalLabel "<GOAL_LABEL>" \
+  --scopeLabel "<SCOPE_LABEL>" \
+  --summary "<SUMMARY_TEXT>" \
+  --nextStepsFile "<SYSTEM_TEMP>/security-review/next-steps.json" \
+  --output "<SYSTEM_TEMP>/security-review/security-review-data.json"
+```
+
+### 4.2 Render the master HTML
+
+```bash
+node "${PLUGIN_ROOT}/scripts/render-review.js" \
+  --output "<DOCS_PATH>" \
+  --data "<SYSTEM_TEMP>/security-review/security-review-data.json"
+```
+
+---
+
+## 5. Present and follow-ups
+
+### 5.1 Open in browser
+
+Open `<DOCS_PATH>` in the user's default browser.
+
+### 5.2 Record skill usage
+
+> Reference: `${PLUGIN_ROOT}/references/skill-tracking-reference.md`
+>
+> Use `--skillName "SecurityReview"`.
+
+### 5.3 In-chat summary
+
+<!-- gate: security-review:5.3.next-action | category=plan | cancel-leaves=nothing -->
+
+> 🚦 **Gate (plan · security-review:5.3.next-action):** Post-report next-action prompt — *"Walk me through the fixes / Re-run the review / Done for now"*. Drives whether remediation skills get invoked.
+>
+> **Trigger:** Phase 5.1 wrote the HTML report.
+> **Why we ask:** Auto-invoking remediation skills (`/manage-headers`, `/manage-firewall`, `/audit-permissions`) without the user reading the report; auto-re-running the review wastes time on a still-fresh result.
+> **Cancel leaves:** Nothing — the HTML report at `docs/security-review-<ts>.html` is the final artifact regardless.
+
+Show a short plain-language summary in the chat: counts of critical / warning / info findings, where the report lives. Then offer the next action with `AskUserQuestion`:
+
+| Question | Options |
+|----------|---------|
+| What would you like to do next? | Walk me through the fixes; Re-run the review; Done for now |
+
+If the user picks "walk me through", group critical findings by section and offer the matching focused skill for each (`/manage-headers`, `/manage-firewall`, `/audit-permissions`, etc.).
+
+If the user picks "re-run", invoke this skill again with the same goal and scope.
+
+---
+
+## 6. Clean up
+
+Delete the entire `<SYSTEM_TEMP>/security-review/` folder. The final HTML, located in `docs/`, must remain. Confirm to the user that temporary files have been removed.
+
+If the cleanup fails (file lock, permission), warn the user and continue — the report is already written and the temp folder can be removed manually later.
+
+---
+
+## Constraints
+
+- **Plain language with users** — never lead with technical terms.
+- **Parallel subagent delegation** — every selected skill runs as a parallel subagent via the `Agent` tool, launched in a single message. Perform the inline read-only `setup-auth` check while subagents work. Use the staggered launch (§ 3.1 fallback) only if the harness rejects the parallel-batch call.
+- **Single consolidated HTML** — never produce per-skill HTML reports during this run. Skills run in `--review` mode.
+- **Same look and feel** — rendering goes through the shared template at `${PLUGIN_ROOT}/scripts/lib/templates/security-review-report.html` via `scripts/render-review.js`. Do not author per-skill HTML or duplicate the template; the generated report must match the existing audit-permissions report visually.
+- **Cleanup is mandatory** — the cleanup step is not optional. Failing to clean up is treated as a non-fatal warning, but the skill always tries.
+- **Never run destructive sub-actions automatically** — skills that propose changes (e.g., editing site settings, deleting WAF rules) must operate in read-only `--review` mode during this orchestration. Apply changes only via the explicit "walk me through fixes" follow-up, after the user picks an action.
+
+## References
+
+- `references/flow.md` — rationale and example phrasing for the conversation beats in phases 2–5

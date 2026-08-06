@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review React Native"
+  short_description: "Review native correctness across iOS and Android"
+  default_prompt: "Use $review-react-native to perform a read-only cross-platform review with device-specific evidence and prioritized findings."

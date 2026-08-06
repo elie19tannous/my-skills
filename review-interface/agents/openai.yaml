@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Interface"
+  short_description: "Review interfaces with evidence and restraint"
+  default_prompt: "Use $review-interface to perform a read-only interface review of this flow and return prioritized evidence."

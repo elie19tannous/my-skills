@@ -1,353 +1,294 @@
 ---
 name: secrets-management
-description: Implement secure secrets management for CI/CD pipelines using Vault, AWS Secrets Manager, or native platform solutions. Use when handling sensitive credentials, rotating secrets, or securing CI/CD environments.
+description: >
+  Guides eliminating hardcoded secrets from code and CI/CD, setting up a
+  secrets manager (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault,
+  SOPS+age/KMS for GitOps), rotating credentials, and adding
+  secret-scanning to catch leaks. Use when the user asks to "remove
+  hardcoded secrets", "set up Vault/Secrets Manager integration", "scan
+  for leaked API keys", "rotate a compromised credential", "encrypt
+  secrets for GitOps with SOPS", or "inject secrets into a Kubernetes
+  pod/CI pipeline securely".
+license: Apache-2.0
+compatibility: "Claude Code, GitHub Copilot, OpenAI Codex, Cursor, Gemini CLI"
+metadata:
+  domain: devsecops
+  maturity: stable
 ---
 
 # Secrets Management
 
-Secure secrets management practices for CI/CD pipelines using Vault, AWS Secrets Manager, and other tools.
-
 ## Purpose
 
-Implement secure secrets management in CI/CD pipelines without hardcoding sensitive information.
+Hardcoded credentials — API keys, database passwords, TLS private keys,
+cloud IAM keys — committed to source control or baked into CI/CD
+configuration are one of the most common and most consequential security
+failures, because a leaked secret is immediately and directly exploitable
+(no reverse-engineering or chained exploit required), and git history
+makes "delete the file" an incomplete fix. This skill covers three
+related problems: preventing secrets from entering source control and CI
+logs in the first place (scanning, pre-commit hooks), storing and
+distributing secrets correctly at runtime (a dedicated secrets manager
+rather than environment variables baked into images or config files), and
+responding when a secret does leak (rotation, revocation, blast-radius
+assessment).
 
-## When to Use
+## When to use
 
-- Store API keys and credentials
-- Manage database passwords
-- Handle TLS certificates
-- Rotate secrets automatically
-- Implement least-privilege access
+- The user asks to "remove hardcoded secrets" from a codebase or wants
+  help auditing for them.
+- A team wants to set up HashiCorp Vault, AWS Secrets Manager, Azure Key
+  Vault, GCP Secret Manager, or a GitOps-friendly encrypted-secrets
+  workflow (SOPS + age/KMS, Sealed Secrets) from scratch.
+- The user wants secret-scanning added to CI/CD or pre-commit hooks
+  (Gitleaks, TruffleHog, GitHub secret scanning/push protection) to catch
+  leaks before merge.
+- A secret has leaked (committed to a public repo, printed in CI logs,
+  exposed in an error message) and the user needs a rotation/response
+  plan.
+- The user wants to inject secrets into a Kubernetes workload or CI job
+  without writing them to disk in plaintext or exposing them in logs.
+- The user is deciding between dynamic secrets (short-lived, generated
+  on demand) and static secrets (long-lived, rotated on a schedule) for a
+  given integration.
 
-## Secrets Management Tools
+## Prerequisites & environment
 
-### HashiCorp Vault
+- A secrets manager choice appropriate to the environment:
+  - **HashiCorp Vault** (OSS or Enterprise) — most flexible, supports
+    dynamic secrets (databases, cloud IAM), fine-grained policies, and
+    multiple auth methods (Kubernetes service account, AWS IAM, OIDC);
+    requires running/operating a Vault cluster (or using HCP Vault) —
+    non-trivial operational overhead if self-hosted.
+  - **AWS Secrets Manager / Azure Key Vault / GCP Secret Manager** —
+    cloud-native, lower operational overhead if already on that cloud,
+    integrates with IAM natively; less flexible across multi-cloud.
+  - **SOPS** (Mozilla) + age or a cloud KMS — for encrypting secrets
+    *at rest in git* for GitOps workflows (e.g. secrets committed
+    encrypted, decrypted at deploy time by Flux/ArgoCD or a CI step).
+  - **Kubernetes Sealed Secrets** (Bitnami) — cluster-scoped alternative
+    to SOPS for GitOps secrets, encrypts against a controller-held key
+    pair so only that cluster can decrypt.
+- Secret-scanning tooling: **Gitleaks** or **TruffleHog** for CI/pre-commit
+  scanning; GitHub Advanced Security "secret scanning" and "push
+  protection" if on GitHub with the relevant license tier.
+- CI/CD platform's native secret store (GitHub Actions "Secrets",
+  GitLab CI/CD variables marked "masked" and "protected", etc.) as the
+  minimum viable baseline even before adopting a full secrets manager.
+- IAM/permissions to create service identities (Kubernetes service
+  accounts, cloud IAM roles) that the secrets manager will authenticate
+  workloads against — secrets managers are only as strong as the
+  authentication method used to reach them.
 
-- Centralized secrets management
-- Dynamic secrets generation
-- Secret rotation
-- Audit logging
-- Fine-grained access control
+## Step-by-step guidance
 
-### AWS Secrets Manager
+1. **Add secret-scanning first**, before anything else, so you stop the
+   bleeding while you build out proper management:
+   ```yaml
+   # GitHub Actions - Gitleaks
+   name: secret-scan
+   on: [push, pull_request]
+   jobs:
+     gitleaks:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+           with:
+             fetch-depth: 0
+         - uses: gitleaks/gitleaks-action@v2
+           env:
+             GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+   ```
+   Add a matching pre-commit hook so leaks are caught before they're even
+   pushed:
+   ```yaml
+   # .pre-commit-config.yaml
+   repos:
+     - repo: https://github.com/gitleaks/gitleaks
+       rev: v8.18.4
+       hooks:
+         - id: gitleaks
+   ```
 
-- AWS-native solution
-- Automatic rotation
-- Integration with RDS
-- CloudFormation support
+2. **Inventory existing hardcoded secrets** found by the scan, and for
+   each one: rotate/revoke it at the source system first (assume it's
+   compromised the moment it was committed, even to a private repo —
+   git history persists), *then* remove it from code, and only then
+   consider the finding resolved. Removing the file without rotating the
+   credential leaves the leaked value valid forever in history.
 
-### Azure Key Vault
+3. **Stand up the secrets manager.** Vault example — enable a KV v2
+   secrets engine and a policy scoped to least privilege:
+   ```bash
+   vault secrets enable -path=myapp kv-v2
+   vault kv put myapp/prod/db username="svc-myapp" password="<generated>"
+   ```
+   ```hcl
+   # policy: myapp-prod-read.hcl
+   path "myapp/data/prod/*" {
+     capabilities = ["read"]
+   }
+   ```
 
-- Azure-native solution
-- HSM-backed keys
-- Certificate management
-- RBAC integration
+4. **Authenticate workloads, not humans, to fetch secrets at runtime.**
+   Kubernetes example using Vault's Kubernetes auth method with the Vault
+   Agent Injector (annotations on a pod spec):
+   ```yaml
+   metadata:
+     annotations:
+       vault.hashicorp.com/agent-inject: "true"
+       vault.hashicorp.com/role: "myapp-prod"
+       vault.hashicorp.com/agent-inject-secret-db-creds: "myapp/data/prod/db"
+   ```
+   This avoids ever writing the secret into a Kubernetes Secret object,
+   environment variable dump, or CI log — the sidecar fetches it directly
+   into a file the app reads at startup.
 
-### Google Secret Manager
+5. **For GitOps, encrypt secrets at rest with SOPS** rather than
+   committing plaintext or relying on cluster RBAC alone:
+   ```yaml
+   # .sops.yaml
+   creation_rules:
+     - path_regex: secrets/.*\.yaml$
+       kms: arn:aws:kms:us-east-1:<AWS_ACCOUNT_ID>:key/<KMS_KEY_ID>
+   ```
+   ```bash
+   sops --encrypt --in-place secrets/prod-db.yaml
+   git add secrets/prod-db.yaml   # ciphertext only — safe to commit
+   ```
 
-- GCP-native solution
-- Versioning
-- IAM integration
+6. **Prefer dynamic, short-lived secrets over long-lived static ones**
+   where the backing system supports it (Vault's database secrets engine
+   generates a unique DB credential per lease with automatic expiry,
+   versus a single shared password rotated manually every 90 days).
 
-## HashiCorp Vault Integration
+7. **Set a rotation policy and automate it** for anything that must
+   remain static (API keys for third-party SaaS without dynamic-secret
+   support): document an owner, a rotation interval, and an automated
+   or scripted rotation procedure — not a calendar reminder to do it
+   manually.
 
-### Setup Vault
+8. **Mask secrets in CI logs explicitly** even when using a secrets
+   manager — a script that echoes a fetched secret for debugging, or a
+   stack trace that includes a connection string, leaks it just as
+   badly as a hardcoded value.
 
-```bash
-# Start Vault dev server
-vault server -dev
+## Best practices
 
-# Set environment
-export VAULT_ADDR='http://127.0.0.1:8200'
-export VAULT_TOKEN='root'
+- Rotate first, remove second: a leaked secret is compromised the moment
+  it's committed, regardless of repo visibility; deleting it from the
+  latest commit does nothing to git history without a separate
+  history-rewrite (`git filter-repo` / BFG), and even that doesn't help
+  once it's been cloned or indexed.
+- Prefer dynamic/short-lived secrets (database credentials issued
+  per-session, cloud STS tokens) over long-lived static ones wherever the
+  backend supports it — a leaked short-lived credential has a small blast
+  radius by construction.
+- Scope access with least privilege per environment/workload identity,
+  not one shared "CI" or "prod" credential used everywhere — a Vault
+  policy or IAM role per service limits blast radius if one workload is
+  compromised.
+- Never pass secrets as CLI arguments or build args — they end up in
+  shell history, process lists (`ps aux`), and (for Docker build args)
+  potentially cached image layers. Use environment variables sourced from
+  a secrets manager, files mounted at runtime, or BuildKit secret mounts
+  (`--mount=type=secret`) instead.
+- Mask and audit: configure CI to mask known secret patterns in logs, and
+  enable audit logging on the secrets manager (Vault audit devices, cloud
+  CloudTrail/Activity Log) so every secret access is traceable.
+- Combine secret-scanning at commit time (prevent), a secrets manager at
+  runtime (contain), and a rotation policy (recover) — each addresses a
+  different failure mode and none alone is sufficient.
 
-# Enable secrets engine
-vault secrets enable -path=secret kv-v2
+## Common pitfalls
 
-# Store secret
-vault kv put secret/database/config username=admin password=secret
+- **Symptom:** A secret was committed, the commit was reverted/force-pushed
+  away, and the team considers the incident closed.
+  **Fix:** Treat the credential as permanently compromised regardless of
+  history rewriting — rotate/revoke it at the source system. History
+  rewriting only helps prevent *future* discovery; it does not undo
+  exposure to anyone who already cloned, forked, or indexed the repo
+  (including any CI system or bot that pulled it in the interim).
+
+- **Symptom:** Secrets are stored in a secrets manager, but a debug log
+  statement or an unhandled exception prints the full config object,
+  leaking the secret into application logs anyway.
+  **Fix:** Redact known secret fields in logging middleware/formatters at
+  the framework level (structured logging with an explicit denylist of
+  field names) rather than relying on developers to remember not to log
+  the config object.
+
+- **Symptom:** A Docker image built with `--build-arg DB_PASSWORD=...`
+  works fine, but the password is later found inside an intermediate
+  layer via `docker history` even after the final stage doesn't reference
+  it.
+  **Fix:** Use BuildKit secret mounts (`RUN --mount=type=secret,id=dbpass`)
+  which never persist the value in any image layer, instead of build
+  args, for any credential needed only during the build.
+
+- **Symptom:** Vault (or another secrets manager) is deployed, but every
+  service shares one broad "read everything" policy/token because
+  writing per-service policies felt slow.
+  **Fix:** Invest in per-service/per-environment policies up front —
+  retrofitting least privilege after a broad token is already
+  distributed to a dozen services is far more disruptive than doing it
+  at rollout time.
+
+- **Symptom:** A rotated database password breaks the application because
+  it was cached in a connection pool or a long-lived environment variable
+  that isn't reloaded until restart.
+  **Fix:** Design rotation to be observed by the app at runtime (short
+  connection pool max-lifetime, a sidecar that re-renders config and
+  signals a reload, or dynamic secrets with lease renewal) rather than
+  assuming rotation alone is sufficient without an app-side refresh path.
+
+## Worked example
+
+A team finds a hardcoded AWS access key in `config/settings.py` via a
+newly-added Gitleaks scan, and migrates the service to Vault-issued
+dynamic AWS credentials.
+
+Gitleaks finding:
+```
+Finding:     <AWS_ACCESS_KEY_ID>
+Secret:      <REDACTED_EXAMPLE_NOT_A_REAL_KEY>
+RuleID:      aws-access-token
+File:        config/settings.py
+Line:        14
+Commit:      3f9a21c
 ```
 
-### GitHub Actions with Vault
+Response, in order:
+1. Deactivate the leaked IAM access key immediately in the AWS console/CLI
+   (`aws iam update-access-key --access-key-id <KEY_ID> --status Inactive`),
+   then delete it once confirmed unused.
+2. Remove the hardcoded key from `config/settings.py` and replace with a
+   Vault-issued dynamic credential:
+   ```bash
+   vault secrets enable -path=aws aws
+   vault write aws/roles/myapp-prod \
+     credential_type=iam_user \
+     policy_document=@myapp-prod-policy.json
+   ```
+   ```python
+   # settings.py — fetch a short-lived credential at startup instead of
+   # embedding one
+   import hvac
+   client = hvac.Client(url=os.environ["VAULT_ADDR"])
+   creds = client.secrets.aws.generate_credentials(name="myapp-prod")
+   ```
+3. Add the Gitleaks CI job and pre-commit hook (shown above) so the same
+   class of leak is caught before merge going forward.
+4. Rewrite git history to remove the literal string from old commits
+   (`git filter-repo --path config/settings.py --invert-paths` or a
+   targeted BFG run) as defense-in-depth — understanding this does not
+   undo the exposure, only limits future discovery.
 
-```yaml
-name: Deploy with Vault Secrets
+## Cross-references
 
-on: [push]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Import Secrets from Vault
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://vault.example.com:8200
-          token: ${{ secrets.VAULT_TOKEN }}
-          secrets: |
-            secret/data/database username | DB_USERNAME ;
-            secret/data/database password | DB_PASSWORD ;
-            secret/data/api key | API_KEY
-
-      - name: Use secrets
-        run: |
-          echo "Connecting to database as $DB_USERNAME"
-          # Use $DB_PASSWORD, $API_KEY
-```
-
-### GitLab CI with Vault
-
-```yaml
-deploy:
-  image: vault:1.17
-  before_script:
-    - export VAULT_ADDR=https://vault.example.com:8200
-    - export VAULT_TOKEN=$VAULT_TOKEN
-    - apk add curl jq
-  script:
-    - |
-      DB_PASSWORD=$(vault kv get -field=password secret/database/config)
-      API_KEY=$(vault kv get -field=key secret/api/credentials)
-      echo "Deploying with secrets..."
-      # Use $DB_PASSWORD, $API_KEY
-```
-
-**Reference:** See `references/vault-setup.md`
-
-## AWS Secrets Manager
-
-### Store Secret
-
-```bash
-aws secretsmanager create-secret \
-  --name production/database/password \
-  --secret-string "super-secret-password"
-```
-
-### Retrieve in GitHub Actions
-
-```yaml
-- name: Configure AWS credentials
-  uses: aws-actions/configure-aws-credentials@v4
-  with:
-    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    aws-region: us-west-2
-
-- name: Get secret from AWS
-  run: |
-    SECRET=$(aws secretsmanager get-secret-value \
-      --secret-id production/database/password \
-      --query SecretString \
-      --output text)
-    echo "::add-mask::$SECRET"
-    echo "DB_PASSWORD=$SECRET" >> $GITHUB_ENV
-
-- name: Use secret
-  run: |
-    # Use $DB_PASSWORD
-    ./deploy.sh
-```
-
-### Terraform with AWS Secrets Manager
-
-```hcl
-data "aws_secretsmanager_secret_version" "db_password" {
-  secret_id = "production/database/password"
-}
-
-resource "aws_db_instance" "main" {
-  allocated_storage    = 100
-  engine              = "postgres"
-  instance_class      = "db.t3.large"
-  username            = "admin"
-  password            = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
-}
-```
-
-## GitHub Secrets
-
-### Organization/Repository Secrets
-
-```yaml
-- name: Use GitHub secret
-  env:
-    API_KEY: ${{ secrets.API_KEY }}
-    DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  run: |
-    # Secrets are injected as env vars — never print them to logs
-    ./deploy.sh
-```
-
-### Environment Secrets
-
-```yaml
-deploy:
-  runs-on: ubuntu-latest
-  environment: production
-  steps:
-    - name: Deploy
-      env:
-        PROD_API_KEY: ${{ secrets.PROD_API_KEY }}
-      run: |
-        # Secret injected as env var — never print to logs
-        ./deploy.sh
-```
-
-**Reference:** See `references/github-secrets.md`
-
-## GitLab CI/CD Variables
-
-### Project Variables
-
-```yaml
-deploy:
-  script:
-    - echo "Deploying with $API_KEY"
-    - echo "Database: $DATABASE_URL"
-```
-
-### Protected and Masked Variables
-
-- Protected: Only available in protected branches
-- Masked: Hidden in job logs
-- File type: Stored as file
-
-## Best Practices
-
-1. **Never commit secrets** to Git
-2. **Use different secrets** per environment
-3. **Rotate secrets regularly**
-4. **Implement least-privilege access**
-5. **Enable audit logging**
-6. **Use secret scanning** (GitGuardian, TruffleHog)
-7. **Mask secrets in logs**
-8. **Encrypt secrets at rest**
-9. **Use short-lived tokens** when possible
-10. **Document secret requirements**
-
-## Secret Rotation
-
-### Automated Rotation with AWS
-
-```python
-import boto3
-import json
-
-def lambda_handler(event, context):
-    client = boto3.client('secretsmanager')
-
-    # Get current secret
-    response = client.get_secret_value(SecretId='my-secret')
-    current_secret = json.loads(response['SecretString'])
-
-    # Generate new password
-    new_password = generate_strong_password()
-
-    # Update database password
-    update_database_password(new_password)
-
-    # Update secret
-    client.put_secret_value(
-        SecretId='my-secret',
-        SecretString=json.dumps({
-            'username': current_secret['username'],
-            'password': new_password
-        })
-    )
-
-    return {'statusCode': 200}
-```
-
-### Manual Rotation Process
-
-1. Generate new secret
-2. Update secret in secret store
-3. Update applications to use new secret
-4. Verify functionality
-5. Revoke old secret
-
-## External Secrets Operator
-
-### Kubernetes Integration
-
-```yaml
-apiVersion: external-secrets.io/v1beta1
-kind: SecretStore
-metadata:
-  name: vault-backend
-  namespace: production
-spec:
-  provider:
-    vault:
-      server: "https://vault.example.com:8200"
-      path: "secret"
-      version: "v2"
-      auth:
-        kubernetes:
-          mountPath: "kubernetes"
-          role: "production"
-
----
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-metadata:
-  name: database-credentials
-  namespace: production
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: vault-backend
-    kind: SecretStore
-  target:
-    name: database-credentials
-    creationPolicy: Owner
-  data:
-    - secretKey: username
-      remoteRef:
-        key: database/config
-        property: username
-    - secretKey: password
-      remoteRef:
-        key: database/config
-        property: password
-```
-
-## Secret Scanning
-
-### Pre-commit Hook
-
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-
-# Check for secrets with TruffleHog
-docker run --rm -v "$(pwd):/repo" \
-  trufflesecurity/trufflehog:3.88 \
-  filesystem --directory=/repo
-
-if [ $? -ne 0 ]; then
-  echo "❌ Secret detected! Commit blocked."
-  exit 1
-fi
-```
-
-### CI/CD Secret Scanning
-
-```yaml
-secret-scan:
-  stage: security
-  image: trufflesecurity/trufflehog:3.88
-  script:
-    - trufflehog filesystem .
-  allow_failure: false
-```
-
-
-## Related Skills
-
-- `github-actions-templates` - For GitHub Actions integration
-- `gitlab-ci-patterns` - For GitLab CI integration
-- `deployment-pipeline-design` - For pipeline architecture
+- [secure-cicd-gates](../secure-cicd-gates/SKILL.md) — where
+  secret-scanning fits among other pipeline security gates, and how to
+  avoid it becoming redundant with SAST secret-detection rules.
+- [policy-as-code-guardrails](../policy-as-code-guardrails/SKILL.md) —
+  enforcing "no plaintext secrets in manifests/IaC" as an automated
+  policy rather than a manual review checklist item.

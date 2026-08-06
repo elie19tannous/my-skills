@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review React"
+  short_description: "Review React correctness and architecture"
+  default_prompt: "Use $review-react to perform a read-only React review and return only verified, prioritized findings."

@@ -1,14 +1,16 @@
 ---
 name: shopify-automation
 description: "Automate Shopify tasks via Rube MCP (Composio): products, orders, customers, inventory, collections. Always search tools first for current schemas."
-risk: unknown
-source: community
-date_added: "2026-02-27"
+requires:
+  mcp: [rube]
+category: ecommerce
 ---
 
 # Shopify Automation via Rube MCP
 
 Automate Shopify operations through Composio's Shopify toolkit via Rube MCP.
+
+**Toolkit docs**: [composio.dev/toolkits/shopify](https://composio.dev/toolkits/shopify)
 
 ## Prerequisites
 
@@ -168,10 +170,5 @@ For advanced operations:
 | GraphQL | SHOPIFY_GRAPH_QL_QUERY | query |
 | Bulk query | SHOPIFY_BULK_QUERY_OPERATION | query |
 
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+---
+*Powered by [Composio](https://composio.dev)*

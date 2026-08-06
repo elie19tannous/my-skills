@@ -1,8 +1,7 @@
 ---
 name: skill-improver
-description: "Iteratively improve a Claude Code skill using the skill-reviewer agent until it meets quality standards. Use when improving a skill with multiple quality issues, iterating on a new skill until it meets standards, or automated fix-review cycles instead of manual editing."
-risk: unknown
-source: community
+description: "Iteratively reviews and fixes Claude Code skill quality issues until they meet standards. Runs automated fix-review cycles using the skill-reviewer agent. Use to fix skill quality issues, improve skill descriptions, run automated skill review loops, or iteratively refine a skill. Triggers on 'fix my skill', 'improve skill quality', 'skill improvement loop'. NOT for one-time reviews—use /skill-reviewer directly."
+allowed-tools: Task Read Edit Write Glob Grep
 ---
 
 # Skill Improvement Methodology
@@ -24,6 +23,7 @@ Verify it's enabled: run `/plugins` — `plugin-dev` should appear in the list. 
 5. **Repeat** - Continue until quality bar is met
 
 ## When to Use
+
 - Improving a skill with multiple quality issues
 - Iterating on a new skill until it meets standards
 - Automated fix-review cycles instead of manual editing
@@ -54,7 +54,6 @@ These significantly degrade skill effectiveness:
 - Weak or vague trigger descriptions — Claude may not recognize when to use the skill
 - Wrong writing voice (second person "you" instead of imperative) — Inconsistent with Claude's execution model
 - SKILL.md exceeds 500 lines without using references/ — Overloads context, reduces comprehension
-- Missing "When to Use" or "When NOT to Use" sections — Required by project quality standards
 - Description doesn't specify when to trigger — Skill may never be selected
 
 ### Minor Issues (Evaluate before fixing)
@@ -90,14 +89,12 @@ Replace `[SKILL_PATH]` with the absolute path to the skill directory (e.g., `/pa
 ```text
 Critical: SKILL.md:1 - Missing required 'name' field in frontmatter
 Major: SKILL.md:3 - Description uses second person ("you should use")
-Major: Missing "When NOT to Use" section
 Minor: Line 45 is verbose
 ```
 
 **Fixes applied:**
 - Added name field to frontmatter
 - Rewrote description in third person
-- Added "When NOT to Use" section
 
 **Iteration 2 — run skill-reviewer again to verify fixes:**
 ```text
@@ -144,8 +141,3 @@ The marker is the ONLY way to complete the loop. Natural language like "looks go
 - "This minor issue seems wrong, I'll skip all of them" - Evaluate each one individually
 - "The reviewer is being too strict" - The quality bar exists for a reason
 - "It's good enough" - If there are major issues, it's not good enough
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

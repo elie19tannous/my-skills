@@ -1,10 +1,7 @@
 ---
 name: semgrep-rule-variant-creator
 description: Creates language variants of existing Semgrep rules. Use when porting a Semgrep rule to specified target languages. Takes an existing rule and target languages as input, produces independent rule+test directories for each language.
-allowed-tools:
- ...
-risk: unknown
-source: community
+allowed-tools: Bash Read Write Edit Glob Grep WebFetch
 ---
 
 # Semgrep Rule Variant Creator
@@ -12,6 +9,7 @@ source: community
 Port existing Semgrep rules to new target languages with proper applicability analysis and test-driven validation.
 
 ## When to Use
+
 **Ideal scenarios:**
 - Porting an existing Semgrep rule to one or more target languages
 - Creating language-specific variants of a universal vulnerability pattern
@@ -116,7 +114,7 @@ Before porting, determine if the pattern applies to the target language.
 - `APPLICABLE_WITH_ADAPTATION` → Proceed but significant changes needed
 - `NOT_APPLICABLE` → Skip this language, document why
 
-See applicability-analysis.md for detailed guidance.
+See [applicability-analysis.md]({baseDir}/references/applicability-analysis.md) for detailed guidance.
 
 ### Phase 2: Test Creation (Test-First)
 
@@ -142,7 +140,7 @@ db.Query("SELECT * FROM users WHERE id = ?", userInput)
 3. **Update metadata**: language key, message, rule ID
 4. **Adapt for idioms**: Handle language-specific constructs
 
-See language-syntax-guide.md for translation guidance.
+See [language-syntax-guide.md]({baseDir}/references/language-syntax-guide.md) for translation guidance.
 
 ### Phase 4: Validation
 
@@ -161,7 +159,7 @@ For taint rule debugging:
 semgrep --dataflow-traces -f rule.yaml test-file
 ```
 
-See workflow.md for detailed workflow and troubleshooting.
+See [workflow.md]({baseDir}/references/workflow.md) for detailed workflow and troubleshooting.
 
 ## Quick Reference
 
@@ -195,11 +193,6 @@ See workflow.md for detailed workflow and troubleshooting.
 
 ## Next Steps
 
-- For applicability analysis guidance, see applicability-analysis.md
-- For language translation guidance, see language-syntax-guide.md
-- For detailed workflow and examples, see workflow.md
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- For applicability analysis guidance, see [applicability-analysis.md]({baseDir}/references/applicability-analysis.md)
+- For language translation guidance, see [language-syntax-guide.md]({baseDir}/references/language-syntax-guide.md)
+- For detailed workflow and examples, see [workflow.md]({baseDir}/references/workflow.md)

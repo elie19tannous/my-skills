@@ -1,13 +1,16 @@
 ---
 name: security-requirement-extraction
-description: Derive security requirements from threat models and business context. Use when translating threats into actionable requirements, creating security user stories, or building security test cases.
+description: "Derive security requirements from threat models and business context. Use when translating threats into actionable requirements, creating security user stories, or building security test cases."
+risk: safe
+source: community
+date_added: "2026-02-27"
 ---
 
 # Security Requirement Extraction
 
 Transform threat analysis into actionable security requirements.
 
-## When to Use This Skill
+## Use this skill when
 
 - Converting threat models to requirements
 - Writing security user stories
@@ -16,52 +19,23 @@ Transform threat analysis into actionable security requirements.
 - Compliance requirement mapping
 - Security architecture documentation
 
-## Core Concepts
+## Do not use this skill when
 
-### 1. Requirement Categories
+- The task is unrelated to security requirement extraction
+- You need a different domain or tool outside this scope
 
-```
-Business Requirements → Security Requirements → Technical Controls
-         ↓                       ↓                      ↓
-  "Protect customer    "Encrypt PII at rest"   "AES-256 encryption
-   data"                                        with KMS key rotation"
-```
+## Instructions
 
-### 2. Security Requirement Types
+- Clarify goals, constraints, and required inputs.
+- Apply relevant best practices and validate outcomes.
+- Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
 
-| Type               | Focus                   | Example                               |
-| ------------------ | ----------------------- | ------------------------------------- |
-| **Functional**     | What system must do     | "System must authenticate users"      |
-| **Non-functional** | How system must perform | "Authentication must complete in <2s" |
-| **Constraint**     | Limitations imposed     | "Must use approved crypto libraries"  |
+## Resources
 
-### 3. Requirement Attributes
+- `resources/implementation-playbook.md` for detailed patterns and examples.
 
-| Attribute        | Description                 |
-| ---------------- | --------------------------- |
-| **Traceability** | Links to threats/compliance |
-| **Testability**  | Can be verified             |
-| **Priority**     | Business importance         |
-| **Risk Level**   | Impact if not met           |
-
-## Templates and detailed worked examples
-
-Full template library lives in `references/details.md`. Read that file when you need concrete templates for this skill.
-
-## Best Practices
-
-### Do's
-
-- **Trace to threats** - Every requirement should map to threats
-- **Be specific** - Vague requirements can't be tested
-- **Include acceptance criteria** - Define "done"
-- **Consider compliance** - Map to frameworks early
-- **Review regularly** - Requirements evolve with threats
-
-### Don'ts
-
-- **Don't be generic** - "Be secure" is not a requirement
-- **Don't skip rationale** - Explain why it matters
-- **Don't ignore priorities** - Not all requirements are equal
-- **Don't forget testability** - If you can't test it, you can't verify it
-- **Don't work in isolation** - Involve stakeholders
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

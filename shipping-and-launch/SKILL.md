@@ -1,6 +1,13 @@
 ---
 name: shipping-and-launch
 description: Prepares production launches. Use when preparing to deploy to production. Use when you need a pre-launch checklist, when setting up monitoring, when planning a staged rollout, or when you need a rollback strategy.
+risk: critical
+source: https://github.com/addyosmani/agent-skills/tree/main/skills/shipping-and-launch
+source_repo: addyosmani/agent-skills
+source_type: community
+date_added: 2026-07-01
+license: MIT
+license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
 ---
 
 # Shipping and Launch
@@ -308,3 +315,9 @@ After deploying:
 - [ ] Critical user flow works
 - [ ] Logs are flowing
 - [ ] Rollback tested or verified ready
+
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream source and local project context.
+- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
+- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

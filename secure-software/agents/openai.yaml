@@ -1,0 +1,4 @@
+interface:
+  display_name: "Secure Software"
+  short_description: "Build security into software from the design"
+  default_prompt: "Use $secure-software to threat-model and implement this feature with proportionate, verifiable security controls."

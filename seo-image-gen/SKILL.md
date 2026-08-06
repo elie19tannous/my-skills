@@ -1,36 +1,45 @@
 ---
 name: seo-image-gen
-description: "Generate SEO-focused images such as OG cards, hero images, schema assets, product visuals, and infographics. Use when image generation is part of an SEO workflow or content publishing task."
-risk: unknown
-source: "https://github.com/AgriciDaniel/claude-seo"
-date_added: "2026-03-21"
+description: "AI image generation for SEO assets: OG/social preview images, blog hero images, schema images, product photography, infographics. Powered by Gemini via nanobanana-mcp. Requires banana extension installed. Use when user says \"generate image\", \"OG image\", \"social preview\", \"hero image\", \"blog image\", \"product photo\", \"infographic\", \"seo image\", \"create visual\", \"image-gen\", \"favicon\", \"schema image\", \"pinterest pin\", \"generate visual\", \"banner\", or \"thumbnail\"."
 argument-hint: "[og|hero|product|infographic|custom|batch] <description>"
 user-invokable: true
-allowed-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - WebFetch
-  - Write
+license: MIT
+compatibility: "Requires nanobanana MCP server"
+metadata:
+  author: AgriciDaniel
+  version: "1.9.6"
+  category: seo
 ---
 
 # SEO Image Gen: AI Image Generation for SEO Assets (Extension)
+## Shared Data Cache
+
+**Step 0 -- Check shared data cache:**
+
+Before gathering, check `.seo-cache/` for reusable context from related SEO skills.
+Reference: `../seo/references/shared-data-cache.md` for schemas and dependency map.
+
+Check these cache files when present:
+- `.seo-cache/site-meta.json` for domain, business type, industry, and crawl context
+- `.seo-cache/audit-scores.json` for prior full-audit priorities
+- `.seo-cache/pages/{url-slug}/page-analysis.json` for page-level context when a URL is provided
+
+- If found: parse and use clearly valid fields (note "Using cached [X] from [date]")
+- If missing, corrupt, or irrelevant: continue with fresh evidence
+- If the user says "refresh" or "re-run": ignore cache reads and overwrite on write
 
 Generate production-ready images for SEO use cases using Gemini's image generation
 via the banana Creative Director pipeline. Maps SEO needs to optimized domain modes,
 aspect ratios, and resolution defaults.
 
-## When to Use
-- Use when generating OG images, hero images, schema visuals, infographics, or similar SEO assets.
-- Use when image generation is part of a broader SEO or publishing workflow.
-- Use only when the required image-generation extension is available.
-
 ## Architecture Note
+
+This extension is built on the Banana image-generation pipeline
+for SEO-specific image workflows in Codex.
 
 This skill has two components with distinct roles:
 - **SKILL.md** (this file): Handles interactive `/seo image-gen` commands for generating images
-- **Agent** (`agents/seo-image-gen.md`): Audit-only analyst spawned during `/seo audit` to assess existing OG/social images and produce a generation plan (never auto-generates)
+- **Agent** (`agents/seo-image-gen.toml`): Audit-only analyst spawned during `/seo audit` to assess existing OG/social images and produce a generation plan (never auto-generates)
 
 ## Prerequisites
 
@@ -88,7 +97,7 @@ For every generation request:
 
 If the user mentions a brand or has SEO presets configured:
 ```bash
-python3 ~/.claude/skills/seo-image-gen/scripts/presets.py list
+python3 scripts/presets.py list
 ```
 Load matching preset and apply as defaults. Also check `references/seo-image-presets.md`
 for SEO-specific preset templates.
@@ -126,7 +135,7 @@ After every successful generation, guide the user on:
 
 Image generation costs money. Be transparent:
 - Show estimated cost before generating (especially for batch)
-- Log every generation: `python3 ~/.claude/skills/seo-image-gen/scripts/cost_tracker.py log --model MODEL --resolution RES --prompt "brief"`
+- Log every generation: `python3 scripts/cost_tracker.py log --model MODEL --resolution RES --prompt "brief"`
 - Run `cost_tracker.py summary` if user asks about usage
 
 Approximate costs (gemini-3.1-flash):
@@ -152,7 +161,7 @@ Approximate costs (gemini-3.1-flash):
 | API key invalid | New key at https://aistudio.google.com/apikey |
 | Rate limited (429) | Wait 60s, retry. Free tier: ~10 RPM / ~500 RPD |
 | `IMAGE_SAFETY` | Rephrase prompt - see `references/prompt-engineering.md` Safety section |
-| MCP unavailable | Fall back: `python3 ~/.claude/skills/seo-image-gen/scripts/generate.py --prompt "..." --aspect-ratio "16:9"` |
+| MCP unavailable | Fall back: `python3 scripts/generate.py --prompt "..." --aspect-ratio "16:9"` |
 | Extension not installed | Show install instructions: `./extensions/banana/install.sh` |
 
 ## Cross-Skill Integration
@@ -181,7 +190,7 @@ After generating, always provide:
 4. **SEO checklist**:alt text suggestion, file naming, WebP conversion
 5. **Schema snippet**:ImageObject or og:image markup if applicable
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+## Write to shared data cache
+
+After completing all work, write a concise JSON summary to `.seo-cache/` when the workflow produced durable findings.
+Use the schemas and naming rules in `../seo/references/shared-data-cache.md`; include at least `cache_type`, `analyzed_at`, source URL/domain, key findings, issues, recommendations, and tool limitations. Add `.seo-cache/` to `.gitignore` if it is missing.
