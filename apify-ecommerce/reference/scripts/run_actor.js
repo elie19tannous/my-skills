@@ -176,13 +176,6 @@ async function pollUntilComplete(token, runId, timeout, interval) {
     }
 }
 
-function csvCell(value) {
-    if (value === null || value === undefined) return '';
-    let text = String(value);
-    if (/^[\u0000-\u0020]*[=+@-]/.test(text)) text = `'${text}`;
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
 // Download dataset items
 async function downloadResults(token, datasetId, outputPath, format) {
     const url = `https://api.apify.com/v2/datasets/${datasetId}/items?token=${encodeURIComponent(token)}&format=json`;
@@ -207,7 +200,7 @@ async function downloadResults(token, datasetId, outputPath, format) {
         // CSV output
         if (data.length > 0) {
             const fieldnames = Object.keys(data[0]);
-            const csvLines = [fieldnames.map(csvCell).join(',')];
+            const csvLines = [fieldnames.join(',')];
 
             for (const row of data) {
                 const values = fieldnames.map((key) => {
@@ -220,7 +213,15 @@ async function downloadResults(token, datasetId, outputPath, format) {
                         value = JSON.stringify(value) || '';
                     }
 
-                    return csvCell(value);
+                    // CSV escape: wrap in quotes if contains comma, quote, or newline
+                    if (value === null || value === undefined) {
+                        return '';
+                    }
+                    const strValue = String(value);
+                    if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
+                        return `"${strValue.replace(/"/g, '""')}"`;
+                    }
+                    return strValue;
                 });
                 csvLines.push(values.join(','));
             }

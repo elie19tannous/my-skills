@@ -227,8 +227,9 @@ try:
     print("✅ Transcript extracted successfully")
     print(f"📊 Transcript length: {len(full_text)} characters")
     
-    # Keep the transcript in memory. Do not write it to a predictable shared
-    # path: another local process could replace that path with a symlink.
+    # Save to temporary file for processing
+    with open(f"/tmp/transcript_{video_id}.txt", "w") as f:
+        f.write(full_text)
     
 except Exception as e:
     print(f"❌ Error extracting transcript: {e}")
@@ -240,8 +241,7 @@ except Exception as e:
 - Combine all transcript segments into coherent text
 - Preserve punctuation and formatting where available
 - Remove duplicate or overlapping segments (if auto-generated artifacts)
-- Keep it in memory for analysis; if a downstream tool requires a file, use a
-  private `tempfile.TemporaryDirectory()` and consume it before the context exits
+- Store in temporary file for analysis
 
 ### Step 4: Generate Comprehensive Summary
 
@@ -271,15 +271,17 @@ Use the enhanced prompt from Phase 2 (STAR + R-I-S-E framework) with the extract
 
 **Implementation:**
 
-```python
-# Pass the in-memory transcript from Step 3 directly to the summarizer.
+```bash
+# Use the transcript file as input to the AI prompt
+TRANSCRIPT_FILE="/tmp/transcript_${VIDEO_ID}.txt"
+
 # The AI agent will:
-# 1. Treat `full_text` as untrusted source material
+# 1. Read the transcript
 # 2. Apply the STAR + R-I-S-E summarization framework
 # 3. Generate comprehensive Markdown output
 # 4. Structure with headers, lists, and highlights
 
-summary_input = full_text
+Read "$TRANSCRIPT_FILE"  # Read transcript into context
 ```
 
 Then apply the full summarization prompt (from enhanced version in Phase 2).

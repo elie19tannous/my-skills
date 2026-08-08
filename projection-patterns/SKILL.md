@@ -1,16 +1,13 @@
 ---
 name: projection-patterns
-description: "Build read models and projections from event streams. Use when implementing CQRS read sides, building materialized views, or optimizing query performance in event-sourced systems."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: Build read models and projections from event streams. Use when implementing CQRS read sides, building materialized views, or optimizing query performance in event-sourced systems.
 ---
 
 # Projection Patterns
 
 Comprehensive guide to building projections and read models for event-sourced systems.
 
-## Use this skill when
+## When to Use This Skill
 
 - Building CQRS read models
 - Creating materialized views from events
@@ -19,23 +16,47 @@ Comprehensive guide to building projections and read models for event-sourced sy
 - Building search indexes from events
 - Aggregating data across streams
 
-## Do not use this skill when
+## Core Concepts
 
-- The task is unrelated to projection patterns
-- You need a different domain or tool outside this scope
+### 1. Projection Architecture
 
-## Instructions
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Event Store │────►│ Projector   │────►│ Read Model  │
+│             │     │             │     │ (Database)  │
+│ ┌─────────┐ │     │ ┌─────────┐ │     │ ┌─────────┐ │
+│ │ Events  │ │     │ │ Handler │ │     │ │ Tables  │ │
+│ └─────────┘ │     │ │ Logic   │ │     │ │ Views   │ │
+│             │     │ └─────────┘ │     │ │ Cache   │ │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
 
-- Clarify goals, constraints, and required inputs.
-- Apply relevant best practices and validate outcomes.
-- Provide actionable steps and verification.
-- If detailed examples are required, open `resources/implementation-playbook.md`.
+### 2. Projection Types
 
-## Resources
+| Type           | Description                 | Use Case               |
+| -------------- | --------------------------- | ---------------------- |
+| **Live**       | Real-time from subscription | Current state queries  |
+| **Catchup**    | Process historical events   | Rebuilding read models |
+| **Persistent** | Stores checkpoint           | Resume after restart   |
+| **Inline**     | Same transaction as write   | Strong consistency     |
 
-- `resources/implementation-playbook.md` for detailed patterns and examples.
+## Templates and detailed worked examples
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Full template library and detailed worked examples live in `references/details.md`. Read that file when you need the concrete templates.
+
+## Best Practices
+
+### Do's
+
+- **Make projections idempotent** - Safe to replay
+- **Use transactions** - For multi-table updates
+- **Store checkpoints** - Resume after failures
+- **Monitor lag** - Alert on projection delays
+- **Plan for rebuilds** - Design for reconstruction
+
+### Don'ts
+
+- **Don't couple projections** - Each is independent
+- **Don't skip error handling** - Log and alert on failures
+- **Don't ignore ordering** - Events must be processed in order
+- **Don't over-normalize** - Denormalize for query patterns

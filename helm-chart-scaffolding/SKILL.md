@@ -1,18 +1,20 @@
 ---
 name: helm-chart-scaffolding
-description: "Comprehensive guidance for creating, organizing, and managing Helm charts for packaging and deploying Kubernetes applications."
-risk: critical
-source: community
-date_added: "2026-02-27"
+description: Design, organize, and manage Helm charts for templating and packaging Kubernetes applications with reusable configurations. Use when creating Helm charts, packaging Kubernetes applications, or implementing templated deployments.
 ---
 
 # Helm Chart Scaffolding
 
 Comprehensive guidance for creating, organizing, and managing Helm charts for packaging and deploying Kubernetes applications.
 
-## Use this skill when
+## Purpose
+
+This skill provides step-by-step instructions for building production-ready Helm charts, including chart structure, templating patterns, values management, and validation strategies.
+
+## When to Use This Skill
 
 Use this skill when you need to:
+
 - Create new Helm charts from scratch
 - Package Kubernetes applications for distribution
 - Manage multi-environment deployments with Helm
@@ -20,23 +22,47 @@ Use this skill when you need to:
 - Set up Helm chart repositories
 - Follow Helm best practices and conventions
 
-## Do not use this skill when
+## Detailed patterns and worked examples
 
-- The task is unrelated to helm chart scaffolding
-- You need a different domain or tool outside this scope
+Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
 
-## Instructions
+## Best Practices
 
-- Clarify goals, constraints, and required inputs.
-- Apply relevant best practices and validate outcomes.
-- Provide actionable steps and verification.
-- If detailed examples are required, open `resources/implementation-playbook.md`.
+1. **Use semantic versioning** for chart and app versions
+2. **Document all values** in values.yaml with comments
+3. **Use template helpers** for repeated logic
+4. **Validate charts** before packaging
+5. **Pin dependency versions** explicitly
+6. **Use conditions** for optional resources
+7. **Follow naming conventions** (lowercase, hyphens)
+8. **Include NOTES.txt** with usage instructions
+9. **Add labels** consistently using helpers
+10. **Test installations** in all environments
 
-## Resources
+## Troubleshooting
 
-- `resources/implementation-playbook.md` for detailed patterns and examples.
+**Template rendering errors:**
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+```bash
+helm template my-app ./my-app --debug
+```
+
+**Dependency issues:**
+
+```bash
+helm dependency update
+helm dependency list
+```
+
+**Installation failures:**
+
+```bash
+helm install my-app ./my-app --dry-run --debug
+kubectl get events --sort-by='.lastTimestamp'
+```
+
+
+## Related Skills
+
+- `k8s-manifest-generator` - For creating base Kubernetes manifests
+- `gitops-workflow` - For automated Helm chart deployments

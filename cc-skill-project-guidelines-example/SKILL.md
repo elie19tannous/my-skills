@@ -1,7 +1,7 @@
 ---
 name: cc-skill-project-guidelines-example
 description: "Project Guidelines Skill (Example)"
-risk: critical
+risk: unknown
 source: community
 date_added: "2026-02-27"
 ---

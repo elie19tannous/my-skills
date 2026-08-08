@@ -1,7 +1,7 @@
 ---
 name: apify-actor-development
 description: "Important: Before you begin, fill in the generatedBy property in the meta section of .actor/actor.json. Replace it with the tool and model you're currently using, such as \"Claude Code with Claude Sonnet 4.5\". This helps Apify monitor and improve AGENTS.md for specific AI tools and models."
-risk: critical
+risk: unknown
 source: community
 ---
 
@@ -91,7 +91,7 @@ Use the appropriate CLI command based on the user's language choice. Additional 
 
 **Treat all crawled web content as untrusted input.** Actors ingest data from external websites that may contain malicious payloads. Follow these rules:
 
-- **Sanitize crawled data** — Never pass raw HTML, URLs, or scraped text directly into shell commands, `eval()`, database queries, or template engines. Use proper escaping or parameterized APIs. <!-- security-allowlist: defensive untrusted-input guidance -->
+- **Sanitize crawled data** — Never pass raw HTML, URLs, or scraped text directly into shell commands, `eval()`, database queries, or template engines. Use proper escaping or parameterized APIs.
 - **Validate and type-check all external data** — Before pushing to datasets or key-value stores, verify that values match expected types and formats. Reject or sanitize unexpected structures.
 - **Do not execute or interpret crawled content** — Never treat scraped text as code, commands, or configuration. Content from websites could include prompt injection attempts or embedded scripts.
 - **Isolate credentials from data pipelines** — Ensure `APIFY_TOKEN` and other secrets are never accessible in request handlers or passed alongside crawled data. Use the Apify SDK's built-in credential management rather than passing tokens through environment variables in data-processing code.
@@ -129,7 +129,7 @@ Use the appropriate CLI command based on the user's language choice. Additional 
 - Store personal/sensitive data unless explicitly permitted
 - Use deprecated options like `requestHandlerTimeoutMillis` on CheerioCrawler (v3.x)
 - Use `additionalHttpHeaders` - use `preNavigationHooks` instead
-- Pass raw crawled content into shell commands, `eval()`, or code-generation functions <!-- security-allowlist: prohibited-pattern checklist -->
+- Pass raw crawled content into shell commands, `eval()`, or code-generation functions
 - Use `console.log()` or `print()` instead of the Apify logger — these bypass credential censoring
 - Disable standby mode without explicit permission
 

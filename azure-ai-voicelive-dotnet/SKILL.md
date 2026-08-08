@@ -1,9 +1,12 @@
 ---
 name: azure-ai-voicelive-dotnet
-description: Azure AI Voice Live SDK for .NET. Build real-time voice AI applications with bidirectional WebSocket communication.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure AI Voice Live SDK for .NET. Build real-time voice AI applications with bidirectional WebSocket communication. Use for voice assistants, conversational AI, real-time speech-to-speech, and voice-enabled chatbots. Triggers: "voice live", "real-time voice", "VoiceLiveClient", "VoiceLiveSession", "voice assistant .NET", "bidirectional audio", "speech-to-speech".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.AI.VoiceLive
 ---
 
 # Azure.AI.VoiceLive (.NET)
@@ -23,23 +26,29 @@ dotnet add package NAudio                    # For audio capture/playback
 ## Environment Variables
 
 ```bash
-AZURE_VOICELIVE_ENDPOINT=https://<resource>.services.ai.azure.com/
-AZURE_VOICELIVE_MODEL=gpt-4o-realtime-preview
-AZURE_VOICELIVE_VOICE=en-US-AvaNeural
-# Optional: API key if not using Entra ID
-AZURE_VOICELIVE_API_KEY=<your-api-key>
+AZURE_VOICELIVE_ENDPOINT=https://<resource>.services.ai.azure.com/  # Required: Voice Live endpoint
+AZURE_VOICELIVE_MODEL=gpt-4o-realtime-preview  # Required: model deployment name
+AZURE_VOICELIVE_VOICE=en-US-AvaNeural  # Optional: Voice Live voice name
+AZURE_VOICELIVE_API_KEY=<your-api-key>  # Only required for AzureKeyCredential auth
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
-### Microsoft Entra ID (Recommended)
+### Microsoft Entra Token Credential
 
 ```csharp
 using Azure.Identity;
 using Azure.AI.VoiceLive;
 
 Uri endpoint = new Uri("https://your-resource.cognitiveservices.azure.com");
-DefaultAzureCredential credential = new DefaultAzureCredential();
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 VoiceLiveClient client = new VoiceLiveClient(endpoint, credential);
 ```
 
@@ -264,11 +273,3 @@ if (serverEvent is SessionUpdateError error)
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.ai.voicelive |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.VoiceLive |
 | Quickstart | https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

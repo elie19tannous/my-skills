@@ -1,420 +1,572 @@
 ---
 name: mongodb
-description: Administer MongoDB databases. Configure replica sets, sharding, and backups. Use when managing MongoDB deployments.
-license: MIT
-metadata:
-  author: devops-skills
-  version: "1.0"
+description: Work with MongoDB databases using best practices. Use when designing schemas, writing queries, building aggregation pipelines, or optimizing performance. Triggers on MongoDB, Mongoose, NoSQL, aggregation pipeline, document database, MongoDB Atlas.
 ---
 
-# MongoDB
+# MongoDB & Mongoose
 
-Administer, optimize, and secure MongoDB NoSQL databases in development and production environments.
+Build and query MongoDB databases with best practices.
 
-## When to Use
-
-- You need a document-oriented database with flexible schemas.
-- Your data is semi-structured or heavily nested (JSON-like documents).
-- You need horizontal scaling through sharding.
-- Your application benefits from rich querying and aggregation pipelines.
-
-## Prerequisites
-
-- Linux server (Debian/Ubuntu or RHEL-based) or Docker.
-- Root or sudo access for package installation.
-- MongoDB 7.x recommended for production (6.x still supported).
-
-## Installation and Setup
+## Quick Start
 
 ```bash
-# Debian / Ubuntu — MongoDB 7
-curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
-  sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
-echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] \
-  https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
-  sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-sudo apt update
-sudo apt install -y mongodb-org
-
-# Start and enable
-sudo systemctl enable --now mongod
-
-# Verify
-mongosh --eval "db.version()"
+npm install mongodb mongoose
 ```
 
-## Initial User Setup
+### Native Driver
+```typescript
+import { MongoClient, ObjectId } from 'mongodb';
 
-```javascript
-// Connect without auth first
-// mongosh
+const client = new MongoClient(process.env.MONGODB_URI!);
+const db = client.db('myapp');
+const users = db.collection('users');
 
-use admin
+// Connect
+await client.connect();
 
-// Create admin user
-db.createUser({
-  user: "admin",
-  pwd: "strong_admin_password",
-  roles: [
-    { role: "userAdminAnyDatabase", db: "admin" },
-    { role: "readWriteAnyDatabase", db: "admin" },
-    { role: "clusterAdmin", db: "admin" }
-  ]
-})
-
-// Create an application-scoped user
-use mydb
-db.createUser({
-  user: "myapp",
-  pwd: "strong_app_password",
-  roles: [{ role: "readWrite", db: "mydb" }]
-})
+// CRUD Operations
+await users.insertOne({ name: 'Alice', email: 'alice@example.com' });
+const user = await users.findOne({ email: 'alice@example.com' });
+await users.updateOne({ _id: user._id }, { $set: { name: 'Alice Smith' } });
+await users.deleteOne({ _id: user._id });
 ```
 
-Enable authentication in `/etc/mongod.conf`:
+### Mongoose Setup
+```typescript
+import mongoose from 'mongoose';
 
-```yaml
-security:
-  authorization: enabled
+await mongoose.connect(process.env.MONGODB_URI!, {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+});
+
+// Connection events
+mongoose.connection.on('connected', () => console.log('MongoDB connected'));
+mongoose.connection.on('error', (err) => console.error('MongoDB error:', err));
+mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected'));
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  process.exit(0);
+});
 ```
 
-```bash
-sudo systemctl restart mongod
-# Now connect with credentials
-mongosh -u myapp -p strong_app_password --authenticationDatabase mydb
+## Schema Design
+
+### Basic Schema
+```typescript
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+interface IUser extends Document {
+  email: string;
+  name: string;
+  password: string;
+  role: 'user' | 'admin';
+  profile: {
+    avatar?: string;
+    bio?: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const userSchema = new Schema<IUser>({
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Invalid email format'],
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    minlength: 2,
+    maxlength: 100,
+  },
+  password: {
+    type: String,
+    required: true,
+    select: false,  // Never return password by default
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
+  profile: {
+    avatar: String,
+    bio: { type: String, maxlength: 500 },
+  },
+}, {
+  timestamps: true,  // Adds createdAt, updatedAt
+  toJSON: {
+    transform(doc, ret) {
+      delete ret.password;
+      delete ret.__v;
+      return ret;
+    },
+  },
+});
+
+// Indexes
+userSchema.index({ email: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ name: 'text', 'profile.bio': 'text' });  // Text search
+
+const User: Model<IUser> = mongoose.model('User', userSchema);
 ```
 
-## mongosh Commands Reference
+### Embedded Documents vs References
 
-```javascript
-// Show databases and collections
-show dbs
-use mydb
-show collections
+```typescript
+// ✅ Embed when: Data is read together, doesn't grow unbounded
+const orderSchema = new Schema({
+  customer: {
+    name: String,
+    email: String,
+    address: {
+      street: String,
+      city: String,
+      country: String,
+    },
+  },
+  items: [{
+    product: String,
+    quantity: Number,
+    price: Number,
+  }],
+  total: Number,
+});
 
-// Insert documents
-db.users.insertOne({ name: "Alice", email: "alice@example.com", age: 30 })
-db.users.insertMany([
-  { name: "Bob", email: "bob@example.com", age: 25 },
-  { name: "Carol", email: "carol@example.com", age: 35 }
-])
+// ✅ Reference when: Data is large, shared, or changes independently
+const postSchema = new Schema({
+  title: String,
+  content: String,
+  author: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  comments: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Comment',
+  }],
+});
 
-// Query documents
-db.users.find({ age: { $gte: 25 } }).sort({ name: 1 }).limit(10)
-db.users.findOne({ email: "alice@example.com" })
-db.users.countDocuments({ age: { $gte: 30 } })
+// Populate references
+const post = await Post.findById(id)
+  .populate('author', 'name email')  // Select specific fields
+  .populate({
+    path: 'comments',
+    populate: { path: 'author', select: 'name' },  // Nested populate
+  });
+```
 
-// Update
-db.users.updateOne(
-  { email: "alice@example.com" },
-  { $set: { age: 31 }, $currentDate: { updatedAt: true } }
-)
-db.users.updateMany(
-  { age: { $lt: 30 } },
-  { $set: { tier: "junior" } }
-)
+### Virtuals
+```typescript
+const userSchema = new Schema({
+  firstName: String,
+  lastName: String,
+});
 
-// Delete
-db.users.deleteOne({ email: "bob@example.com" })
-db.users.deleteMany({ tier: "junior" })
+// Virtual field (not stored in DB)
+userSchema.virtual('fullName').get(function() {
+  return `${this.firstName} ${this.lastName}`;
+});
+
+// Virtual populate (for reverse references)
+userSchema.virtual('posts', {
+  ref: 'Post',
+  localField: '_id',
+  foreignField: 'author',
+});
+
+// Enable virtuals in JSON
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
+```
+
+## Query Operations
+
+### Find Operations
+```typescript
+// Find with filters
+const users = await User.find({
+  role: 'user',
+  createdAt: { $gte: new Date('2024-01-01') },
+});
+
+// Query builder
+const results = await User.find()
+  .where('role').equals('user')
+  .where('createdAt').gte(new Date('2024-01-01'))
+  .select('name email')
+  .sort({ createdAt: -1 })
+  .limit(10)
+  .skip(20)
+  .lean();  // Return plain objects (faster)
+
+// Find one
+const user = await User.findOne({ email: 'alice@example.com' });
+const userById = await User.findById(id);
+
+// Exists check
+const exists = await User.exists({ email: 'alice@example.com' });
+
+// Count
+const count = await User.countDocuments({ role: 'admin' });
+```
+
+### Query Operators
+```typescript
+// Comparison
+await User.find({ age: { $eq: 25 } });      // Equal
+await User.find({ age: { $ne: 25 } });      // Not equal
+await User.find({ age: { $gt: 25 } });      // Greater than
+await User.find({ age: { $gte: 25 } });     // Greater or equal
+await User.find({ age: { $lt: 25 } });      // Less than
+await User.find({ age: { $lte: 25 } });     // Less or equal
+await User.find({ age: { $in: [20, 25, 30] } });   // In array
+await User.find({ age: { $nin: [20, 25] } });      // Not in array
+
+// Logical
+await User.find({
+  $and: [{ age: { $gte: 18 } }, { role: 'user' }],
+});
+await User.find({
+  $or: [{ role: 'admin' }, { isVerified: true }],
+});
+await User.find({ age: { $not: { $lt: 18 } } });
+
+// Element
+await User.find({ avatar: { $exists: true } });
+await User.find({ score: { $type: 'number' } });
+
+// Array
+await User.find({ tags: 'nodejs' });  // Array contains value
+await User.find({ tags: { $all: ['nodejs', 'mongodb'] } });  // Contains all
+await User.find({ tags: { $size: 3 } });  // Array length
+await User.find({ 'items.0.price': { $gt: 100 } });  // Array index
+
+// Text search
+await User.find({ $text: { $search: 'mongodb developer' } });
+
+// Regex
+await User.find({ name: { $regex: /^john/i } });
+```
+
+### Update Operations
+```typescript
+// Update one
+await User.updateOne(
+  { _id: userId },
+  { $set: { name: 'New Name' } }
+);
+
+// Update many
+await User.updateMany(
+  { role: 'user' },
+  { $set: { isVerified: true } }
+);
+
+// Find and update (returns document)
+const updated = await User.findByIdAndUpdate(
+  userId,
+  { $set: { name: 'New Name' } },
+  { new: true, runValidators: true }  // Return updated doc, run validators
+);
+
+// Update operators
+await User.updateOne({ _id: userId }, {
+  $set: { name: 'New Name' },          // Set field
+  $unset: { tempField: '' },           // Remove field
+  $inc: { loginCount: 1 },             // Increment
+  $mul: { score: 1.5 },                // Multiply
+  $min: { lowScore: 50 },              // Set if less than
+  $max: { highScore: 100 },            // Set if greater than
+  $push: { tags: 'new-tag' },          // Add to array
+  $pull: { tags: 'old-tag' },          // Remove from array
+  $addToSet: { tags: 'unique-tag' },   // Add if not exists
+});
+
+// Upsert (insert if not exists)
+await User.updateOne(
+  { email: 'new@example.com' },
+  { $set: { name: 'New User' } },
+  { upsert: true }
+);
+```
+
+## Aggregation Pipeline
+
+### Basic Aggregation
+```typescript
+const results = await Order.aggregate([
+  // Stage 1: Match
+  { $match: { status: 'completed' } },
+  
+  // Stage 2: Group
+  { $group: {
+    _id: '$customerId',
+    totalOrders: { $sum: 1 },
+    totalSpent: { $sum: '$total' },
+    avgOrder: { $avg: '$total' },
+  }},
+  
+  // Stage 3: Sort
+  { $sort: { totalSpent: -1 } },
+  
+  // Stage 4: Limit
+  { $limit: 10 },
+]);
+```
+
+### Pipeline Stages
+```typescript
+const pipeline = [
+  // $match - Filter documents
+  { $match: { createdAt: { $gte: new Date('2024-01-01') } } },
+  
+  // $project - Shape output
+  { $project: {
+    name: 1,
+    email: 1,
+    yearJoined: { $year: '$createdAt' },
+    fullName: { $concat: ['$firstName', ' ', '$lastName'] },
+  }},
+  
+  // $lookup - Join collections
+  { $lookup: {
+    from: 'orders',
+    localField: '_id',
+    foreignField: 'userId',
+    as: 'orders',
+  }},
+  
+  // $unwind - Flatten arrays
+  { $unwind: { path: '$orders', preserveNullAndEmptyArrays: true } },
+  
+  // $group - Aggregate
+  { $group: {
+    _id: '$_id',
+    name: { $first: '$name' },
+    orderCount: { $sum: 1 },
+    orders: { $push: '$orders' },
+  }},
+  
+  // $addFields - Add computed fields
+  { $addFields: {
+    hasOrders: { $gt: ['$orderCount', 0] },
+  }},
+  
+  // $facet - Multiple pipelines
+  { $facet: {
+    topCustomers: [{ $sort: { orderCount: -1 } }, { $limit: 5 }],
+    stats: [{ $group: { _id: null, avgOrders: { $avg: '$orderCount' } } }],
+  }},
+];
+```
+
+### Analytics Examples
+```typescript
+// Sales by month
+const salesByMonth = await Order.aggregate([
+  { $match: { status: 'completed' } },
+  { $group: {
+    _id: {
+      year: { $year: '$createdAt' },
+      month: { $month: '$createdAt' },
+    },
+    totalSales: { $sum: '$total' },
+    orderCount: { $sum: 1 },
+  }},
+  { $sort: { '_id.year': -1, '_id.month': -1 } },
+]);
+
+// Top products
+const topProducts = await Order.aggregate([
+  { $unwind: '$items' },
+  { $group: {
+    _id: '$items.productId',
+    totalQuantity: { $sum: '$items.quantity' },
+    totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
+  }},
+  { $lookup: {
+    from: 'products',
+    localField: '_id',
+    foreignField: '_id',
+    as: 'product',
+  }},
+  { $unwind: '$product' },
+  { $project: {
+    name: '$product.name',
+    totalQuantity: 1,
+    totalRevenue: 1,
+  }},
+  { $sort: { totalRevenue: -1 } },
+  { $limit: 10 },
+]);
+```
+
+## Middleware (Hooks)
+
+```typescript
+// Pre-save middleware
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+  next();
+});
+
+// Post-save middleware
+userSchema.post('save', function(doc) {
+  console.log('User saved:', doc._id);
+});
+
+// Pre-find middleware
+userSchema.pre(/^find/, function(next) {
+  // Exclude deleted users by default
+  this.find({ isDeleted: { $ne: true } });
+  next();
+});
+
+// Pre-aggregate middleware
+userSchema.pre('aggregate', function(next) {
+  // Add match stage to all aggregations
+  this.pipeline().unshift({ $match: { isDeleted: { $ne: true } } });
+  next();
+});
+```
+
+## Transactions
+
+```typescript
+const session = await mongoose.startSession();
+
+try {
+  session.startTransaction();
+  
+  // All operations in the transaction
+  const user = await User.create([{ name: 'Alice' }], { session });
+  await Account.create([{ userId: user[0]._id, balance: 0 }], { session });
+  await Order.updateOne({ _id: orderId }, { $set: { status: 'paid' } }, { session });
+  
+  await session.commitTransaction();
+} catch (error) {
+  await session.abortTransaction();
+  throw error;
+} finally {
+  session.endSession();
+}
+
+// With callback
+await mongoose.connection.transaction(async (session) => {
+  await User.create([{ name: 'Alice' }], { session });
+  await Account.create([{ userId: user._id }], { session });
+});
 ```
 
 ## Indexing
 
-```javascript
-// Single-field index
-db.users.createIndex({ email: 1 }, { unique: true })
+```typescript
+// Single field index
+userSchema.index({ email: 1 });
 
 // Compound index
-db.orders.createIndex({ userId: 1, createdAt: -1 })
+userSchema.index({ role: 1, createdAt: -1 });
+
+// Unique index
+userSchema.index({ email: 1 }, { unique: true });
+
+// Partial index
+userSchema.index(
+  { email: 1 },
+  { partialFilterExpression: { isActive: true } }
+);
+
+// TTL index (auto-delete after time)
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
 
 // Text index for search
-db.articles.createIndex({ title: "text", body: "text" })
-db.articles.find({ $text: { $search: "mongodb scaling" } })
+postSchema.index({ title: 'text', content: 'text' });
 
-// TTL index — auto-delete documents after 30 days
-db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 2592000 })
+// Geospatial index
+locationSchema.index({ coordinates: '2dsphere' });
 
-// List indexes
-db.users.getIndexes()
-
-// Drop an index
-db.users.dropIndex("email_1")
-
-// Explain a query to verify index usage
-db.orders.find({ userId: 42 }).explain("executionStats")
+// Check indexes
+const indexes = await User.collection.getIndexes();
 ```
 
-## Aggregation Pipeline Examples
+## Performance Tips
 
-```javascript
-// Revenue per status
-db.orders.aggregate([
-  { $group: {
-      _id: "$status",
-      totalRevenue: { $sum: "$total" },
-      count: { $sum: 1 }
-  }},
-  { $sort: { totalRevenue: -1 } }
-])
+```typescript
+// Use lean() for read-only queries
+const users = await User.find().lean();
 
-// Top 5 customers by order value (with a join)
-db.orders.aggregate([
-  { $group: {
-      _id: "$userId",
-      spent: { $sum: "$total" },
-      orderCount: { $sum: 1 }
+// Select only needed fields
+const users = await User.find().select('name email');
+
+// Use cursor for large datasets
+const cursor = User.find().cursor();
+for await (const user of cursor) {
+  // Process one at a time
+}
+
+// Bulk operations
+const bulkOps = [
+  { insertOne: { document: { name: 'User 1' } } },
+  { updateOne: { filter: { _id: id1 }, update: { $set: { name: 'Updated' } } } },
+  { deleteOne: { filter: { _id: id2 } } },
+];
+await User.bulkWrite(bulkOps);
+
+// Explain query
+const explanation = await User.find({ role: 'admin' }).explain('executionStats');
+```
+
+## MongoDB Atlas
+
+```typescript
+// Atlas connection string
+const uri = 'mongodb+srv://user:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority';
+
+// Atlas Search (full-text search)
+const results = await Product.aggregate([
+  { $search: {
+    index: 'default',
+    text: {
+      query: 'wireless headphones',
+      path: ['name', 'description'],
+      fuzzy: { maxEdits: 1 },
+    },
   }},
-  { $sort: { spent: -1 } },
-  { $limit: 5 },
-  { $lookup: {
-      from: "users",
-      localField: "_id",
-      foreignField: "_id",
-      as: "user"
-  }},
-  { $unwind: "$user" },
   { $project: {
-      _id: 0,
-      name: "$user.name",
-      email: "$user.email",
-      spent: 1,
-      orderCount: 1
-  }}
-])
-
-// Daily signup trend
-db.users.aggregate([
-  { $group: {
-      _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-      signups: { $sum: 1 }
+    name: 1,
+    score: { $meta: 'searchScore' },
   }},
-  { $sort: { _id: 1 } },
-  { $limit: 30 }
-])
+]);
+
+// Atlas Vector Search
+const results = await Product.aggregate([
+  { $vectorSearch: {
+    index: 'vector_index',
+    path: 'embedding',
+    queryVector: [0.1, 0.2, ...],
+    numCandidates: 100,
+    limit: 10,
+  }},
+]);
 ```
 
-## Replica Set Setup
+## Resources
 
-A replica set requires a minimum of three members (or two data-bearing nodes plus an arbiter).
-
-### Configuration File for Each Member
-
-```yaml
-# /etc/mongod.conf (adjust port and dbPath per member)
-storage:
-  dbPath: /var/lib/mongodb
-net:
-  port: 27017
-  bindIp: 0.0.0.0
-replication:
-  replSetName: rs0
-security:
-  authorization: enabled
-  keyFile: /etc/mongodb-keyfile
-```
-
-```bash
-# Generate a shared keyfile for internal auth
-openssl rand -base64 756 > /etc/mongodb-keyfile
-chmod 400 /etc/mongodb-keyfile
-chown mongodb:mongodb /etc/mongodb-keyfile
-# Copy this file to all replica set members
-```
-
-### Initialize the Replica Set
-
-```javascript
-// Connect to the first member
-// mongosh --port 27017
-
-rs.initiate({
-  _id: "rs0",
-  members: [
-    { _id: 0, host: "mongo1:27017", priority: 2 },
-    { _id: 1, host: "mongo2:27017", priority: 1 },
-    { _id: 2, host: "mongo3:27017", priority: 1 }
-  ]
-})
-
-// Check status
-rs.status()
-
-// View replication lag per member
-rs.printReplicationInfo()
-rs.printSecondaryReplicationInfo()
-```
-
-## Backup and Restore
-
-```bash
-# Full dump of all databases
-mongodump --uri="mongodb://admin:secret@localhost:27017" --out=/backups/full_$(date +%F)
-
-# Single database
-mongodump --uri="mongodb://myapp:secret@localhost:27017/mydb" --out=/backups/mydb_$(date +%F)
-
-# Compressed dump
-mongodump --uri="mongodb://admin:secret@localhost:27017" --gzip --out=/backups/gz_$(date +%F)
-
-# Restore all databases
-mongorestore --uri="mongodb://admin:secret@localhost:27017" /backups/full_2025-01-15/
-
-# Restore a single database, dropping existing data first
-mongorestore --uri="mongodb://admin:secret@localhost:27017" \
-  --drop --db mydb /backups/mydb_2025-01-15/mydb/
-
-# Restore compressed dump
-mongorestore --uri="mongodb://admin:secret@localhost:27017" --gzip /backups/gz_2025-01-15/
-```
-
-## Docker Compose Setup
-
-```yaml
-# docker-compose.yml
-version: "3.9"
-
-services:
-  mongo1:
-    image: mongo:7
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: secret
-    volumes:
-      - mongo1_data:/data/db
-      - ./mongo-keyfile:/etc/mongodb-keyfile:ro
-    command: >
-      mongod
-        --replSet rs0
-        --keyFile /etc/mongodb-keyfile
-        --bind_ip_all
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  mongo2:
-    image: mongo:7
-    restart: unless-stopped
-    volumes:
-      - mongo2_data:/data/db
-      - ./mongo-keyfile:/etc/mongodb-keyfile:ro
-    command: >
-      mongod
-        --replSet rs0
-        --keyFile /etc/mongodb-keyfile
-        --bind_ip_all
-
-  mongo3:
-    image: mongo:7
-    restart: unless-stopped
-    volumes:
-      - mongo3_data:/data/db
-      - ./mongo-keyfile:/etc/mongodb-keyfile:ro
-    command: >
-      mongod
-        --replSet rs0
-        --keyFile /etc/mongodb-keyfile
-        --bind_ip_all
-
-  mongo-init:
-    image: mongo:7
-    restart: "no"
-    depends_on:
-      mongo1:
-        condition: service_healthy
-    entrypoint: >
-      mongosh --host mongo1 -u admin -p secret --authenticationDatabase admin --eval '
-        rs.initiate({
-          _id: "rs0",
-          members: [
-            { _id: 0, host: "mongo1:27017", priority: 2 },
-            { _id: 1, host: "mongo2:27017", priority: 1 },
-            { _id: 2, host: "mongo3:27017", priority: 1 }
-          ]
-        })
-      '
-
-volumes:
-  mongo1_data:
-  mongo2_data:
-  mongo3_data:
-```
-
-```bash
-# Generate keyfile before starting
-openssl rand -base64 756 > mongo-keyfile
-chmod 400 mongo-keyfile
-
-docker compose up -d
-
-# Connect
-mongosh "mongodb://admin:secret@127.0.0.1:27017/?replicaSet=rs0&authSource=admin"
-```
-
-## Monitoring Queries
-
-```javascript
-// Server status summary
-db.serverStatus().connections
-db.serverStatus().opcounters
-
-// Current operations (look for long-running queries)
-db.currentOp({ secs_running: { $gte: 5 } })
-
-// Collection stats
-db.orders.stats()
-
-// Index sizes
-db.orders.stats().indexSizes
-
-// Profiler — log slow queries (> 100ms)
-db.setProfilingLevel(1, { slowms: 100 })
-db.system.profile.find().sort({ ts: -1 }).limit(5)
-
-// Replica set lag
-rs.printSecondaryReplicationInfo()
-```
-
-## Configuration Tuning
-
-```yaml
-# /etc/mongod.conf — production recommendations
-storage:
-  dbPath: /var/lib/mongodb
-  journal:
-    enabled: true
-  wiredTiger:
-    engineConfig:
-      cacheSizeGB: 4          # ~50% of RAM, leave rest for OS cache
-    collectionConfig:
-      blockCompressor: snappy
-net:
-  port: 27017
-  bindIp: 0.0.0.0
-  maxIncomingConnections: 500
-operationProfiling:
-  mode: slowOp
-  slowOpThresholdMs: 100
-```
-
-## Troubleshooting
-
-| Symptom | Likely Cause | Fix |
-|---|---|---|
-| `COLLSCAN` in explain output | Missing index on queried field | Create an appropriate index |
-| Replica member stuck in `RECOVERING` | Oplog window exceeded | Resync by removing data and restarting the member |
-| `too many open files` | OS file descriptor limit too low | Set `ulimit -n 65535` in service file |
-| High memory usage | WiredTiger cache too large | Reduce `cacheSizeGB` in config |
-| Slow aggregation pipelines | No index on `$match` stage fields | Add index; place `$match` as early as possible in pipeline |
-| Authentication failure | Wrong `authenticationDatabase` | Specify `--authenticationDatabase admin` for admin users |
-
-## Related Skills
-
-- [redis](../redis/) - Caching layer in front of MongoDB
-- [database-backups](../database-backups/) - Automated backup strategies
-- [postgresql](../postgresql/) - Alternative relational database
+- **MongoDB Docs**: https://www.mongodb.com/docs/
+- **Mongoose Docs**: https://mongoosejs.com/docs/
+- **MongoDB University**: https://learn.mongodb.com/
+- **Atlas Docs**: https://www.mongodb.com/docs/atlas/

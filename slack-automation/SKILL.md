@@ -1,16 +1,14 @@
 ---
 name: slack-automation
-description: Automate Slack messaging, channel management, search, reactions, and threads via Rube MCP (Composio). Send messages, search conversations, manage channels/users, and react to messages programmatically.
-requires:
-  mcp: [rube]
-category: communication
+description: "Automate Slack workspace operations including messaging, search, channel management, and reaction workflows through Composio's Slack toolkit."
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Slack Automation via Rube MCP
 
 Automate Slack workspace operations including messaging, search, channel management, and reaction workflows through Composio's Slack toolkit.
-
-**Toolkit docs**: [composio.dev/toolkits/slack](https://composio.dev/toolkits/slack)
 
 ## Prerequisites
 
@@ -21,7 +19,6 @@ Automate Slack workspace operations including messaging, search, channel managem
 ## Setup
 
 **Get Rube MCP**: Add `https://rube.app/mcp` as an MCP server in your client configuration. No API keys needed — just add the endpoint and it works.
-
 
 1. Verify Rube MCP is available by confirming `RUBE_SEARCH_TOOLS` responds
 2. Call `RUBE_MANAGE_CONNECTIONS` with toolkit `slack`
@@ -191,5 +188,10 @@ Most list endpoints use cursor-based pagination:
 | Channel history | `SLACK_FETCH_CONVERSATION_HISTORY` | `channel`, `oldest`, `latest` |
 | Workspace info | `SLACK_FETCH_TEAM_INFO` | (none) |
 
----
-*Powered by [Composio](https://composio.dev)*
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

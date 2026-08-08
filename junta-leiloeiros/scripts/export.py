@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,13 +38,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 from db import Database
 
 OUTPUT_DIR = Path(__file__).parent.parent / "data" / "exports"
-
-
-def spreadsheet_safe_cell(value):
-    """Neutralize strings that spreadsheet programs can interpret as formulas."""
-    if isinstance(value, str) and re.match(r"^[\x00-\x20]*[=+@-]", value):
-        return "'" + value
-    return value
 
 
 def export_json(records: list, output_dir: Path, suffix: str = "") -> Path:
@@ -80,10 +72,9 @@ def export_csv(records: list, output_dir: Path, suffix: str = "") -> Path:
     path = output_dir / f"leiloeiros{suffix}_{ts}.csv"
 
     with safe_user_path(path).open("w", newline="", encoding="utf-8-sig") as f:
-        fieldnames = list(records[0].keys())
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=list(records[0].keys()), extrasaction="ignore")
         writer.writeheader()
-        writer.writerows({key: spreadsheet_safe_cell(value) for key, value in record.items()} for record in records)
+        writer.writerows(records)
     print(f"[CSV] {len(records)} registros → {path}")
     return path
 

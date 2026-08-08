@@ -1,12 +1,20 @@
 ---
 name: expo-ui
-description: "Framework (OSS). Build native UI with the @expo/ui package: real SwiftUI on iOS and Jetpack Compose on Android rendered from React in an Expo or React Native app. Covers universal cross-platform components (Host, Column, Row, Button, Text, List, and more imported from @expo/ui), drop-in replacements for popular React Native community libraries (BottomSheet, DateTimePicker, Slider, Menu, etc.), and platform-specific SwiftUI (@expo/ui/swift-ui, iOS only) and Jetpack Compose (@expo/ui/jetpack-compose, Android only) trees and modifiers. Use when adding or reviewing @expo/ui Host/RNHostView trees, building native-feeling UI where standard React Native components fall short (grouped settings forms with toggles, sections, menus, sheets, pickers, sliders), choosing between universal and platform-specific components, or replacing an RN community UI library with a native @expo/ui equivalent. Not for custom native modules, Expo Router navigation, Reanimated, or data fetching."
-version: 1.0.0
+description: "Build native UI with the @expo/ui package: real SwiftUI on iOS and Jetpack Compose on Android rendered from React in an Expo or React Native app. Covers universal cross-platform components (Host, Column, Row, Button, Text, List, and more imported from @expo/ui), drop-in replacements..."
+risk: unknown
+source: https://github.com/expo/skills/tree/main/plugins/expo/skills/expo-ui
+source_repo: expo/skills
+source_type: official
+date_added: 2026-07-01
 license: MIT
-allowed-tools: "Bash(node *expo-ui/scripts/list-components.js *)"
+license_source: https://github.com/expo/skills/blob/main/LICENSE
 ---
 
 # Expo UI (`@expo/ui`)
+## When to Use
+
+Use this skill when you need build native UI with the @expo/ui package: real SwiftUI on iOS and Jetpack Compose on Android rendered from React in an Expo or React Native app. Covers universal cross-platform components (Host, Column, Row, Button, Text, List, and more imported from @expo/ui), drop-in replacements...
+
 
 `@expo/ui` renders real native UI from React: SwiftUI on iOS, Jetpack Compose on Android. Start with its universal components (one tree for iOS, Android, and web) and drop to platform-specific SwiftUI/Jetpack Compose only when the universal layer falls short. It also ships drop-in replacements for migrating off RN community UI libraries.
 
@@ -46,10 +54,8 @@ references/
   jetpack-compose.md       Platform-specific Android UI: @expo/ui/jetpack-compose components, modifiers, LazyColumn caveat, icons, useNativeState
 ```
 
-## Submitting Feedback
-If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
-```bash
-npx --yes submit-expo-feedback@latest --category skills --subject "expo-ui" "<actionable feedback>"
-```
-Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
-If an AI agent repeatedly failed or the user had to take over an Expo task, load the expo-skill-feedback skill and follow its eval-candidate flow instead of reusing the command above.
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream product or API scope.
+- Verify commands, API behavior, pricing, quotas, credentials, and deployment effects against current official documentation before making changes.
+- Do not treat generated examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

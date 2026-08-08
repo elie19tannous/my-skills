@@ -1,9 +1,13 @@
 ---
 name: azure-ai-contentsafety-py
-description: Azure AI Content Safety SDK for Python. Use for detecting harmful content in text and images with multi-severity classification.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure AI Content Safety SDK for Python. Use for detecting harmful content in text and images with multi-severity classification.
+  Triggers: "azure-ai-contentsafety", "ContentSafetyClient", "content moderation", "harmful content", "text analysis", "image analysis".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: azure-ai-contentsafety
 ---
 
 # Azure AI Content Safety SDK for Python
@@ -19,56 +23,80 @@ pip install azure-ai-contentsafety
 ## Environment Variables
 
 ```bash
-CONTENT_SAFETY_ENDPOINT=https://<resource>.cognitiveservices.azure.com
-CONTENT_SAFETY_KEY=<your-api-key>
+CONTENT_SAFETY_ENDPOINT=https://<resource>.cognitiveservices.azure.com  # Required for all auth methods
+AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
+CONTENT_SAFETY_KEY=<your-api-key>  # Only required for the legacy API-key auth path below
 ```
 
-## Authentication
+## Authentication & Lifecycle
 
-### API Key
+> **🔑 Two rules apply to every code sample below:**
+>
+> 1. **Prefer `DefaultAzureCredential`.** It works locally (Azure CLI / VS Code / Developer CLI) and in Azure (managed identity, workload identity) with no code change. Avoid connection strings, account/API keys — they bypass Entra audit and rotation.
+>    - Local dev: `DefaultAzureCredential` works as-is.
+>    - Production: set `AZURE_TOKEN_CREDENTIALS=prod` (or `AZURE_TOKEN_CREDENTIALS=<specific_credential>`) to constrain the credential chain to production-safe credentials.
+> 2. **Wrap every client in a context manager** so HTTP transports, sockets, and token caches are released deterministically:
+>    - Sync: `with <Client>(...) as client:`
+>    - Async: `async with <Client>(...) as client:` **and** `async with DefaultAzureCredential() as credential:` (from `azure.identity.aio`)
+>
+> Snippets may abbreviate this setup, but production code should always follow both rules.
 
 ```python
-from azure.ai.contentsafety import ContentSafetyClient
-from azure.core.credentials import AzureKeyCredential
 import os
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.ai.contentsafety import ContentSafetyClient
+from azure.ai.contentsafety.models import AnalyzeTextOptions
 
-client = ContentSafetyClient(
+# Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+credential = DefaultAzureCredential(require_envvar=True)
+# Or use a specific credential directly in production:
+# See https://learn.microsoft.com/python/api/overview/azure/identity-readme?view=azure-python#credential-classes
+# credential = ManagedIdentityCredential()
+
+with ContentSafetyClient(
     endpoint=os.environ["CONTENT_SAFETY_ENDPOINT"],
-    credential=AzureKeyCredential(os.environ["CONTENT_SAFETY_KEY"])
-)
+    credential=credential,
+) as client:
+    response = client.analyze_text(AnalyzeTextOptions(text="Hello, world!"))
 ```
 
-### Entra ID
+### Legacy: API Key (existing keyed deployments)
+
+New code should use `DefaultAzureCredential` above. Use `AzureKeyCredential` only if you have an existing keyed deployment that hasn't been migrated to Entra ID yet — for example, regulated environments still completing their Entra rollout.
 
 ```python
+import os
+from azure.core.credentials import AzureKeyCredential
 from azure.ai.contentsafety import ContentSafetyClient
-from azure.identity import DefaultAzureCredential
+from azure.ai.contentsafety.models import AnalyzeTextOptions
 
-client = ContentSafetyClient(
+with ContentSafetyClient(
     endpoint=os.environ["CONTENT_SAFETY_ENDPOINT"],
-    credential=DefaultAzureCredential()
-)
+    credential=AzureKeyCredential(os.environ["CONTENT_SAFETY_KEY"]),
+) as client:
+    response = client.analyze_text(AnalyzeTextOptions(text="Hello, world!"))
 ```
+
+The `BlocklistClient` accepts the same `AzureKeyCredential` if you also need to manage blocklists with a key.
 
 ## Analyze Text
 
 ```python
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.ai.contentsafety.models import AnalyzeTextOptions, TextCategory
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
 
-client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
+with ContentSafetyClient(endpoint, DefaultAzureCredential()) as client:
+    request = AnalyzeTextOptions(text="Your text content to analyze")
+    response = client.analyze_text(request)
 
-request = AnalyzeTextOptions(text="Your text content to analyze")
-response = client.analyze_text(request)
-
-# Check each category
-for category in [TextCategory.HATE, TextCategory.SELF_HARM, 
-                 TextCategory.SEXUAL, TextCategory.VIOLENCE]:
-    result = next((r for r in response.categories_analysis 
-                   if r.category == category), None)
-    if result:
-        print(f"{category}: severity {result.severity}")
+    # Check each category
+    for category in [TextCategory.HATE, TextCategory.SELF_HARM, 
+                     TextCategory.SEXUAL, TextCategory.VIOLENCE]:
+        result = next((r for r in response.categories_analysis 
+                       if r.category == category), None)
+        if result:
+            print(f"{category}: severity {result.severity}")
 ```
 
 ## Analyze Image
@@ -76,23 +104,22 @@ for category in [TextCategory.HATE, TextCategory.SELF_HARM,
 ```python
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.ai.contentsafety.models import AnalyzeImageOptions, ImageData
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
 import base64
 
-client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
+with ContentSafetyClient(endpoint, DefaultAzureCredential()) as client:
+    # From file
+    with open("image.jpg", "rb") as f:
+        image_data = base64.b64encode(f.read()).decode("utf-8")
 
-# From file
-with open("image.jpg", "rb") as f:
-    image_data = base64.b64encode(f.read()).decode("utf-8")
+    request = AnalyzeImageOptions(
+        image=ImageData(content=image_data)
+    )
 
-request = AnalyzeImageOptions(
-    image=ImageData(content=image_data)
-)
+    response = client.analyze_image(request)
 
-response = client.analyze_image(request)
-
-for result in response.categories_analysis:
-    print(f"{result.category}: severity {result.severity}")
+    for result in response.categories_analysis:
+        print(f"{result.category}: severity {result.severity}")
 ```
 
 ### Image from URL
@@ -114,19 +141,18 @@ response = client.analyze_image(request)
 ```python
 from azure.ai.contentsafety import BlocklistClient
 from azure.ai.contentsafety.models import TextBlocklist
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
 
-blocklist_client = BlocklistClient(endpoint, AzureKeyCredential(key))
+with BlocklistClient(endpoint, DefaultAzureCredential()) as blocklist_client:
+    blocklist = TextBlocklist(
+        blocklist_name="my-blocklist",
+        description="Custom terms to block"
+    )
 
-blocklist = TextBlocklist(
-    blocklist_name="my-blocklist",
-    description="Custom terms to block"
-)
-
-result = blocklist_client.create_or_update_text_blocklist(
-    blocklist_name="my-blocklist",
-    options=blocklist
-)
+    result = blocklist_client.create_or_update_text_blocklist(
+        blocklist_name="my-blocklist",
+        options=blocklist
+    )
 ```
 
 ### Add Block Items
@@ -205,18 +231,12 @@ request = AnalyzeTextOptions(
 
 ## Best Practices
 
-1. **Use blocklists** for domain-specific terms
-2. **Set severity thresholds** appropriate for your use case
-3. **Handle multiple categories** — content can be harmful in multiple ways
-4. **Use halt_on_blocklist_hit** for immediate rejection
-5. **Log analysis results** for audit and improvement
-6. **Consider 8-severity mode** for finer-grained control
-7. **Pre-moderate AI outputs** before showing to users
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+1. **Pick sync OR async and stay consistent.** Do not mix `azure.ai.contentsafety` sync clients with `azure.ai.contentsafety.aio` async clients in the same call path. Choose one mode per module.
+2. **Always use context managers for clients and async credentials.** Wrap every client in `with ContentSafetyClient(...) as client:` (sync) or `async with ContentSafetyClient(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
+3. **Use blocklists** for domain-specific terms
+4. **Set severity thresholds** appropriate for your use case
+5. **Handle multiple categories** — content can be harmful in multiple ways
+6. **Use halt_on_blocklist_hit** for immediate rejection
+7. **Log analysis results** for audit and improvement
+8. **Consider 8-severity mode** for finer-grained control
+9. **Pre-moderate AI outputs** before showing to users

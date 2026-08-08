@@ -1,7 +1,7 @@
 ---
 # agentskills.io compliant frontmatter
 name: clarity-gate
-risk: critical
+risk: unknown
 source: community
 version: 2.1.3
 description: >

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import re
 import io
 import json
 import sys
@@ -132,10 +131,7 @@ def export_csv():
         extrasaction="ignore",
     )
     writer.writeheader()
-    writer.writerows({
-        key: ("'" + value if isinstance(value, str) and re.match(r"^[\x00-\x20]*[=+@-]", value) else value)
-        for key, value in record.items()
-    } for record in records)
+    writer.writerows(records)
     output.seek(0)
 
     return StreamingResponse(

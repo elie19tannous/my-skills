@@ -47,12 +47,9 @@ uv venv
 **Install uv if needed:**
 ```bash
 # macOS/Linux
-tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/uv-install.XXXXXX")" || exit 1
-trap 'rm -rf "$tmpdir"' EXIT
-curl -fsSL https://astral.sh/uv/install.sh -o "$tmpdir/install.sh"
-less "$tmpdir/install.sh"
-# Run only after reviewing the complete script and confirming the source:
-sh "$tmpdir/install.sh"
+curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+less /tmp/uv-install.sh
+sh /tmp/uv-install.sh
 
 # Or with pip
 pip install uv
@@ -378,12 +375,9 @@ response = collection.query.hybrid(
 
 ```bash
 # Install Ollama (macOS/Linux)
-tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/ollama-install.XXXXXX")" || exit 1
-trap 'rm -rf "$tmpdir"' EXIT
-curl -fsSL https://ollama.com/install.sh -o "$tmpdir/install.sh"
-less "$tmpdir/install.sh"
-# Run only after reviewing the complete script and confirming the source:
-sh "$tmpdir/install.sh"
+curl -fsSL https://ollama.com/install.sh -o /tmp/ollama-install.sh
+less /tmp/ollama-install.sh
+sh /tmp/ollama-install.sh
 
 # Or on macOS with Homebrew
 brew install ollama

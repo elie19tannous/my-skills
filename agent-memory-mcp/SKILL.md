@@ -1,7 +1,7 @@
 ---
 name: agent-memory-mcp
 description: "A hybrid memory system that provides persistent, searchable knowledge management for AI agents (Architecture, Patterns, Decisions)."
-risk: critical
+risk: unknown
 source: community
 date_added: "2026-02-27"
 ---
@@ -16,29 +16,18 @@ This skill provides a persistent, searchable memory bank that automatically sync
 
 ## Setup
 
-1. **Review the Repository**:
-   Ask the user to approve network access to the named repository, then clone the
-   pinned revision into a temporary directory, not an active skills path:
+1. **Clone the Repository**:
+   Clone the `agentMemory` project into your agent's workspace or a parallel directory:
 
    ```bash
-   review_dir="$(mktemp -d)"
-   git clone --filter=blob:none https://github.com/webzler/agentMemory.git "$review_dir/agent-memory"
-   git -C "$review_dir/agent-memory" checkout --detach 0409b7b7bb6fe443d0d4b6a6b1ee0d4df214f3cd
-   git -C "$review_dir/agent-memory" ls-files
+   git clone https://github.com/webzler/agentMemory.git .agent/skills/agent-memory
    ```
 
-   Read all bundled files and inspect `package.json`, lockfiles, lifecycle
-   scripts, network behavior, credential access, and filesystem scope. Show the
-   findings and exact commit, then wait for explicit user approval.
-
-2. **Install the Reviewed Revision**:
-
-   Copy the reviewed tree to a user-selected location after approval. Install
-   locked dependencies only after the package scripts have been reviewed:
+2. **Install Dependencies**:
 
    ```bash
-   cd <approved-agent-memory-directory>
-   npm ci
+   cd .agent/skills/agent-memory
+   npm install
    npm run compile
    ```
 
@@ -101,4 +90,3 @@ This skill is applicable to execute the workflow or actions described in the ove
 - Use this skill only when the task clearly matches the scope described above.
 - Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
 - Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
-- Re-review upstream before changing the pinned revision; a commit pin improves reproducibility but is not a trust guarantee.

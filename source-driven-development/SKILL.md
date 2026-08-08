@@ -1,13 +1,6 @@
 ---
 name: source-driven-development
 description: Grounds every implementation decision in official documentation. Use when you want authoritative, source-cited code free from outdated patterns. Use when building with any framework or library where correctness matters.
-risk: critical
-source: https://github.com/addyosmani/agent-skills/tree/main/skills/source-driven-development
-source_repo: addyosmani/agent-skills
-source_type: community
-date_added: 2026-07-01
-license: MIT
-license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
 ---
 
 # Source-Driven Development
@@ -199,9 +192,3 @@ After implementing with source-driven development:
 - [ ] No deprecated APIs are used (checked against migration guides)
 - [ ] Conflicts between docs and existing code were surfaced to the user
 - [ ] Anything that could not be verified is explicitly flagged as unverified
-
-## Limitations
-
-- Use this skill only when the task clearly matches its upstream source and local project context.
-- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
-- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

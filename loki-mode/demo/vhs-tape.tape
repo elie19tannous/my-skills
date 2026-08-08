@@ -28,7 +28,7 @@ Show
 
 # Step 1: Show we're starting Claude Code
 Sleep 1s
-Type "claude"
+Type "claude --dangerously-skip-permissions"
 Enter
 Sleep 2s
 

@@ -1,9 +1,12 @@
 ---
 name: azure-ai-document-intelligence-dotnet
-description: Azure AI Document Intelligence SDK for .NET. Extract text, tables, and structured data from documents using prebuilt and custom models.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure AI Document Intelligence SDK for .NET. Extract text, tables, and structured data from documents using prebuilt and custom models. Use for invoice processing, receipt extraction, ID document analysis, and custom document models. Triggers: "Document Intelligence", "DocumentIntelligenceClient", "form recognizer", "invoice extraction", "receipt OCR", "document analysis .NET".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.AI.DocumentIntelligence
 ---
 
 # Azure.AI.DocumentIntelligence (.NET)
@@ -22,21 +25,28 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-DOCUMENT_INTELLIGENCE_ENDPOINT=https://<resource-name>.cognitiveservices.azure.com/
-DOCUMENT_INTELLIGENCE_API_KEY=<your-api-key>
-BLOB_CONTAINER_SAS_URL=https://<storage>.blob.core.windows.net/<container>?<sas-token>
+DOCUMENT_INTELLIGENCE_ENDPOINT=https://<resource-name>.cognitiveservices.azure.com/  # Required: Document Intelligence endpoint
+DOCUMENT_INTELLIGENCE_API_KEY=<your-api-key>  # Only required for AzureKeyCredential auth
+BLOB_CONTAINER_SAS_URL=https://<storage>.blob.core.windows.net/<container>?<sas-token>  # Optional: blob container SAS URL for training data
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
-### Microsoft Entra ID (Recommended)
+### Microsoft Entra Token Credential
 
 ```csharp
 using Azure.Identity;
 using Azure.AI.DocumentIntelligence;
 
 string endpoint = Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT");
-var credential = new DefaultAzureCredential();
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 var client = new DocumentIntelligenceClient(new Uri(endpoint), credential);
 ```
 
@@ -336,11 +346,3 @@ catch (RequestFailedException ex)
 | GitHub Samples | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/documentintelligence/Azure.AI.DocumentIntelligence/samples |
 | Document Intelligence Studio | https://documentintelligence.ai.azure.com/ |
 | Prebuilt Models | https://aka.ms/azsdk/formrecognizer/models |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

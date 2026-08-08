@@ -1,7 +1,7 @@
 ---
 name: ml-engineer
 description: Build production ML systems with PyTorch 2.x, TensorFlow, and modern ML frameworks. Implements model serving, feature engineering, A/B testing, and monitoring.
-risk: critical
+risk: unknown
 source: community
 date_added: '2026-02-27'
 ---

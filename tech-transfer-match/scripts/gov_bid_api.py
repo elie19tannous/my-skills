@@ -14,7 +14,7 @@ from typing import Optional, List, Dict, Any
 # 配置
 # ─────────────────────────────────────────────
 BASE_URL = "https://gate.gov-bid.com/outer-gateway/bid"
-API_KEY  = "c25c774b2b1d4e15adfd0a1ebded3adb"
+API_KEY  = "${GOV_BID_API_KEY}"
 TIMEOUT  = 15  # 秒
 USER_ID  = 88  # 文档固定值
 

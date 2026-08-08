@@ -1,7 +1,7 @@
 ---
 name: project-development
 description: "This skill covers the principles for identifying tasks suited to LLM processing, designing effective project architectures, and iterating rapidly using agent-assisted development."
-risk: critical
+risk: unknown
 source: community
 ---
 

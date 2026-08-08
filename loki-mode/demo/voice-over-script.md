@@ -16,9 +16,9 @@ Complete narration for Loki Mode demo video.
 
 ## Setup (0:30 - 1:00)
 
-> First, we launch Claude Code with normal permission prompts enabled so sensitive actions remain reviewable.
+> First, we launch Claude Code with the dangerously-skip-permissions flag. This allows Loki Mode to run autonomously without asking for confirmation at every step.
 >
-> [Show terminal: `claude`]
+> [Show terminal: `claude --dangerously-skip-permissions`]
 >
 > Now we invoke Loki Mode with our PRD.
 
@@ -216,7 +216,7 @@ Complete narration for Loki Mode demo video.
 >
 > Install it as a Claude Code skill and start building.
 >
-> Keep normal permission prompts enabled throughout the run.
+> Remember to use the dangerously-skip-permissions flag for full autonomy.
 >
 > Thanks for watching!
 

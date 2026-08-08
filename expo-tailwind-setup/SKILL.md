@@ -1,11 +1,20 @@
 ---
 name: expo-tailwind-setup
-description: Framework (OSS). Set up Tailwind CSS v4 in Expo with react-native-css and NativeWind v5 for universal styling
-version: 1.0.0
+description: Set up Tailwind CSS v4 in Expo with react-native-css and NativeWind v5 for universal styling
+risk: unknown
+source: https://github.com/expo/skills/tree/main/plugins/expo/skills/expo-tailwind-setup
+source_repo: expo/skills
+source_type: official
+date_added: 2026-07-01
 license: MIT
+license_source: https://github.com/expo/skills/blob/main/LICENSE
 ---
 
 # Tailwind CSS Setup for Expo with react-native-css
+## When to Use
+
+Use this skill when you need set up Tailwind CSS v4 in Expo with react-native-css and NativeWind v5 for universal styling.
+
 
 This guide covers setting up Tailwind CSS v4 in Expo using react-native-css and NativeWind v5 for universal styling across iOS, Android, and Web.
 
@@ -479,10 +488,8 @@ Add className to component props:
 type Props = React.ComponentProps<typeof RNView> & { className?: string };
 ```
 
-## Submitting Feedback
-If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
-```bash
-npx --yes submit-expo-feedback@latest --category skills --subject "expo-tailwind-setup" "<actionable feedback>"
-```
-Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
-If an AI agent repeatedly failed or the user had to take over an Expo task, load the expo-skill-feedback skill and follow its eval-candidate flow instead of reusing the command above.
+## Limitations
+
+- Use this skill only when the task clearly matches its upstream product or API scope.
+- Verify commands, API behavior, pricing, quotas, credentials, and deployment effects against current official documentation before making changes.
+- Do not treat generated examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

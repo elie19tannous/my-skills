@@ -1,9 +1,12 @@
 ---
 name: azure-resource-manager-mysql-dotnet
-description: Azure MySQL Flexible Server SDK for .NET. Database management for MySQL Flexible Server deployments.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure MySQL Flexible Server SDK for .NET. Database management for MySQL Flexible Server deployments. Use for creating servers, databases, firewall rules, configurations, backups, and high availability. Triggers: "MySQL", "MySqlFlexibleServer", "MySQL Flexible Server", "Azure Database for MySQL", "MySQL database management", "MySQL firewall", "MySQL backup".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.ResourceManager.MySql
 ---
 
 # Azure.ResourceManager.MySql (.NET)
@@ -25,9 +28,10 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id>
-AZURE_RESOURCE_GROUP=<your-resource-group>
-AZURE_MYSQL_SERVER_NAME=<your-mysql-server>
+AZURE_SUBSCRIPTION_ID=<your-subscription-id>  # Required: Azure subscription ID
+AZURE_RESOURCE_GROUP=<your-resource-group>  # Required: resource group name
+AZURE_MYSQL_SERVER_NAME=<your-mysql-server>  # Required: MySQL Flexible Server name
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -38,7 +42,14 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.MySql;
 using Azure.ResourceManager.MySql.FlexibleServers;
 
-ArmClient client = new ArmClient(new DefaultAzureCredential());
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
+ArmClient client = new ArmClient(credential);
 ```
 
 ## Resource Hierarchy
@@ -60,7 +71,6 @@ Subscription
 ### 1. Create MySQL Flexible Server
 
 ```csharp
-using System;
 using Azure.ResourceManager.MySql.FlexibleServers;
 using Azure.ResourceManager.MySql.FlexibleServers.Models;
 
@@ -75,7 +85,7 @@ MySqlFlexibleServerData data = new MySqlFlexibleServerData(AzureLocation.EastUS)
 {
     Sku = new MySqlFlexibleServerSku("Standard_D2ds_v4", MySqlFlexibleServerSkuTier.GeneralPurpose),
     AdministratorLogin = "mysqladmin",
-    AdministratorLoginPassword = Environment.GetEnvironmentVariable("MYSQL_ADMIN_PASSWORD") ?? throw new InvalidOperationException("MYSQL_ADMIN_PASSWORD is required"),
+    AdministratorLoginPassword = "YourSecurePassword123!",
     Version = MySqlFlexibleServerVersion.Ver8_0_21,
     Storage = new MySqlFlexibleServerStorage
     {
@@ -392,11 +402,3 @@ string connectionString = $"Server={server.Data.FullyQualifiedDomainName};" +
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.resourcemanager.mysql |
 | Product Documentation | https://learn.microsoft.com/azure/mysql/flexible-server/ |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/mysql/Azure.ResourceManager.MySql |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

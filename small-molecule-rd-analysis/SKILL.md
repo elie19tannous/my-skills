@@ -7,7 +7,7 @@ description: "分析小分子结构、性质、合成路线和研发风险。适
 
 ## 技能定位
 
-本技能是化学分子领域的专业情报分析平台，通过集成 MCP 工具（`https://connect.zhihuiya.com/713886/logic-mcp?apikey=sk-3F0NsY7KOt2ZyO72XkgwUIwD80xSfBjCNKp7juA92d0HWpKu`）访问智慧芽化学分子数据库，为用户提供：
+本技能是化学分子领域的专业情报分析平台，通过集成 MCP 工具（`https://connect.zhihuiya.com/713886/logic-mcp?apikey=<YOUR_ZHIHUIYA_API_KEY>`）访问智慧芽化学分子数据库，为用户提供：
 
 - **化合物搜索**：按名称、CAS号、SMILES、InChI等多维度检索化合物
 - **结构分析**：分子结构相似性搜索、子结构搜索、骨架分析
@@ -37,7 +37,7 @@ description: "分析小分子结构、性质、合成路线和研发风险。适
 
 ## MCP 工具配置
 
-**MCP 端点**：`https://connect.zhihuiya.com/713886/logic-mcp?apikey=sk-3F0NsY7KOt2ZyO72XkgwUIwD80xSfBjCNKp7juA92d0HWpKu`
+**MCP 端点**：`https://connect.zhihuiya.com/713886/logic-mcp?apikey=<YOUR_ZHIHUIYA_API_KEY>`
 
 调用前必须先通过 `activate_skill` 激活本技能，并按照 MCP 工具返回的可用工具列表选择合适的工具执行任务。
 

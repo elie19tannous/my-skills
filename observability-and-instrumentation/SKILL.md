@@ -1,13 +1,6 @@
 ---
 name: observability-and-instrumentation
-description: Instruments code so production behavior is visible and diagnosable. Use when adding logging, metrics, tracing, or alerting. Use when shipping any feature that runs in production and you need evidence it works. Use when production issues are reported but you can't tell what happened...
-risk: critical
-source: https://github.com/addyosmani/agent-skills/tree/main/skills/observability-and-instrumentation
-source_repo: addyosmani/agent-skills
-source_type: community
-date_added: 2026-07-01
-license: MIT
-license_source: https://github.com/addyosmani/agent-skills/blob/main/LICENSE
+description: Instruments code so production behavior is visible and diagnosable. Use when adding logging, metrics, tracing, or alerting. Use when shipping any feature that runs in production and you need evidence it works. Use when production issues are reported but you can't tell what happened from the available data.
 ---
 
 # Observability and Instrumentation
@@ -208,9 +201,3 @@ After instrumenting a feature, confirm:
 - [ ] An induced failure in staging was located via telemetry alone, without reading the source
 
 For the at-a-glance version of this list, including the pre-launch instrumentation gate, see `references/observability-checklist.md`.
-
-## Limitations
-
-- Use this skill only when the task clearly matches its upstream source and local project context.
-- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
-- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

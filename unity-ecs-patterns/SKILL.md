@@ -1,16 +1,13 @@
 ---
 name: unity-ecs-patterns
-description: "Production patterns for Unity's Data-Oriented Technology Stack (DOTS) including Entity Component System, Job System, and Burst Compiler."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: Master Unity ECS (Entity Component System) with DOTS, Jobs, and Burst for high-performance game development. Use when building data-oriented games, optimizing performance, or working with large entity counts.
 ---
 
 # Unity ECS Patterns
 
 Production patterns for Unity's Data-Oriented Technology Stack (DOTS) including Entity Component System, Job System, and Burst Compiler.
 
-## Use this skill when
+## When to Use This Skill
 
 - Building high-performance Unity games
 - Managing thousands of entities efficiently
@@ -19,23 +16,47 @@ Production patterns for Unity's Data-Oriented Technology Stack (DOTS) including 
 - Converting OOP game code to ECS
 - Using Jobs and Burst for parallelization
 
-## Do not use this skill when
+## Core Concepts
 
-- The task is unrelated to unity ecs patterns
-- You need a different domain or tool outside this scope
+### 1. ECS vs OOP
 
-## Instructions
+| Aspect      | Traditional OOP   | ECS/DOTS        |
+| ----------- | ----------------- | --------------- |
+| Data layout | Object-oriented   | Data-oriented   |
+| Memory      | Scattered         | Contiguous      |
+| Processing  | Per-object        | Batched         |
+| Scaling     | Poor with count   | Linear scaling  |
+| Best for    | Complex behaviors | Mass simulation |
 
-- Clarify goals, constraints, and required inputs.
-- Apply relevant best practices and validate outcomes.
-- Provide actionable steps and verification.
-- If detailed examples are required, open `resources/implementation-playbook.md`.
+### 2. DOTS Components
 
-## Resources
+```
+Entity: Lightweight ID (no data)
+Component: Pure data (no behavior)
+System: Logic that processes components
+World: Container for entities
+Archetype: Unique combination of components
+Chunk: Memory block for same-archetype entities
+```
 
-- `resources/implementation-playbook.md` for detailed patterns and examples.
+## Detailed patterns and worked examples
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
+
+## Best Practices
+
+### Do's
+
+- **Use ISystem over SystemBase** - Better performance
+- **Burst compile everything** - Massive speedup
+- **Batch structural changes** - Use ECB
+- **Profile with Profiler** - Identify bottlenecks
+- **Use Aspects** - Clean component grouping
+
+### Don'ts
+
+- **Don't use managed types** - Breaks Burst
+- **Don't structural change in jobs** - Use ECB
+- **Don't over-architect** - Start simple
+- **Don't ignore chunk utilization** - Group similar entities
+- **Don't forget disposal** - Native collections leak

@@ -1,20 +1,15 @@
 ---
 name: azure-servicebus-rust
-description: 'Azure Service Bus library for Rust. Send and receive messages using queues, topics, and subscriptions. Triggers: "service bus rust", "ServiceBusClient rust", "send message servicebus rust", "receive message servicebus rust", "queue rust messaging", "topic subscription rust".'
-risk: critical
-source: https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-servicebus-rust
-source_repo: microsoft/skills
-source_type: official
-date_added: 2026-07-01
+description: |
+  Azure Service Bus library for Rust. Send and receive messages using queues, topics, and subscriptions.
+  Triggers: "service bus rust", "ServiceBusClient rust", "send message servicebus rust", "receive message servicebus rust", "queue rust messaging", "topic subscription rust".
 license: MIT
-license_source: https://github.com/microsoft/skills/blob/main/LICENSE
+metadata:
+  author: Microsoft
+  package: azure_messaging_servicebus
 ---
 
 # Azure Service Bus library for Rust
-## When to Use
-
-Use this skill when you need azure Service Bus library for Rust. Send and receive messages using queues, topics, and subscriptions. Triggers: "service bus rust", "ServiceBusClient rust", "send message servicebus rust", "receive message servicebus rust", "queue rust messaging", "topic subscription rust".
-
 
 Client library for Azure Service Bus — enterprise message broker with queues and publish-subscribe topics.
 
@@ -174,9 +169,3 @@ For Entra ID auth, assign one of these roles:
 | API Reference | https://docs.rs/azure_messaging_servicebus/latest/azure_messaging_servicebus                    |
 | crates.io     | https://crates.io/crates/azure_messaging_servicebus                                             |
 | Source Code   | https://github.com/Azure/azure-sdk-for-rust/tree/main/sdk/servicebus/azure_messaging_servicebus |
-
-## Limitations
-
-- Use this skill only when the task clearly matches its upstream source and local project context.
-- Verify commands, generated code, dependencies, credentials, and external service behavior before applying changes.
-- Do not treat examples as a substitute for environment-specific tests, security review, or user approval for destructive or costly actions.

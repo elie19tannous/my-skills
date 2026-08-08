@@ -1,7 +1,7 @@
 ---
 name: mermaid-expert
 description: Create Mermaid diagrams for flowcharts, sequences, ERDs, and architectures. Masters syntax for all diagram types and styling.
-risk: critical
+risk: unknown
 source: community
 date_added: '2026-02-27'
 ---

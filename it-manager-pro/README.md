@@ -38,4 +38,4 @@ To keep responses concise and high-value, the skill will provide a core answer f
 - `examples/`: Practical scenarios for crisis management, budgeting, and strategy.
 
 ---
-*Powered by Agentic Skills Ecosystem.*
+*Powered by Antigravity Skills Ecosystem.*

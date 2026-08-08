@@ -1,7 +1,7 @@
 ---
 name: code-showcase-testing-patterns
 description: Jest testing patterns, factory functions, mocking strategies, and TDD workflow. Use when writing unit tests, creating test factories, or following TDD red-green-refactor cycle.
-risk: critical
+risk: unknown
 source: https://github.com/ChrisWiles/claude-code-showcase/tree/main/.claude/skills/testing-patterns
 source_repo: ChrisWiles/claude-code-showcase
 source_type: community

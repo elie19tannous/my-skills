@@ -1,7 +1,7 @@
 ---
 name: xlsx-official
 description: "Unless otherwise stated by the user or existing template"
-risk: critical
+risk: unknown
 source: community
 date_added: "2026-02-27"
 ---

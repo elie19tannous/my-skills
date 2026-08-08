@@ -1,9 +1,12 @@
 ---
 name: azure-storage-file-share-ts
-description: Azure File Share JavaScript/TypeScript SDK (@azure/storage-file-share) for SMB file share operations.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure File Share JavaScript/TypeScript SDK (@azure/storage-file-share) for SMB file share operations. Use for creating shares, managing directories, uploading/downloading files, and handling file metadata. Supports Azure Files SMB protocol scenarios. Triggers: "file share", "@azure/storage-file-share", "ShareServiceClient", "ShareClient", "SMB", "Azure Files".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: '@azure/storage-file-share'
 ---
 
 # @azure/storage-file-share (TypeScript/JavaScript)
@@ -26,6 +29,7 @@ AZURE_STORAGE_ACCOUNT_NAME=<account-name>
 AZURE_STORAGE_ACCOUNT_KEY=<account-key>
 # OR connection string
 AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
+AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -55,16 +59,22 @@ const client = new ShareServiceClient(
 );
 ```
 
-### DefaultAzureCredential
+### Microsoft Entra Token Credential
 
 ```typescript
 import { ShareServiceClient } from "@azure/storage-file-share";
-import { DefaultAzureCredential } from "@azure/identity";
+import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
+// const credential = new ManagedIdentityCredential();
 
 const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME!;
 const client = new ShareServiceClient(
   `https://${accountName}.file.core.windows.net`,
-  new DefaultAzureCredential()
+  credential
 );
 ```
 
@@ -472,7 +482,7 @@ import {
 ## Best Practices
 
 1. **Use connection strings for simplicity** — Easiest setup for development
-2. **Use DefaultAzureCredential for production** — Enable managed identity in Azure
+2. **Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production**
 3. **Set quotas on shares** — Prevent unexpected storage costs
 4. **Use streaming for large files** — `uploadStream`/`downloadToFile` for files > 256MB
 5. **Use ranges for partial updates** — More efficient than full file replacement
@@ -492,11 +502,3 @@ import {
 | SAS generation | ✅ | ❌ |
 | DefaultAzureCredential | ✅ | ❌ |
 | Anonymous/SAS access | ✅ | ✅ |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

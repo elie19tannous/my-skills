@@ -310,7 +310,7 @@ def main() -> int:
     word_count = len(transcript.split()) if transcript else 0
     seeds = detect_seeds(transcript) if transcript else []
 
-    body = markdown_text(transcript) if transcript else (
+    body = transcript or (
         f"# {markdown_text(title)}\n\n"
         f"No subtitles or auto-captions available for this video.\n\n"
         "To capture this transcript, add captions to the source video or transcribe the audio "

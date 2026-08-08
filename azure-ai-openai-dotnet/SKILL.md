@@ -1,9 +1,12 @@
 ---
 name: azure-ai-openai-dotnet
-description: Azure OpenAI SDK for .NET. Client library for Azure OpenAI and OpenAI services. Use for chat completions, embeddings, image generation, audio transcription, and assistants.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure OpenAI SDK for .NET. Client library for Azure OpenAI and OpenAI services. Use for chat completions, embeddings, image generation, audio transcription, and assistants. Triggers: "Azure OpenAI", "AzureOpenAIClient", "ChatClient", "chat completions .NET", "GPT-4", "embeddings", "DALL-E", "Whisper", "OpenAI .NET".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.AI.OpenAI
 ---
 
 # Azure.AI.OpenAI (.NET)
@@ -24,9 +27,10 @@ dotnet add package OpenAI
 ## Environment Variables
 
 ```bash
-AZURE_OPENAI_ENDPOINT=https://<resource-name>.openai.azure.com
-AZURE_OPENAI_API_KEY=<api-key>                    # For key-based auth
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini          # Your deployment name
+AZURE_OPENAI_ENDPOINT=https://<resource-name>.openai.azure.com  # Required: Azure OpenAI endpoint
+AZURE_OPENAI_API_KEY=<api-key>  # Only required for AzureKeyCredential auth
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini  # Required: model deployment name
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Client Hierarchy
@@ -53,15 +57,22 @@ AzureOpenAIClient client = new(
     new AzureKeyCredential(Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY")!));
 ```
 
-### Microsoft Entra ID (Recommended for Production)
+### Microsoft Entra Token Credential
 
 ```csharp
 using Azure.Identity;
 using Azure.AI.OpenAI;
 
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 AzureOpenAIClient client = new(
     new Uri(Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT")!),
-    new DefaultAzureCredential());
+    credential);
 ```
 
 ### Using OpenAI SDK Directly with Azure
@@ -454,11 +465,3 @@ catch (RequestFailedException ex)
 | Migration Guide (1.0→2.0) | https://learn.microsoft.com/azure/ai-services/openai/how-to/dotnet-migration |
 | Quickstart | https://learn.microsoft.com/azure/ai-services/openai/quickstart |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/openai/Azure.AI.OpenAI |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

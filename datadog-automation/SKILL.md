@@ -1,16 +1,14 @@
 ---
 name: datadog-automation
 description: "Automate Datadog tasks via Rube MCP (Composio): query metrics, search logs, manage monitors/dashboards, create events and downtimes. Always search tools first for current schemas."
-requires:
-  mcp: [rube]
-category: observability
+risk: critical
+source: community
+date_added: "2026-02-27"
 ---
 
 # Datadog Automation via Rube MCP
 
 Automate Datadog monitoring and observability operations through Composio's Datadog toolkit via Rube MCP.
-
-**Toolkit docs**: [composio.dev/toolkits/datadog](https://composio.dev/toolkits/datadog)
 
 ## Prerequisites
 
@@ -237,5 +235,10 @@ logs("service:web status:error").index("main").rollup("count").last("5m") > 10
 | List hosts | DATADOG_LIST_HOSTS | filter, sort_field |
 | Get trace | DATADOG_GET_TRACE_BY_ID | trace_id |
 
----
-*Powered by [Composio](https://composio.dev)*
+## When to Use
+This skill is applicable to execute the workflow or actions described in the overview.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

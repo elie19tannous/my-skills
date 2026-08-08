@@ -1,7 +1,7 @@
 ---
 name: multi-platform-apps-multi-platform
 description: "Build and deploy the same feature consistently across web, mobile, and desktop platforms using API-first architecture and parallel implementation strategies."
-risk: critical
+risk: unknown
 source: community
 date_added: "2026-02-27"
 ---

@@ -1,7 +1,7 @@
 ---
 name: hig-inputs
 description: "Check for .claude/apple-design-context.md before asking questions. Use existing context and only ask for information not already covered."
-risk: none
+risk: unknown
 source: community
 date_added: '2026-02-27'
 ---

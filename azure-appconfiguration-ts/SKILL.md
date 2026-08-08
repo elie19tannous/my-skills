@@ -1,9 +1,11 @@
 ---
 name: azure-appconfiguration-ts
-description: "Centralized configuration management with feature flags and dynamic refresh."
-risk: critical
-source: community
-date_added: "2026-02-27"
+description: Build applications using Azure App Configuration SDK for JavaScript (@azure/app-configuration). Use when working with configuration settings, feature flags, Key Vault references, dynamic refresh, or centralized configuration management.
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: '@azure/app-configuration'
 ---
 
 # Azure App Configuration SDK for TypeScript
@@ -29,18 +31,24 @@ npm install @microsoft/feature-management
 AZURE_APPCONFIG_ENDPOINT=https://<your-resource>.azconfig.io
 # OR
 AZURE_APPCONFIG_CONNECTION_STRING=Endpoint=https://...;Id=...;Secret=...
+AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
 
 ```typescript
 import { AppConfigurationClient } from "@azure/app-configuration";
-import { DefaultAzureCredential } from "@azure/identity";
+import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
 
-// DefaultAzureCredential (recommended)
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
+// const credential = new ManagedIdentityCredential();
+
 const client = new AppConfigurationClient(
   process.env.AZURE_APPCONFIG_ENDPOINT!,
-  new DefaultAzureCredential()
+  credential
 );
 
 // Connection string
@@ -126,7 +134,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 
 const appConfig = await load(
   process.env.AZURE_APPCONFIG_ENDPOINT!,
-  new DefaultAzureCredential(),
+  new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]}),
   {
     selectors: [
       { keyFilter: "app:*", labelFilter: "production" },
@@ -175,7 +183,7 @@ app.use((req, res, next) => {
 const appConfig = await load(endpoint, credential, {
   selectors: [{ keyFilter: "app:*" }],
   keyVaultOptions: {
-    credential: new DefaultAzureCredential(),
+    credential: new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]}),
     secretRefreshIntervalInMs: 7200_000,  // 2 hours
   },
 });
@@ -349,11 +357,3 @@ import {
 5. **Use snapshots** - For immutable release configurations
 6. **Sentinel pattern** - Use a sentinel key to trigger full refresh
 7. **RBAC roles** - `App Configuration Data Reader` for read-only access
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

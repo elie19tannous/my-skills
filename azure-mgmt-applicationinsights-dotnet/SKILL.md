@@ -1,9 +1,12 @@
 ---
 name: azure-mgmt-applicationinsights-dotnet
-description: Azure Application Insights SDK for .NET. Application performance monitoring and observability resource management.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure Application Insights SDK for .NET. Application performance monitoring and observability resource management. Use for creating Application Insights components, web tests, workbooks, analytics items, and API keys. Triggers: "Application Insights", "ApplicationInsights", "App Insights", "APM", "application monitoring", "web tests", "availability tests", "workbooks".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.ResourceManager.ApplicationInsights
 ---
 
 # Azure.ResourceManager.ApplicationInsights (.NET)
@@ -23,9 +26,10 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id>
-AZURE_RESOURCE_GROUP=<your-resource-group>
-AZURE_APPINSIGHTS_NAME=<your-appinsights-component>
+AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
+AZURE_RESOURCE_GROUP=<your-resource-group> # Required: Azure resource group name
+AZURE_APPINSIGHTS_NAME=<your-appinsights-component> # Required: Application Insights component name
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -35,7 +39,14 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ApplicationInsights;
 
-ArmClient client = new ArmClient(new DefaultAzureCredential());
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
+ArmClient client = new ArmClient(credential);
 ```
 
 ## Resource Hierarchy
@@ -485,11 +496,3 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.resourcemanager.applicationinsights |
 | Product Documentation | https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/applicationinsights/Azure.ResourceManager.ApplicationInsights |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

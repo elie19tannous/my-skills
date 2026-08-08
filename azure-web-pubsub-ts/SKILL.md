@@ -1,9 +1,11 @@
 ---
 name: azure-web-pubsub-ts
-description: "Real-time messaging with WebSocket connections and pub/sub patterns."
-risk: critical
-source: community
-date_added: "2026-02-27"
+description: Build real-time messaging applications using Azure Web PubSub SDKs for JavaScript (@azure/web-pubsub, @azure/web-pubsub-client). Use when implementing WebSocket-based real-time features, pub/sub messaging, group chat, or live notifications.
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: '@azure/web-pubsub, @azure/web-pubsub-client'
 ---
 
 # Azure Web PubSub SDKs for TypeScript
@@ -28,6 +30,7 @@ npm install @azure/web-pubsub-express
 ```bash
 WEBPUBSUB_CONNECTION_STRING=Endpoint=https://<resource>.webpubsub.azure.com;AccessKey=<key>;Version=1.0;
 WEBPUBSUB_ENDPOINT=https://<resource>.webpubsub.azure.com
+AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Server-Side: WebPubSubServiceClient
@@ -36,7 +39,13 @@ WEBPUBSUB_ENDPOINT=https://<resource>.webpubsub.azure.com
 
 ```typescript
 import { WebPubSubServiceClient, AzureKeyCredential } from "@azure/web-pubsub";
-import { DefaultAzureCredential } from "@azure/identity";
+import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
+
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
+// const credential = new ManagedIdentityCredential();
 
 // Connection string
 const client = new WebPubSubServiceClient(
@@ -44,10 +53,10 @@ const client = new WebPubSubServiceClient(
   "chat"  // hub name
 );
 
-// DefaultAzureCredential (recommended)
+// Microsoft Entra Token Credential (recommended)
 const client2 = new WebPubSubServiceClient(
   process.env.WEBPUBSUB_ENDPOINT!,
-  new DefaultAzureCredential(),
+  credential,
   "chat"
 );
 
@@ -304,17 +313,9 @@ import {
 
 ## Best Practices
 
-1. **Use Entra ID auth** - `DefaultAzureCredential` for production
+1. **Use Microsoft Entra Token Credential** - Use `DefaultAzureCredential` for local development; use `ManagedIdentityCredential` or `WorkloadIdentityCredential` for production
 2. **Register handlers before start** - Don't miss initial events
 3. **Use groups for channels** - Organize messages by topic/room
 4. **Handle reconnection** - Client auto-reconnects by default
 5. **Validate in handleConnect** - Reject unauthorized connections early
 6. **Use noEcho** - Prevent message echo back to sender when needed
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

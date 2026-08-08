@@ -1,30 +1,22 @@
 # My Claude Skills
 
-Collection of **14,888 skills** gathered with Claude Code since day 1.
+Collection of 16,015 skills used with Claude Code.
 
-Each top-level folder is one skill — see its `SKILL.md` for what it does and when it triggers.
-16,400 `SKILL.md` files in total (some skills bundle sub-skills).
+Each folder = one skill (see its `SKILL.md`).
 
-## History
+## Contents
 
-| Date | Skills |
-|------|--------|
-| 2026-07-23 | 4,140 |
-| 2026-08-06 | 14,888 |
+Skills span development, DevOps, security, data/AI, design, writing, business,
+research, media generation, and domain-specific workflows.
 
-Latest addition: a GitHub-wide sweep of 345 agent-skill repositories, 238 of them installed —
-covering security/DFIR, academic publishing (per-journal packs), game development,
-Apple/iOS, cloud (AWS/Azure/GCP), legal, finance/trading, design systems, and media generation.
+Sources include Anthropic's official skills, community marketplaces
+(skills.sh, SkillsMP), and individually authored skills.
 
-## Install
+## Notes
 
-```bash
-npx -y skills@latest add elie19tannous/my-skills -g --copy --skill '*' -y
-```
-
-Or copy any single folder into `~/.claude/skills/`.
-
-## Credit
-
-These skills come from many open-source authors across GitHub. Each folder keeps its
-original contents and license where the source repo provided one.
+- Skills are instruction files an agent reads and follows. Review a skill's
+  `SKILL.md` before relying on it — treat third-party skills the way you'd
+  treat any third-party dependency.
+- Credentials found in upstream sources have been redacted and replaced with
+  placeholders or environment-variable references.
+- Skill authorship and licensing remain with the original authors.

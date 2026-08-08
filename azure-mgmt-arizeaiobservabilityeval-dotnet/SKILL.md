@@ -1,9 +1,11 @@
 ---
 name: azure-mgmt-arizeaiobservabilityeval-dotnet
-description: Azure Resource Manager SDK for Arize AI Observability and Evaluation (.NET).
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: "Azure Resource Manager SDK for Arize AI Observability and Evaluation (.NET). Use when managing Arize AI organizations \non Azure via Azure Marketplace, creating/updating/deleting Arize resources, or integrating Arize ML observability \ninto .NET applications. Triggers: \"Arize AI\", \"ML observability\", \"ArizeAIObservabilityEval\", \"Arize organization\".\n"
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.ResourceManager.ArizeAIObservabilityEval
 ---
 
 # Azure.ResourceManager.ArizeAIObservabilityEval
@@ -29,10 +31,11 @@ dotnet add package Azure.ResourceManager.ArizeAIObservabilityEval --version 1.0.
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id>
-AZURE_TENANT_ID=<your-tenant-id>
-AZURE_CLIENT_ID=<your-client-id>
-AZURE_CLIENT_SECRET=<your-client-secret>
+AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_TENANT_ID=<your-tenant-id> # For service principal auth (optional)
+AZURE_CLIENT_ID=<your-client-id> # For service principal auth (optional)
+AZURE_CLIENT_SECRET=<your-client-secret> # For service principal auth (optional)
 ```
 
 ## Authentication
@@ -42,8 +45,13 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ArizeAIObservabilityEval;
 
-// Always use DefaultAzureCredential
-var credential = new DefaultAzureCredential();
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 var armClient = new ArmClient(credential);
 ```
 
@@ -227,11 +235,3 @@ var data = await org.GetAsync();
 - [NuGet Package](https://www.nuget.org/packages/Azure.ResourceManager.ArizeAIObservabilityEval)
 - [Azure SDK for .NET](https://github.com/Azure/azure-sdk-for-net)
 - [Arize AI](https://arize.com/)
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

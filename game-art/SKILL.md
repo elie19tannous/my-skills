@@ -1,7 +1,7 @@
 ---
 name: game-art
 description: "Game art principles. Visual style selection, asset pipeline, animation workflow."
-risk: none
+risk: unknown
 source: community
 date_added: "2026-02-27"
 ---

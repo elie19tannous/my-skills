@@ -1,299 +1,143 @@
 ---
 name: triage
-license: MIT
-description: >-
-  GitHub issue and PR investigator. Pulls open issues/PRs, classifies them, searches
-  the codebase for root cause or reviews contributed code, proposes fixes with file:line
-  references, and optionally implements fixes. Use for investigating GitHub issues and
-  reviewing PRs; do NOT use for general code review unrelated to GitHub issues.
-user-invocable: true
-auto-trigger: false
-trigger_keywords:
-  - triage
-  - open issues
-  - unlabeled issues
-  - review pr
-  - review prs
-  - investigate issue
-effort: high
-last-updated: 2026-03-24
+description: Move issues and external PRs through a state machine of triage roles — categorise, verify, grill if needed, and write agent-ready briefs.
+disable-model-invocation: true
+category: "development"
+risk: "safe"
+source: "community"
+source_repo: "mattpocock/skills"
+source_type: "community"
+date_added: "2026-06-19"
+author: "Matt Pocock"
+license: "MIT"
+license_source: "https://github.com/mattpocock/skills/blob/main/LICENSE"
+tags:
+  - engineering
+  - workflow
+  - coding-agents
+tools:
+  - claude-code
+  - codex-cli
+  - cursor
 ---
 
-# Triage — GitHub Issue & PR Investigator
+# Triage
 
 ## When to Use
 
-**Don't use when:** fixing a specific already-diagnosed issue (use /marshal); monitoring a single PR's CI (use /pr-watch); reviewing code quality outside of GitHub issues (use /review).
+Use when this workflow matches the user request: Move issues and external PRs through a state machine of triage roles — categorise, verify, grill if needed, and write agent-ready briefs.
 
-- `/triage` — triage all open, unlabeled issues
-- `/triage 10` — investigate issue #10 specifically
-- `/triage pr 13` — review PR #13
-- `/triage prs` — review all open PRs
-- `/triage --batch` — pull all open issues, classify, investigate, report
-- `/triage --stale` — find issues older than 14 days with no activity
-- After the `issue-monitor` SessionStart hook reports new issues
 
-## Codex PR review integration
+_Source: [mattpocock/skills](https://github.com/mattpocock/skills) (MIT)._
 
-For Codex-visible PRs, decide whether to use native `@codex review`, local Citadel triage, or both:
+Move issues on the project issue tracker through a small state machine of triage roles.
 
-```bash
-node scripts/codex-pr-review.js plan --repo <owner/repo> --pr <number> --risk <low|medium|high|local-only> --write
-```
+If this repo treats external pull requests as a request surface (see the issue-tracker config), triage covers them too: **a PR is an issue with attached code** — same roles, same states, same machine, with a few deltas marked "for a PR" below. Resolve a bare `#42` to an issue or PR per the tracker config.
 
-Use native `@codex review` when the diff is GitHub-visible and the main need is a focused P0/P1 review. Use local Citadel triage when the answer depends on unpushed files, local generated artifacts, or hands-on edits. Use both for large or risky PRs.
-
-After Codex posts a GitHub review, fetch and ingest the review comments before deciding merge readiness:
-
-```bash
-node scripts/codex-review-fetch.js --repo <owner/repo> --pr <number> --write
-```
-
-Use `--file <review-comments.json>` with the same script when working from exported/offline review data.
-
-Treat ingested P0/P1 findings as blockers until local verification confirms they are fixed or not applicable.
-
-## Inputs
-
-| Input | Source | Required |
-|-------|--------|----------|
-| Issue/PR number | Argument (e.g., `/triage 10`, `/triage pr 13`) | No — omit to triage all open |
-| Mode | `pr` prefix for PRs | No — defaults to issues |
-| Repo | Auto-detected from git remote | Yes (auto) |
-| gh CLI | `"/c/Program Files/GitHub CLI/gh.exe"` on Windows, `gh` elsewhere | Yes (auto) |
-
-## Execution Protocol
-
-### Phase 0 — Environment Setup
-
-1. Detect repo from `git remote get-url origin`, extract `owner/repo`
-2. Verify `gh` auth status
-3. Set `$GH`: Windows → `"/c/Program Files/GitHub CLI/gh.exe"`, other → `gh`
-
-### Phase 1 — Issue Intake
-
-**Single issue** (`/triage 10`):
-```
-$GH issue view <number> --repo <owner/repo> --json number,title,body,labels,state,comments,createdAt,updatedAt,author,assignees
-```
-
-**Batch** (`/triage` or `--batch`):
-```
-$GH issue list --repo <owner/repo> --state open --json number,title,labels,createdAt,updatedAt --limit 50
-```
-Filter to untriaged: issues with no labels, or missing priority/type label.
-
-**Stale** (`--stale`):
-```
-$GH issue list --repo <owner/repo> --state open --json number,title,labels,createdAt,updatedAt --limit 100
-```
-Filter to issues with no activity in 14+ days.
-
-**Single PR** (`/triage pr 13`):
-```
-$GH pr view <number> --repo <owner/repo> --json number,title,body,author,state,files,commits,comments,createdAt,headRefName,baseRefName,mergeable,reviewDecision
-$GH pr diff <number> --repo <owner/repo>
-```
-
-**All PRs** (`/triage prs`):
-```
-$GH pr list --repo <owner/repo> --state open --json number,title,author,createdAt,labels --limit 50
-```
-
-### Phase 1b — PR Review Protocol
-
-#### PR Classification
-
-| Type | Signal |
-|------|--------|
-| `bugfix` | Fixes a reported issue, closes #N |
-| `feature` | Adds new functionality |
-| `refactor` | Restructures without changing behavior |
-| `docs` | Documentation only |
-| `infra` | CI/CD, build, packaging, installer |
-
-#### PR Review Checklist
-
-1. Read the full diff — not just the PR description.
-2. Check for regressions against closed issues and recent commits.
-3. Check for conflicts with in-flight work (same files as open PRs).
-4. Verify the approach: correct solution, not overly complex.
-5. Check cross-platform: Unix assumptions, Windows path handling.
-6. Check conventions against existing project patterns.
-7. Check for scope creep beyond the PR title.
-
-#### PR Resolution
-
-Write a per-PR resolution block (full template: docs/TRIAGE.md#pr-resolution-template) with:
-- Author, type, files changed count, mergeable status
-- What it does (1-3 sentences)
-- Review findings, each with a file:line reference
-- Issues found, split into **Critical** (blocks merge) and **Non-critical** (nice to fix, not blocking)
-- Recommendation checkbox: Approve / Request changes (with the specific changes needed) / Close (with reason)
-
-#### PR Actions
-
-**IMPORTANT:** All PR actions are external. Show the user the exact comment text and get approval before posting.
-
-### Phase 2 — Classification
-
-**Type** (exactly one):
-| Type | Signal |
-|------|--------|
-| `bug` | Error messages, "doesn't work", stack traces, regression |
-| `feature` | "Would be nice", "add support for" |
-| `question` | "How do I", "is it possible" |
-| `docs` | README/documentation issues |
-| `infra` | CI/CD, build, packaging, dependencies |
-
-**Severity** (bugs only):
-| Severity | Criteria |
-|----------|----------|
-| `critical` | Blocks installation or core functionality for all users |
-| `high` | Breaks a major feature or affects many users |
-| `medium` | Breaks a minor feature or has a workaround |
-| `low` | Cosmetic, edge case, or easy workaround |
-
-**Affected Component:**
-- Citadel hooks / skills / agents
-- `.claude/harness.json` — project configuration
-- `.planning/` — planning/campaign system
-- `docs/` — documentation
-- Root files — project setup
-
-### Phase 3 — Investigation
-
-#### 3a. Parse the Report
-
-Extract: error messages, environment, reproduction steps, expected vs actual behavior, workarounds.
-
-#### 3b. Search the Codebase
-
-1. Grep for exact error messages / error codes
-2. Read files named in the issue
-3. Find functions named in stack traces
-4. Search for the bug class or anti-pattern
-5. `git log --oneline -20 -- <affected-files>` for recent changes
-6. Cross-reference similar issues
-
-#### 3c. Root Cause Analysis
-
-For bugs:
-1. What breaks — the specific code path
-2. Why it breaks — root cause, not symptom
-3. When introduced — git blame / log
-4. Who is affected — scope
-5. The fix — file:line references
-
-For features/questions:
-1. Already possible? Search existing functionality.
-2. Where would it go? Which component/layer.
-3. Effort: trivial / small / medium / large
-4. Blockers: dependencies, architecture constraints
-
-#### 3d. Reproduce (when possible)
-
-Set up conditions, run the failing command, confirm error matches, verify proposed fix resolves it.
-
-### Phase 4 — Resolution Plan
-
-Write a per-issue resolution plan (full template: docs/TRIAGE.md#issue-resolution-plan-template) with:
-- Type, severity, component, reproducible (yes / no / not-attempted)
-- Root cause: 1-3 sentences explaining WHY
-- Affected code: `<file>:<line>` entries with what is wrong at each
-- Proposed fix: specific code changes with file:line references
-- Impact: who is affected, whether a workaround exists, whether it is a breaking change
-- Recommended action checkbox: Fix in next release / Needs more info from reporter / Won't fix (with reason) / Duplicate of #N
-
-### Phase 5 — Action
-
-**Auto-fix** when: root cause clear and verified, fix contained to 1-3 files, no breaking changes, no architectural decisions needed.
-
-Steps:
-1. Branch: `fix/issue-<number>-<slug>`
-2. Implement fix
-3. Run typecheck/build
-4. Commit: `fix: <description> (closes #<number>)`
-5. Push and open PR linking the issue
-6. Comment on the issue with the PR link
-
-**Comment with findings** when fix needs discussion or user input: post root cause analysis, proposed fix, and questions.
-
-**Label only** for questions/docs/features: add type + priority labels, optionally point to existing docs.
-
-### Phase 6 — Report
-
-Output a Triage Summary table with columns `# | Title | Type | Severity | Action | Status`, one row per triaged item (example: docs/TRIAGE.md#triage-summary-example).
-
-## Label Taxonomy
-
-Apply via `$GH issue edit <number> --add-label "<label>"`:
-
-**Type:** `bug`, `feature`, `question`, `docs`, `infra`
-**Severity (bugs):** `critical`, `high`, `medium`, `low`
-**Status:** `needs-info`, `confirmed`, `wont-fix`, `duplicate`
-
-## Auto-fix Handoff
+Every comment or issue posted to the issue tracker during triage **must** start with this disclaimer:
 
 ```
----PR READY---
-PR #<N>: <url>
-
-To watch this PR automatically:
-  Local  →  /pr-watch <N>
-  Cloud  →  open in Claude Code web or mobile, toggle "Auto fix" ON
----
+> *This was generated by AI during triage.*
 ```
 
-## Contextual Gates
+## Reference docs
 
-**Disclosure:** "Triaging GitHub issues and PRs. Read-only — no changes made without showing you first."
-**Reversibility:** green — investigation is read-only; any GitHub actions (labels, comments, PRs) shown to user for approval before posting
-**Trust gates:**
-- Any: view triage report; all external actions require explicit approval
+- [AGENT-BRIEF.md](AGENT-BRIEF.md) — how to write durable agent briefs
+- [OUT-OF-SCOPE.md](OUT-OF-SCOPE.md) — how the `.out-of-scope/` knowledge base works
 
-## Quality Gates
+## Roles
 
-- [ ] Every issue has a classification (type + severity for bugs)
-- [ ] Every bug has root cause with file:line references
-- [ ] Every auto-fix passes typecheck and build
-- [ ] Every PR links to the issue it fixes
-- [ ] Every issue has at least a label or comment
-- [ ] No issue comment is generic or substanceless
+Two **category** roles:
 
-## Fringe Cases
+- `bug` — something is broken
+- `enhancement` — new feature or improvement
 
-**gh not available or not authenticated:** Stop and instruct: "Run `gh auth login` before using /triage."
+Five **state** roles:
 
-**No open issues or PRs:** Report "No open issues found." and exit cleanly.
+- `needs-triage` — maintainer needs to evaluate
+- `needs-info` — waiting on reporter for more information
+- `ready-for-agent` — fully specified, ready for an AFK agent
+- `ready-for-human` — needs human implementation
+- `wontfix` — will not be actioned
 
-**Empty/unparseable issue body:** Classify as `needs-info`, comment requesting reproduction steps.
+For a PR, the same states read against the attached code: `ready-for-agent` means a brief is attached and an agent should take the next step on the diff; `ready-for-human` means it's ready for a human to merge.
 
-**`.planning/` missing:** /triage reads from GitHub, not local state. Skip .planning/ writes if missing.
+Every triaged issue should carry exactly one category role and one state role. If state roles conflict, flag it and ask the maintainer before doing anything else.
 
-## Anti-Patterns — Do NOT
+These are canonical role names — the actual label strings used in the issue tracker may differ. The mapping should have been provided to you - run `/setup-matt-pocock-skills` if not.
 
-- Post generic comments without substance
-- Propose fixes without reading the actual code
-- Label without investigating
-- Auto-fix when root cause is unclear
-- Close issues without explanation
-- Guess at fixes — verify by reading code and running checks
+State transitions: an unlabeled issue normally goes to `needs-triage` first; from there it moves to `needs-info`, `ready-for-agent`, `ready-for-human`, or `wontfix`. `needs-info` returns to `needs-triage` once the reporter replies. The maintainer can override at any time — flag transitions that look unusual and ask before proceeding.
 
-## gh CLI Notes
+## Invocation
 
-- Windows: `"/c/Program Files/GitHub CLI/gh.exe"` — always pass `--repo <owner/repo>`
-- Comments: `$GH issue comment <number> --repo <owner/repo> --body "..."`
-- Labels: `$GH issue edit <number> --repo <owner/repo> --add-label "bug,high"`
+The maintainer invokes `/triage` and describes what they want in natural language. Interpret the request and act. Examples:
 
-## Exit Protocol
+- "Show me anything that needs my attention"
+- "Let's look at #42" (issue or PR)
+- "Move #42 to ready-for-agent"
+- "What's ready for agents to pick up?"
 
+## Show what needs attention
+
+Query the issue tracker and present three buckets, oldest first:
+
+1. **Unlabeled** — never triaged.
+2. **`needs-triage`** — evaluation in progress.
+3. **`needs-info` with reporter activity since the last triage notes** — needs re-evaluation.
+
+When PRs are in scope, include external PRs in these buckets and tag each line `[PR]` or `[issue]`. Discovery surfaces only *external* PRs (the tracker config defines who counts as external) — a collaborator's in-flight PR is not triage work. This filter is discovery-only; an explicitly named PR is always triaged regardless of author.
+
+Show counts and a one-line summary per item. Let the maintainer pick.
+
+## Triage a specific issue or PR
+
+1. **Gather context.** Read the full issue or PR (body, comments, labels, author, dates; for a PR, the diff too). Parse any prior triage notes so you don't re-ask resolved questions. Explore the codebase using the project's domain glossary, respecting ADRs in the area. Run two checks against the codebase: (a) **redundancy** — search for an existing implementation of the requested behavior by domain concept (not just the request's wording), and report where you looked. If found, it's an already-implemented `wontfix` (step 5). (b) **prior rejection** — read `.out-of-scope/*.md` and surface any that resembles this request.
+
+2. **Recommend.** Tell the maintainer your category and state recommendation with reasoning, plus a brief codebase summary relevant to the request — including whether it's already implemented. Wait for direction.
+
+3. **Verify the claim.** Before any grilling, check that the claim holds up. For a bug, reproduce it from the reporter's steps. For a PR, confirm the diff does what it claims — check it out, run the relevant tests or commands. Report what happened: confirmed (with code path), failed, or insufficient detail (a strong `needs-info` signal). A confirmed verification makes a much stronger agent brief.
+
+4. **Grill (if needed).** If the request needs fleshing out, run the `/grilling` and `/domain-modeling` skills together — grill it into shape one question at a time, sharpening domain terms and updating `CONTEXT.md`/ADRs inline as decisions land.
+
+5. **Apply the outcome:**
+   - `ready-for-agent` — post an agent brief comment ([AGENT-BRIEF.md](AGENT-BRIEF.md)).
+   - `ready-for-human` — same structure as an agent brief, but note why it can't be delegated (judgment calls, external access, design decisions, manual testing).
+   - `needs-info` — post triage notes (template below).
+   - `wontfix` — close, with the comment depending on *why*:
+     - **Already implemented** — the change already exists in the codebase. Point to where it lives; do **not** write to `.out-of-scope/` (that KB is for *rejected* requests, not built ones).
+     - **Rejected (bug)** — polite explanation, then close.
+     - **Rejected (enhancement)** — write to `.out-of-scope/`, link to it from a comment, then close ([OUT-OF-SCOPE.md](OUT-OF-SCOPE.md)).
+   - `needs-triage` — apply the role. Optional comment if there's partial progress.
+
+## Quick state override
+
+If the maintainer says "move #42 to ready-for-agent", trust them and apply the role directly. Confirm what you're about to do (role changes, comment, close), then act. Skip grilling. If moving to `ready-for-agent` without a grilling session, ask whether they want to write an agent brief.
+
+## Needs-info template
+
+```markdown
+## Triage Notes
+
+**What we've established so far:**
+
+- point 1
+- point 2
+
+**What we still need from you (@reporter):**
+
+- question 1
+- question 2
 ```
----HANDOFF---
-- Triaged N issues: X bugs, Y features, Z questions
-- Auto-fixed: <list of issue numbers with PR links>
-- Needs attention: <list of issues requiring human decision>
-- New labels applied: <count>
-- Reversibility: green — investigation read-only; auto-fix PRs can be closed/reverted if unwanted
----
-```
+
+Capture everything resolved during grilling under "established so far" so the work isn't lost. Questions must be specific and actionable, not "please provide more info".
+
+## Resuming a previous session
+
+If prior triage notes exist on the issue or PR, read them, check whether the reporter has answered any outstanding questions, and present an updated picture before continuing. Don't re-ask resolved questions.
+
+
+## Limitations
+
+- Requires the upstream tool, account, API key, or local setup when the workflow names one.
+- Does not authorize destructive, production, paid, or external-message actions without explicit user approval.
+- Validate generated artifacts or recommendations against the user's real sources before treating them as final.

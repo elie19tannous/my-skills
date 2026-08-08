@@ -1,19 +1,24 @@
 ---
 name: m365-agents-dotnet
-description: Microsoft 365 Agents SDK for .NET. Build multichannel agents for Teams/M365/Copilot Studio with ASP.NET Core hosting, AgentApplication routing, and MSAL-based auth.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Microsoft 365 Agents SDK for .NET. Build multichannel agents for Teams/M365/Copilot Studio with ASP.NET Core hosting, AgentApplication routing, and MSAL-based auth. Triggers: "Microsoft 365 Agents SDK", "Microsoft.Agents", "AddAgentApplicationOptions", "AgentApplication", "AddAgentAspNetAuthentication", "Copilot Studio client", "IAgentHttpAdapter".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Microsoft.Agents.Hosting.AspNetCore, Microsoft.Agents.Authentication.Msal, Microsoft.Agents.CopilotStudio.Client
 ---
 
 # Microsoft 365 Agents SDK (.NET)
 
 ## Overview
+
 Build enterprise agents for Microsoft 365, Teams, and Copilot Studio using the Microsoft.Agents SDK with ASP.NET Core hosting, agent routing, and MSAL-based authentication.
 
 ## Before implementation
+
 - Use the microsoft-docs MCP to verify the latest APIs for AddAgent, AgentApplication, and authentication options.
-- Confirm package versions in NuGet for the Microsoft.Agents.* packages you plan to use.
+- Confirm package versions in NuGet for the Microsoft.Agents.\* packages you plan to use.
 
 ## Installation
 
@@ -31,9 +36,7 @@ dotnet add package Microsoft.Identity.Client.Extensions.Msal
 {
   "TokenValidation": {
     "Enabled": true,
-    "Audiences": [
-      "{{ClientId}}"
-    ],
+    "Audiences": ["{{ClientId}}"],
     "TenantId": "{{TenantId}}"
   },
   "AgentApplication": {
@@ -48,9 +51,7 @@ dotnet add package Microsoft.Identity.Client.Extensions.Msal
         "ClientId": "{{ClientId}}",
         "ClientSecret": "{{ClientSecret}}",
         "AuthorityEndpoint": "https://login.microsoftonline.com/{{TenantId}}",
-        "Scopes": [
-          "https://api.botframework.com/.default"
-        ]
+        "Scopes": ["https://api.botframework.com/.default"]
       }
     }
   },
@@ -273,27 +274,13 @@ await foreach (var activity in client.AskQuestionAsync("Hello!", null))
 5. Reuse HttpClient from IHttpClientFactory and cache MSAL tokens.
 6. Prefer async handlers and pass CancellationToken to SDK calls.
 
-## Reference Files
-
-| File | Contents |
-| --- | --- |
-| references/acceptance-criteria.md | Import paths, hosting pipeline, Copilot Studio client patterns, anti-patterns |
-
 ## Reference Links
 
-| Resource | URL |
-| --- | --- |
-| Microsoft 365 Agents SDK | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/ |
-| AddAgent API | https://learn.microsoft.com/en-us/dotnet/api/microsoft.agents.hosting.aspnetcore.servicecollectionextensions.addagent?view=m365-agents-sdk |
-| AgentApplication API | https://learn.microsoft.com/en-us/dotnet/api/microsoft.agents.builder.app.agentapplication?view=m365-agents-sdk |
-| Auth configuration options | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/microsoft-authentication-library-configuration-options |
-| Copilot Studio integration | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/integrate-with-mcs |
-| GitHub samples | https://github.com/microsoft/agents |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+| Resource                   | URL                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Microsoft 365 Agents SDK   | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/                                                                                |
+| AddAgent API               | https://learn.microsoft.com/en-us/dotnet/api/microsoft.agents.hosting.aspnetcore.servicecollectionextensions.addagent?view=m365-agents-sdk |
+| AgentApplication API       | https://learn.microsoft.com/en-us/dotnet/api/microsoft.agents.builder.app.agentapplication?view=m365-agents-sdk                            |
+| Auth configuration options | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/microsoft-authentication-library-configuration-options                          |
+| Copilot Studio integration | https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/integrate-with-mcs                                                              |
+| GitHub samples             | https://github.com/microsoft/agents                                                                                                        |

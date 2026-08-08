@@ -4,7 +4,7 @@ description: Build Slack apps using the Bolt framework across Python,
   JavaScript, and Java. Covers Block Kit for rich UIs, interactive components,
   slash commands, event handling, OAuth installation flows, and Workflow Builder
   integration.
-risk: critical
+risk: unknown
 source: vibeship-spawner-skills (Apache 2.0)
 date_added: 2026-02-27
 ---

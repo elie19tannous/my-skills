@@ -1,16 +1,13 @@
 ---
 name: billing-automation
-description: "Master automated billing systems including recurring billing, invoice generation, dunning management, proration, and tax calculation."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: Build automated billing systems for recurring payments, invoicing, subscription lifecycle, and dunning management. Use when implementing subscription billing, automating invoicing, or managing recurring payment systems.
 ---
 
 # Billing Automation
 
 Master automated billing systems including recurring billing, invoice generation, dunning management, proration, and tax calculation.
 
-## Use this skill when
+## When to Use This Skill
 
 - Implementing SaaS subscription billing
 - Automating invoice generation and delivery
@@ -20,31 +17,63 @@ Master automated billing systems including recurring billing, invoice generation
 - Processing usage-based billing
 - Managing billing cycles and renewals
 
-## Do not use this skill when
+## Core Concepts
 
-- You only need a one-off invoice or manual billing
-- The task is unrelated to billing or subscriptions
-- You cannot change pricing, plans, or billing flows
+### 1. Billing Cycles
 
-## Instructions
+**Common Intervals:**
 
-- Define plans, pricing, billing intervals, and proration rules.
-- Map subscription lifecycle states and renewal/cancellation behavior.
-- Implement invoicing, payments, retries, and dunning workflows.
-- Model taxes and compliance requirements per region.
-- Validate with sandbox payments and reconcile ledger outputs.
-- If detailed templates are required, open `resources/implementation-playbook.md`.
+- Monthly (most common for SaaS)
+- Annual (discounted long-term)
+- Quarterly
+- Weekly
+- Custom (usage-based, per-seat)
 
-## Safety
+### 2. Subscription States
 
-- Do not charge real customers in testing environments.
-- Verify tax handling and compliance obligations before production rollout.
+```
+trial → active → past_due → canceled
+              → paused → resumed
+```
 
-## Resources
+### 3. Dunning Management
 
-- `resources/implementation-playbook.md` for detailed patterns, checklists, and examples.
+Automated process to recover failed payments through:
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+- Retry schedules
+- Customer notifications
+- Grace periods
+- Account restrictions
+
+### 4. Proration
+
+Adjusting charges when:
+
+- Upgrading/downgrading mid-cycle
+- Adding/removing seats
+- Changing billing frequency
+
+## Quick Start
+
+```python
+from billing import BillingEngine, Subscription
+
+# Initialize billing engine
+billing = BillingEngine()
+
+# Create subscription
+subscription = billing.create_subscription(
+    customer_id="cus_123",
+    plan_id="plan_pro_monthly",
+    billing_cycle_anchor=datetime.now(),
+    trial_days=14
+)
+
+# Process billing cycle
+billing.process_billing_cycle(subscription.id)
+```
+
+## Detailed patterns and worked examples
+
+Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
+

@@ -1,11 +1,19 @@
 ---
 name: obsidian-cli
-description: Interact with Obsidian vaults using the Obsidian CLI to read, create, search, and manage notes, tasks, properties, and more. Also supports plugin and theme development with commands to reload plugins, run JavaScript, capture errors, take screenshots, and inspect the DOM. Use when the user asks to interact with their Obsidian vault, manage notes, search vault content, perform vault operations from the command line, or develop and debug Obsidian plugins and themes.
+description: "Use the Obsidian CLI to read, create, search, and manage vault content, or to develop and debug Obsidian plugins and themes from the command line."
+risk: unknown
+source: "https://github.com/kepano/obsidian-skills"
+date_added: "2026-03-21"
 ---
 
 # Obsidian CLI
 
 Use the `obsidian` CLI to interact with a running Obsidian instance. Requires Obsidian to be open.
+
+## When to Use
+- Use when managing vault content through the Obsidian CLI.
+- Use when developing or debugging Obsidian plugins and themes from the command line.
+- Use when the user wants shell-driven interaction with a running Obsidian app.
 
 ## Command reference
 
@@ -104,3 +112,8 @@ obsidian dev:mobile on
 ```
 
 Run `obsidian help` to see additional developer commands including CDP and debugger controls.
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -1,7 +1,7 @@
 ---
 name: speckit-updater
 description: SpecKit Safe Update
-risk: critical
+risk: unknown
 source: community
 ---
 
@@ -9,10 +9,7 @@ source: community
 
 This skill provides safe update capabilities for GitHub SpecKit installations, preserving customizations while applying template updates.
 
-**Installation**: Before adding any marketplace or manual clone, inspect the
-exact plugin revision and every bundled file, report scripts and network or
-filesystem behavior, and ask for explicit user approval. Do not install a moving
-branch directly into an active agent directory.
+**Installation**: Available via plugin (`/plugin marketplace add NotMyself/claude-plugins` then `/plugin install speckit-updater`) or manual Git clone. See README.md for details.
 
 ## When to Use
 - You need to update or install SpecKit templates while preserving project customizations.
@@ -25,7 +22,7 @@ When the user invokes `/speckit-updater`, you should:
 
 1. **Run the update orchestrator script** without any flags (conversational mode):
    ```powershell
-   pwsh -NoProfile -File "<skill_path>/scripts/update-wrapper.ps1"
+   pwsh -NoProfile -Command "& 'C:\Users\bobby\.claude\skills\speckit-updater\scripts\update-wrapper.ps1'"
    ```
 
 2. **Parse the output** for markers:
@@ -54,7 +51,7 @@ When the user invokes `/speckit-updater`, you should:
 
 5. **Execute approved action** by re-running with `-Proceed` flag:
    ```powershell
-   pwsh -NoProfile -File "<skill_path>/scripts/update-wrapper.ps1" -Proceed
+   pwsh -NoProfile -Command "& 'C:\Users\bobby\.claude\skills\speckit-updater\scripts\update-wrapper.ps1' -Proceed"
    ```
 
 **Special cases:**

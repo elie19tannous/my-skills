@@ -1,9 +1,12 @@
 ---
 name: azure-maps-search-dotnet
-description: Azure Maps SDK for .NET. Location-based services including geocoding, routing, rendering, geolocation, and weather. Use for address search, directions, map tiles, IP geolocation, and weather data.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure Maps SDK for .NET. Location-based services including geocoding, routing, rendering, geolocation, and weather. Use for address search, directions, map tiles, IP geolocation, and weather data. Triggers: "Azure Maps", "MapsSearchClient", "MapsRoutingClient", "MapsRenderingClient", "geocoding .NET", "route directions", "map tiles", "geolocation".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.Maps.Search
 ---
 
 # Azure Maps (.NET)
@@ -45,8 +48,9 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_MAPS_SUBSCRIPTION_KEY=<your-subscription-key>
-AZURE_MAPS_CLIENT_ID=<your-client-id>  # For Entra ID auth
+AZURE_MAPS_SUBSCRIPTION_KEY=<your-subscription-key>  # Only required for AzureKeyCredential auth
+AZURE_MAPS_CLIENT_ID=<your-client-id>  # Required: Azure Maps client ID
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -63,13 +67,19 @@ var credential = new AzureKeyCredential(subscriptionKey);
 var client = new MapsSearchClient(credential);
 ```
 
-### Microsoft Entra ID (Recommended for Production)
+### Microsoft Entra Token Credential
 
 ```csharp
 using Azure.Identity;
 using Azure.Maps.Search;
 
-var credential = new DefaultAzureCredential();
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 var clientId = Environment.GetEnvironmentVariable("AZURE_MAPS_CLIENT_ID");
 
 var client = new MapsSearchClient(credential, clientId);
@@ -493,11 +503,3 @@ catch (RequestFailedException ex)
 | Routing API Reference | https://learn.microsoft.com/dotnet/api/azure.maps.routing |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/maps |
 | Pricing | https://azure.microsoft.com/pricing/details/azure-maps/ |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

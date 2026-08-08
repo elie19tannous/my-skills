@@ -1,9 +1,12 @@
 ---
 name: azure-resource-manager-durabletask-dotnet
-description: Azure Resource Manager SDK for Durable Task Scheduler in .NET.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure Resource Manager SDK for Durable Task Scheduler in .NET. Use for MANAGEMENT PLANE operations: creating/managing Durable Task Schedulers, Task Hubs, and retention policies via Azure Resource Manager. Triggers: "Durable Task Scheduler", "create scheduler", "task hub", "DurableTaskSchedulerResource", "provision Durable Task", "orchestration scheduler".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.ResourceManager.DurableTask
 ---
 
 # Azure.ResourceManager.DurableTask (.NET)
@@ -27,12 +30,12 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-AZURE_SUBSCRIPTION_ID=<your-subscription-id>
-AZURE_RESOURCE_GROUP=<your-resource-group>
-# For service principal auth (optional)
-AZURE_TENANT_ID=<tenant-id>
-AZURE_CLIENT_ID=<client-id>
-AZURE_CLIENT_SECRET=<client-secret>
+AZURE_SUBSCRIPTION_ID=<your-subscription-id> # Required: Azure subscription ID
+AZURE_RESOURCE_GROUP=<your-resource-group> # Required: Azure resource group name
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
+AZURE_TENANT_ID=<tenant-id> # For service principal auth (optional)
+AZURE_CLIENT_ID=<client-id> # For service principal auth (optional)
+AZURE_CLIENT_SECRET=<client-secret> # For service principal auth (optional)
 ```
 
 ## Authentication
@@ -42,8 +45,13 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.DurableTask;
 
-// Always use DefaultAzureCredential
-var credential = new DefaultAzureCredential();
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 var armClient = new ArmClient(credential);
 
 // Get subscription
@@ -279,7 +287,7 @@ armClient.GetDurableTaskHubResource(id);           // Get task hub by ID
 
 1. **Use `WaitUntil.Completed`** for operations that must finish before proceeding
 2. **Use `WaitUntil.Started`** when you want to poll manually or run operations in parallel
-3. **Always use `DefaultAzureCredential`** — never hardcode keys
+3. **Use `DefaultAzureCredential`** — never hardcode keys
 4. **Handle `RequestFailedException`** for ARM API errors
 5. **Use `CreateOrUpdateAsync`** for idempotent operations
 6. **Delete task hubs before schedulers** — schedulers with task hubs cannot be deleted
@@ -376,11 +384,3 @@ await scheduler.DeleteAsync(WaitUntil.Completed);
 
 - [GitHub: Azure.ResourceManager.DurableTask](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/durabletask/Azure.ResourceManager.DurableTask)
 - [NuGet: Azure.ResourceManager.DurableTask](https://www.nuget.org/packages/Azure.ResourceManager.DurableTask)
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

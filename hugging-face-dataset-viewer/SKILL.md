@@ -1,7 +1,7 @@
 ---
 name: hugging-face-dataset-viewer
 description: Hugging Face Dataset Viewer
-risk: critical
+risk: unknown
 source: https://github.com/huggingface/skills/tree/main/skills/huggingface-datasets
 source_repo: huggingface/skills
 source_type: official

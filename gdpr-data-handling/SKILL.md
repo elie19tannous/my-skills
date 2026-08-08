@@ -1,16 +1,13 @@
 ---
 name: gdpr-data-handling
-description: "Practical implementation guide for GDPR-compliant data processing, consent management, and privacy controls."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: Implement GDPR-compliant data handling with consent management, data subject rights, and privacy by design. Use when building systems that process EU personal data, implementing privacy controls, or conducting GDPR compliance reviews.
 ---
 
 # GDPR Data Handling
 
 Practical implementation guide for GDPR-compliant data processing, consent management, and privacy controls.
 
-## Use this skill when
+## When to Use This Skill
 
 - Building systems that process EU personal data
 - Implementing consent management
@@ -19,23 +16,58 @@ Practical implementation guide for GDPR-compliant data processing, consent manag
 - Designing privacy-first architectures
 - Creating data processing agreements
 
-## Do not use this skill when
+## Core Concepts
 
-- The task is unrelated to gdpr data handling
-- You need a different domain or tool outside this scope
+### 1. Personal Data Categories
 
-## Instructions
+| Category               | Examples                    | Protection Level   |
+| ---------------------- | --------------------------- | ------------------ |
+| **Basic**              | Name, email, phone          | Standard           |
+| **Sensitive (Art. 9)** | Health, religion, ethnicity | Explicit consent   |
+| **Criminal (Art. 10)** | Convictions, offenses       | Official authority |
+| **Children's**         | Under 16 data               | Parental consent   |
 
-- Clarify goals, constraints, and required inputs.
-- Apply relevant best practices and validate outcomes.
-- Provide actionable steps and verification.
-- If detailed examples are required, open `resources/implementation-playbook.md`.
+### 2. Legal Bases for Processing
 
-## Resources
+```
+Article 6 - Lawful Bases:
+├── Consent: Freely given, specific, informed
+├── Contract: Necessary for contract performance
+├── Legal Obligation: Required by law
+├── Vital Interests: Protecting someone's life
+├── Public Interest: Official functions
+└── Legitimate Interest: Balanced against rights
+```
 
-- `resources/implementation-playbook.md` for detailed patterns and examples.
+### 3. Data Subject Rights
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+```
+Right to Access (Art. 15)      ─┐
+Right to Rectification (Art. 16) │
+Right to Erasure (Art. 17)       │ Must respond
+Right to Restrict (Art. 18)      │ within 1 month
+Right to Portability (Art. 20)   │
+Right to Object (Art. 21)       ─┘
+```
+
+## Detailed worked examples and patterns
+
+Detailed sections (starting with `## Implementation Patterns`) live in `references/details.md`. Read that file when the navigation summary above is insufficient.
+
+## Best Practices
+
+### Do's
+
+- **Minimize data collection** - Only collect what's needed
+- **Document everything** - Processing activities, legal bases
+- **Encrypt PII** - At rest and in transit
+- **Implement access controls** - Need-to-know basis
+- **Regular audits** - Verify compliance continuously
+
+### Don'ts
+
+- **Don't pre-check consent boxes** - Must be opt-in
+- **Don't bundle consent** - Separate purposes separately
+- **Don't retain indefinitely** - Define and enforce retention
+- **Don't ignore DSARs** - 30-day response required
+- **Don't transfer without safeguards** - SCCs or adequacy decisions

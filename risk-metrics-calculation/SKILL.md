@@ -1,16 +1,13 @@
 ---
 name: risk-metrics-calculation
-description: "Calculate portfolio risk metrics including VaR, CVaR, Sharpe, Sortino, and drawdown analysis. Use when measuring portfolio risk, implementing risk limits, or building risk monitoring systems."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: Calculate portfolio risk metrics including VaR, CVaR, Sharpe, Sortino, and drawdown analysis. Use when measuring portfolio risk, implementing risk limits, or building risk monitoring systems.
 ---
 
 # Risk Metrics Calculation
 
 Comprehensive risk measurement toolkit for portfolio management, including Value at Risk, Expected Shortfall, and drawdown analysis.
 
-## Use this skill when
+## When to Use This Skill
 
 - Measuring portfolio risk
 - Implementing risk limits
@@ -19,23 +16,45 @@ Comprehensive risk measurement toolkit for portfolio management, including Value
 - Setting position sizes
 - Regulatory reporting
 
-## Do not use this skill when
+## Core Concepts
 
-- The task is unrelated to risk metrics calculation
-- You need a different domain or tool outside this scope
+### 1. Risk Metric Categories
 
-## Instructions
+| Category          | Metrics         | Use Case             |
+| ----------------- | --------------- | -------------------- |
+| **Volatility**    | Std Dev, Beta   | General risk         |
+| **Tail Risk**     | VaR, CVaR       | Extreme losses       |
+| **Drawdown**      | Max DD, Calmar  | Capital preservation |
+| **Risk-Adjusted** | Sharpe, Sortino | Performance          |
 
-- Clarify goals, constraints, and required inputs.
-- Apply relevant best practices and validate outcomes.
-- Provide actionable steps and verification.
-- If detailed examples are required, open `resources/implementation-playbook.md`.
+### 2. Time Horizons
 
-## Resources
+```
+Intraday:   Minute/hourly VaR for day traders
+Daily:      Standard risk reporting
+Weekly:     Rebalancing decisions
+Monthly:    Performance attribution
+Annual:     Strategic allocation
+```
 
-- `resources/implementation-playbook.md` for detailed patterns and examples.
+## Detailed patterns and worked examples
 
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+Detailed pattern documentation lives in `references/details.md`. Read that file when the navigation tier above is insufficient.
+
+## Best Practices
+
+### Do's
+
+- **Use multiple metrics** - No single metric captures all risk
+- **Consider tail risk** - VaR isn't enough, use CVaR
+- **Rolling analysis** - Risk changes over time
+- **Stress test** - Historical and hypothetical
+- **Document assumptions** - Distribution, lookback, etc.
+
+### Don'ts
+
+- **Don't rely on VaR alone** - Underestimates tail risk
+- **Don't assume normality** - Returns are fat-tailed
+- **Don't ignore correlation** - Increases in stress
+- **Don't use short lookbacks** - Miss regime changes
+- **Don't forget transaction costs** - Affects realized risk

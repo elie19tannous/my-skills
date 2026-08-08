@@ -1,9 +1,12 @@
 ---
 name: azure-eventgrid-dotnet
-description: Azure Event Grid SDK for .NET. Client library for publishing and consuming events with Azure Event Grid. Use for event-driven architectures, pub/sub messaging, CloudEvents, and EventGridEvents.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure Event Grid SDK for .NET. Client library for publishing and consuming events with Azure Event Grid. Use for event-driven architectures, pub/sub messaging, CloudEvents, and EventGridEvents. Triggers: "Event Grid", "EventGridPublisherClient", "CloudEvent", "EventGridEvent", "publish events .NET", "event-driven", "pub/sub".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.Messaging.EventGrid
 ---
 
 # Azure.Messaging.EventGrid (.NET)
@@ -28,14 +31,12 @@ dotnet add package Microsoft.Azure.Messaging.EventGrid.CloudNativeCloudEvents
 ## Environment Variables
 
 ```bash
-# Topic/Domain endpoint
-EVENT_GRID_TOPIC_ENDPOINT=https://<topic-name>.<region>.eventgrid.azure.net/api/events
-EVENT_GRID_TOPIC_KEY=<access-key>
-
-# Namespace endpoint (for pull delivery)
-EVENT_GRID_NAMESPACE_ENDPOINT=https://<namespace>.<region>.eventgrid.azure.net
-EVENT_GRID_TOPIC_NAME=<topic-name>
-EVENT_GRID_SUBSCRIPTION_NAME=<subscription-name>
+EVENT_GRID_TOPIC_ENDPOINT=https://<topic-name>.<region>.eventgrid.azure.net/api/events  # Required: Event Grid topic or domain endpoint
+EVENT_GRID_TOPIC_KEY=<access-key>  # Only required for AzureKeyCredential auth
+EVENT_GRID_NAMESPACE_ENDPOINT=https://<namespace>.<region>.eventgrid.azure.net  # Optional: Event Grid namespace endpoint
+EVENT_GRID_TOPIC_NAME=<topic-name>  # Required: Event Grid topic name
+EVENT_GRID_SUBSCRIPTION_NAME=<subscription-name>  # Optional: Event Grid subscription name
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Client Hierarchy
@@ -71,15 +72,22 @@ EventGridPublisherClient client = new(
     new AzureKeyCredential("<access-key>"));
 ```
 
-### Microsoft Entra ID (Recommended)
+### Microsoft Entra Token Credential
 
 ```csharp
 using Azure.Identity;
 using Azure.Messaging.EventGrid;
 
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 EventGridPublisherClient client = new(
     new Uri("https://mytopic.eastus-1.eventgrid.azure.net/api/events"),
-    new DefaultAzureCredential());
+    credential);
 ```
 
 ### SAS Token Authentication
@@ -487,11 +495,3 @@ catch (RequestFailedException)
 | Quickstart | https://learn.microsoft.com/azure/event-grid/custom-event-quickstart |
 | Pull Delivery | https://learn.microsoft.com/azure/event-grid/pull-delivery-overview |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/eventgrid/Azure.Messaging.EventGrid |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

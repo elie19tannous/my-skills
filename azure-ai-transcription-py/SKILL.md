@@ -1,9 +1,13 @@
 ---
 name: azure-ai-transcription-py
-description: Azure AI Transcription SDK for Python. Use for real-time and batch speech-to-text transcription with timestamps and diarization.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure AI Transcription SDK for Python. Use for real-time and batch speech-to-text transcription with timestamps and diarization.
+  Triggers: "transcription", "speech to text", "Azure AI Transcription", "TranscriptionClient".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: azure-ai-transcription
 ---
 
 # Azure AI Transcription SDK for Python
@@ -31,47 +35,56 @@ Use subscription key authentication (DefaultAzureCredential is not supported for
 import os
 from azure.ai.transcription import TranscriptionClient
 
-client = TranscriptionClient(
+with TranscriptionClient(
     endpoint=os.environ["TRANSCRIPTION_ENDPOINT"],
-    credential=os.environ["TRANSCRIPTION_KEY"]
-)
+    credential=os.environ["TRANSCRIPTION_KEY"],
+) as client:
+    transcriptions = list(client.list_transcriptions())
 ```
 
 ## Transcription (Batch)
 
 ```python
-job = client.begin_transcription(
-    name="meeting-transcription",
-    locale="en-US",
-    content_urls=["https://<storage>/audio.wav"],
-    diarization_enabled=True
-)
-result = job.result()
-print(result.status)
+import os
+from azure.ai.transcription import TranscriptionClient
+
+with TranscriptionClient(
+    endpoint=os.environ["TRANSCRIPTION_ENDPOINT"],
+    credential=os.environ["TRANSCRIPTION_KEY"],
+) as client:
+    job = client.begin_transcription(
+        name="meeting-transcription",
+        locale="en-US",
+        content_urls=["https://<storage>/audio.wav"],
+        diarization_enabled=True,
+    )
+    result = job.result()
+    print(result.status)
 ```
 
 ## Transcription (Real-time)
 
 ```python
-stream = client.begin_stream_transcription(locale="en-US")
-stream.send_audio_file("audio.wav")
-for event in stream:
-    print(event.text)
+import os
+from azure.ai.transcription import TranscriptionClient
+
+with TranscriptionClient(
+    endpoint=os.environ["TRANSCRIPTION_ENDPOINT"],
+    credential=os.environ["TRANSCRIPTION_KEY"],
+) as client:
+    stream = client.begin_stream_transcription(locale="en-US")
+    stream.send_audio_file("audio.wav")
+    for event in stream:
+        print(event.text)
 ```
 
 ## Best Practices
 
-1. **Enable diarization** when multiple speakers are present
-2. **Use batch transcription** for long files stored in blob storage
-3. **Capture timestamps** for subtitle generation
-4. **Specify language** to improve recognition accuracy
-5. **Handle streaming backpressure** for real-time transcription
-6. **Close transcription sessions** when complete
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+1. **Pick sync OR async and stay consistent.** Do not mix `azure.xxx` sync clients with `azure.xxx.aio` async clients in the same call path. Choose one mode per module.
+2. **Always use context managers for clients and async credentials.** Wrap every client in `with Client(...) as client:` (sync) or `async with Client(...) as client:` (async). For async `DefaultAzureCredential` from `azure.identity.aio`, also use `async with credential:` so tokens and transports are cleaned up.
+3. **Enable diarization** when multiple speakers are present
+4. **Use batch transcription** for long files stored in blob storage
+5. **Capture timestamps** for subtitle generation
+6. **Specify language** to improve recognition accuracy
+7. **Handle streaming backpressure** for real-time transcription
+8. **Close transcription sessions** when complete

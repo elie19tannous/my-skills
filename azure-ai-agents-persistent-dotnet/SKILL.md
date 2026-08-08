@@ -1,9 +1,12 @@
 ---
 name: azure-ai-agents-persistent-dotnet
-description: Azure AI Agents Persistent SDK for .NET. Low-level SDK for creating and managing AI agents with threads, messages, runs, and tools.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure AI Agents Persistent SDK for .NET. Low-level SDK for creating and managing AI agents with threads, messages, runs, and tools. Use for agent CRUD, conversation threads, streaming responses, function calling, file search, and code interpreter. Triggers: "PersistentAgentsClient", "persistent agents", "agent threads", "agent runs", "streaming agents", "function calling agents .NET".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.AI.Agents.Persistent
 ---
 
 # Azure.AI.Agents.Persistent (.NET)
@@ -22,10 +25,11 @@ dotnet add package Azure.Identity
 ## Environment Variables
 
 ```bash
-PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
-MODEL_DEPLOYMENT_NAME=gpt-4o-mini
-AZURE_BING_CONNECTION_ID=<bing-connection-resource-id>
-AZURE_AI_SEARCH_CONNECTION_ID=<search-connection-resource-id>
+PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>  # Required: Azure AI project endpoint
+MODEL_DEPLOYMENT_NAME=gpt-4o-mini  # Required: model deployment name
+AZURE_BING_CONNECTION_ID=<bing-connection-resource-id>  # Required: Bing connection resource ID
+AZURE_AI_SEARCH_CONNECTION_ID=<search-connection-resource-id>  # Required: Azure AI Search connection resource ID
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -35,7 +39,14 @@ using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 
 var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
-PersistentAgentsClient client = new(projectEndpoint, new DefaultAzureCredential());
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
+PersistentAgentsClient client = new(projectEndpoint, credential);
 ```
 
 ## Client Hierarchy
@@ -348,11 +359,3 @@ catch (RequestFailedException ex)
 | API Reference | https://learn.microsoft.com/dotnet/api/azure.ai.agents.persistent |
 | GitHub Source | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Agents.Persistent |
 | Samples | https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Agents.Persistent/samples |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

@@ -74,7 +74,7 @@ PRD → Research → Architecture → Development → Testing → Deployment →
 | **No testing** or basic unit tests | **14 automated quality gates**: security scans, load tests, accessibility audits, code reviews |
 | **Code only** - you handle the rest | **Full business operations**: marketing, sales, legal, HR, finance, investor relations |
 | **Stops on errors** | **Self-healing**: circuit breakers, dead letter queues, exponential backoff, automatic recovery |
-| **No visibility** into progress | **Local status files** with agent monitoring and task queues |
+| **No visibility** into progress | **Real-time dashboard** with agent monitoring, task queues, and live status updates |
 | **"Done" when code is written** | **Never "done"**: continuous optimization, A/B testing, customer feedback loops, perpetual improvement |
 
 ### **Core Advantages**
@@ -142,13 +142,13 @@ Tasks:
 Last Updated: 2026-01-04 20:45:32
 ```
 
-**Dashboard status:**
+**Access the dashboard:**
 ```bash
 # Automatically opens when running autonomously
-bash autonomy/run.sh ./docs/requirements.md
+./autonomy/run.sh ./docs/requirements.md
 
 # Or open manually
-The legacy unauthenticated HTTP dashboard is disabled. Inspect `.loki/STATUS.txt` and the reviewed JSON state files locally instead.
+open .loki/dashboard/index.html
 ```
 
 Auto-refreshes every 3 seconds. Works with any modern browser.
@@ -212,7 +212,7 @@ There is **NEVER** a "finished" state. After completing the PRD, Loki Mode:
 
 ```bash
 # Start autonomous mode
-bash autonomy/run.sh ./docs/requirements.md
+./autonomy/run.sh ./docs/requirements.md
 
 # Hit rate limit? Script automatically:
 # ├─ Saves state checkpoint
@@ -262,10 +262,10 @@ Save as `my-prd.md`.
 
 ```bash
 # Autonomous mode (recommended)
-bash autonomy/run.sh ./my-prd.md
+./autonomy/run.sh ./my-prd.md
 
 # Or manual mode
-claude
+claude --dangerously-skip-permissions
 > Loki Mode with PRD at ./my-prd.md
 ```
 
@@ -381,7 +381,7 @@ Test Loki Mode with these pre-built PRDs in the `examples/` directory:
 
 ```bash
 # Example: Run with simple todo app
-bash autonomy/run.sh examples/simple-todo-app.md
+./autonomy/run.sh examples/simple-todo-app.md
 ```
 
 ---
@@ -396,7 +396,7 @@ Customize the autonomous runner with environment variables:
 LOKI_MAX_RETRIES=100 \
 LOKI_BASE_WAIT=120 \
 LOKI_MAX_WAIT=7200 \
-bash autonomy/run.sh ./docs/requirements.md
+./autonomy/run.sh ./docs/requirements.md
 ```
 
 | Variable | Default | Description |
@@ -432,7 +432,7 @@ channels:
 
 ## Requirements
 
-- **Claude Code** with its normal permission prompts enabled
+- **Claude Code** with `--dangerously-skip-permissions` flag
 - **Internet access** for competitive research and deployment
 - **Cloud provider credentials** (for deployment phase)
 - **Python 3** (for test suite)
@@ -455,7 +455,7 @@ Integrate with [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) for a visua
 npx vibe-kanban
 
 # Export Loki tasks to Vibe Kanban
-bash scripts/export-to-vibe-kanban.sh
+./scripts/export-to-vibe-kanban.sh
 ```
 
 **Benefits:**
@@ -540,7 +540,7 @@ Built for the [Claude Code](https://claude.ai) ecosystem, powered by Anthropic's
 
 ```bash
 git clone https://github.com/asklokesh/loki-mode.git ~/.claude/skills/loki-mode
-bash autonomy/run.sh your-prd.md
+./autonomy/run.sh your-prd.md
 ```
 
 ---

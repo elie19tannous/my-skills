@@ -1,9 +1,12 @@
 ---
 name: azure-eventhub-dotnet
-description: Azure Event Hubs SDK for .NET.
-risk: critical
-source: community
-date_added: '2026-02-27'
+description: |
+  Azure Event Hubs SDK for .NET. Use for high-throughput event streaming: sending events (EventHubProducerClient, EventHubBufferedProducerClient), receiving events (EventProcessorClient with checkpointing), partition management, and real-time data ingestion. Triggers: "Event Hubs", "event streaming", "EventHubProducerClient", "EventProcessorClient", "send events", "receive events", "checkpointing", "partition".
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: Azure.Messaging.EventHubs
 ---
 
 # Azure.Messaging.EventHubs (.NET)
@@ -31,15 +34,12 @@ dotnet add package Azure.Storage.Blobs
 ## Environment Variables
 
 ```bash
-EVENTHUB_FULLY_QUALIFIED_NAMESPACE=<namespace>.servicebus.windows.net
-EVENTHUB_NAME=<event-hub-name>
-
-# For checkpointing (EventProcessorClient)
-BLOB_STORAGE_CONNECTION_STRING=<storage-connection-string>
-BLOB_CONTAINER_NAME=<checkpoint-container>
-
-# Alternative: Connection string auth (not recommended for production)
-EVENTHUB_CONNECTION_STRING=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=...
+EVENTHUB_FULLY_QUALIFIED_NAMESPACE=<namespace>.servicebus.windows.net  # Required: Event Hubs fully qualified namespace
+EVENTHUB_NAME=<event-hub-name>  # Required: Event Hub name
+BLOB_STORAGE_CONNECTION_STRING=<storage-connection-string>  # Alternative to Entra ID auth
+BLOB_CONTAINER_NAME=<checkpoint-container>  # Required: checkpoint container name
+EVENTHUB_CONNECTION_STRING=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=...  # Alternative to Entra ID auth
+AZURE_TOKEN_CREDENTIALS=prod  # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Authentication
@@ -49,8 +49,13 @@ using Azure.Identity;
 using Azure.Messaging.EventHubs;
 using Azure.Messaging.EventHubs.Producer;
 
-// Always use DefaultAzureCredential for production
-var credential = new DefaultAzureCredential();
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+var credential = new DefaultAzureCredential(
+    DefaultAzureCredential.DefaultEnvironmentVariableName
+);
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme?view=azure-dotnet#credential-classes
+// var credential = new ManagedIdentityCredential();
 
 var fullyQualifiedNamespace = Environment.GetEnvironmentVariable("EVENTHUB_FULLY_QUALIFIED_NAMESPACE");
 var eventHubName = Environment.GetEnvironmentVariable("EVENTHUB_NAME");
@@ -361,11 +366,3 @@ processor.ProcessEventAsync += async args =>
 | `Azure.Messaging.EventHubs.Processor` | Production processing | `dotnet add package Azure.Messaging.EventHubs.Processor` |
 | `Azure.ResourceManager.EventHubs` | Management plane (create hubs) | `dotnet add package Azure.ResourceManager.EventHubs` |
 | `Microsoft.Azure.WebJobs.Extensions.EventHubs` | Azure Functions binding | `dotnet add package Microsoft.Azure.WebJobs.Extensions.EventHubs` |
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

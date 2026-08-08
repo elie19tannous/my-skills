@@ -1,106 +1,185 @@
 ---
 name: context-optimization
-description: "Optimizes the context provided to an AI model by deduplicating, filtering, reordering, and scoring information to maximize relevance and token efficiency."
-license: MIT
-metadata:
-  author: awesome-ai-agent-skills
-  version: "1.0.0"
+description: "Context optimization extends the effective capacity of limited context windows through strategic compression, masking, caching, and partitioning. The goal is not to magically increase context windows but to make better use of available capacity."
+risk: unknown
+source: community
 ---
 
-# Context Optimization
+# Context Optimization Techniques
 
-Context optimization is the process of refining the raw context assembled for an AI model so that every token contributes meaningfully to the task. In a typical RAG or agent pipeline, the retrieved context often contains redundant passages, marginally relevant chunks, and poorly ordered information. Optimization transforms this raw material into a lean, high-signal context block that improves answer quality, reduces inference cost, and makes the most of the model's attention budget.
+Context optimization extends the effective capacity of limited context windows through strategic compression, masking, caching, and partitioning. The goal is not to magically increase context windows but to make better use of available capacity. Effective optimization can double or triple effective context capacity without requiring larger models or longer contexts.
 
-## Workflow
+## When to Use
+Activate this skill when:
+- Context limits constrain task complexity
+- Optimizing for cost reduction (fewer tokens = lower costs)
+- Reducing latency for long conversations
+- Implementing long-running agent systems
+- Needing to handle larger documents or conversations
+- Building production systems at scale
 
-1. **Audit the Raw Context**: Inventory every piece of context that has been gathered -- retrieved documents, conversation history, tool outputs, and metadata. Measure the total token count and compare it against the available context budget. Identify the compression ratio needed if the raw context exceeds the budget.
+## Core Concepts
 
-2. **Deduplicate Overlapping Content**: Scan the context for near-duplicate passages that convey the same information. This is common in RAG pipelines where chunking with overlap produces multiple chunks covering the same paragraph, or when multiple source documents repeat the same facts. Use semantic similarity (cosine distance > 0.92) or exact n-gram overlap detection to identify duplicates, then keep only the most complete version of each piece of information.
+Context optimization extends effective capacity through four primary strategies: compaction (summarizing context near limits), observation masking (replacing verbose outputs with references), KV-cache optimization (reusing cached computations), and context partitioning (splitting work across isolated contexts).
 
-3. **Score Relevance and Information Density**: Assign each context chunk two scores: a relevance score (how closely it relates to the current query) and an information density score (how many useful facts it conveys per token). Relevance can be measured via the retrieval score or a lightweight cross-encoder pass. Density can be estimated by counting named entities, code identifiers, numerical data, and key terms relative to chunk length. Multiply the two scores to produce a composite utility score.
+The key insight is that context quality matters more than quantity. Optimization preserves signal while reducing noise. The art lies in selecting what to keep versus what to discard, and when to apply each technique.
 
-4. **Filter Low-Value Content**: Remove chunks whose composite utility score falls below a threshold. A good starting point is to keep the top 60-70% of chunks by utility score. Also remove boilerplate text (copyright notices, navigation menus, repeated headers) that contributes zero information. Be conservative -- it is better to include a marginally relevant chunk than to lose a critical fact.
+## Detailed Topics
 
-5. **Reorder by Priority**: Arrange the remaining chunks to maximize the model's attention. Place the highest-utility chunks first (models attend most to the beginning of the context) and the second-highest near the end (models also attend to recency). Avoid burying critical information in the middle of a long context block -- this is the "lost in the middle" zone where model attention is weakest.
+### Compaction Strategies
 
-6. **Validate Coverage**: After filtering and reordering, verify that the optimized context still covers all aspects of the query. If the query has multiple sub-questions, ensure at least one chunk addresses each. If coverage gaps appear, selectively re-add previously filtered chunks that fill the gap, even if their utility score was below the threshold.
+**What is Compaction**
+Compaction is the practice of summarizing context contents when approaching limits, then reinitializing a new context window with the summary. This distills the contents of a context window in a high-fidelity manner, enabling the agent to continue with minimal performance degradation.
 
-## Techniques
+Compaction typically serves as the first lever in context optimization. The art lies in selecting what to keep versus what to discard.
 
-- **Deduplication**: Identifies and removes redundant passages using semantic similarity thresholds or n-gram overlap detection. Critical in RAG pipelines where overlapping chunks often repeat the same sentences. Keeps the most complete or highest-scoring version.
-- **Relevance Filtering**: Removes chunks that fall below a relevance threshold. Uses the original retrieval score, a reranker score, or keyword overlap with the query as the signal. Aggressiveness should be tuned -- filtering too hard causes coverage gaps.
-- **Information Density Scoring**: Estimates how much useful information a chunk contains per token. Dense chunks (packed with facts, code, or data) are preferred over verbose, low-density prose. Useful for deciding which chunks to keep when two have similar relevance scores.
-- **Priority-Based Ordering**: Arranges chunks so the model sees the most important information first and last, avoiding the "lost in the middle" effect. This is especially impactful for long context windows (32K+ tokens) where attention degradation is more pronounced.
-- **Context Window Strategies**: Different model context windows require different optimization approaches. For small windows (4K tokens), aggressive filtering and compression are essential. For medium windows (32K), focus on deduplication and ordering. For large windows (128K+), ordering and density scoring matter most, since there is room for more material but the lost-in-the-middle effect is amplified.
+**Compaction Implementation**
+Compaction works by identifying sections that can be compressed, generating summaries that capture essential points, and replacing full content with summaries. Priority for compression goes to tool outputs (replace with summaries), old turns (summarize early conversation), retrieved docs (summarize if recent versions exist), and never compress system prompt.
 
-## Usage
+**Summary Generation**
+Effective summaries preserve different elements depending on message type:
 
-Provide the raw context (a list of text chunks with optional metadata and scores), the user query, and the target token budget. The skill returns an optimized context block -- deduplicated, filtered, scored, and reordered -- ready for prompt assembly. Optionally provide a coverage checklist (key topics the context must address) to prevent important information from being filtered out.
+Tool outputs: Preserve key findings, metrics, and conclusions. Remove verbose raw output.
+
+Conversational turns: Preserve key decisions, commitments, and context shifts. Remove filler and back-and-forth.
+
+Retrieved documents: Preserve key facts and claims. Remove supporting evidence and elaboration.
+
+### Observation Masking
+
+**The Observation Problem**
+Tool outputs can comprise 80%+ of token usage in agent trajectories. Much of this is verbose output that has already served its purpose. Once an agent has used a tool output to make a decision, keeping the full output provides diminishing value while consuming significant context.
+
+Observation masking replaces verbose tool outputs with compact references. The information remains accessible if needed but does not consume context continuously.
+
+**Masking Strategy Selection**
+Not all observations should be masked equally:
+
+Never mask: Observations critical to current task, observations from the most recent turn, observations used in active reasoning.
+
+Consider masking: Observations from 3+ turns ago, verbose outputs with key points extractable, observations whose purpose has been served.
+
+Always mask: Repeated outputs, boilerplate headers/footers, outputs already summarized in conversation.
+
+### KV-Cache Optimization
+
+**Understanding KV-Cache**
+The KV-cache stores Key and Value tensors computed during inference, growing linearly with sequence length. Caching the KV-cache across requests sharing identical prefixes avoids recomputation.
+
+Prefix caching reuses KV blocks across requests with identical prefixes using hash-based block matching. This dramatically reduces cost and latency for requests with common prefixes like system prompts.
+
+**Cache Optimization Patterns**
+Optimize for caching by reordering context elements to maximize cache hits. Place stable elements first (system prompt, tool definitions), then frequently reused elements, then unique elements last.
+
+Design prompts to maximize cache stability: avoid dynamic content like timestamps, use consistent formatting, keep structure stable across sessions.
+
+### Context Partitioning
+
+**Sub-Agent Partitioning**
+The most aggressive form of context optimization is partitioning work across sub-agents with isolated contexts. Each sub-agent operates in a clean context focused on its subtask without carrying accumulated context from other subtasks.
+
+This approach achieves separation of concerns—the detailed search context remains isolated within sub-agents while the coordinator focuses on synthesis and analysis.
+
+**Result Aggregation**
+Aggregate results from partitioned subtasks by validating all partitions completed, merging compatible results, and summarizing if still too large.
+
+### Budget Management
+
+**Context Budget Allocation**
+Design explicit context budgets. Allocate tokens to categories: system prompt, tool definitions, retrieved docs, message history, and reserved buffer. Monitor usage against budget and trigger optimization when approaching limits.
+
+**Trigger-Based Optimization**
+Monitor signals for optimization triggers: token utilization above 80%, degradation indicators, and performance drops. Apply appropriate optimization techniques based on context composition.
+
+## Practical Guidance
+
+### Optimization Decision Framework
+
+When to optimize:
+- Context utilization exceeds 70%
+- Response quality degrades as conversations extend
+- Costs increase due to long contexts
+- Latency increases with conversation length
+
+What to apply:
+- Tool outputs dominate: observation masking
+- Retrieved documents dominate: summarization or partitioning
+- Message history dominates: compaction with summarization
+- Multiple components: combine strategies
+
+### Performance Considerations
+
+Compaction should achieve 50-70% token reduction with less than 5% quality degradation. Masking should achieve 60-80% reduction in masked observations. Cache optimization should achieve 70%+ hit rate for stable workloads.
+
+Monitor and iterate on optimization strategies based on measured effectiveness.
 
 ## Examples
 
-### Example 1: Optimizing Context for a Multi-File Code Edit Task
+**Example 1: Compaction Trigger**
+```python
+if context_tokens / context_limit > 0.8:
+    context = compact_context(context)
+```
 
-**Task:** "Refactor the authentication module to use async/await instead of callbacks."
+**Example 2: Observation Masking**
+```python
+if len(observation) > max_length:
+    ref_id = store_observation(observation)
+    return f"[Obs:{ref_id} elided. Key: {extract_key(observation)}]"
+```
 
-**Raw Context (7 chunks, ~4,200 tokens):**
+**Example 3: Cache-Friendly Ordering**
+```python
+# Stable content first
+context = [system_prompt, tool_definitions]  # Cacheable
+context += [reused_templates]  # Reusable
+context += [unique_content]  # Unique
+```
 
-| # | Source | Relevance | Density | Content Summary |
-|---|--------|-----------|---------|-----------------|
-| 1 | `src/auth/login.js:1-45` | 0.93 | High | Login function using callback-based `db.findUser()` |
-| 2 | `src/auth/login.js:20-55` | 0.90 | High | Overlapping chunk -- duplicates lines 20-45 of chunk 1, adds token refresh logic |
-| 3 | `src/auth/middleware.js:1-30` | 0.88 | High | Auth middleware with callback-based token verification |
-| 4 | `README.md:100-130` | 0.45 | Low | Project setup instructions -- no code, no auth details |
-| 5 | `src/auth/register.js:1-40` | 0.82 | High | Registration function using callbacks |
-| 6 | `package.json:1-25` | 0.35 | Low | Dependency list -- no auth-related logic |
-| 7 | `src/auth/login.js:40-70` | 0.91 | High | Token generation and session creation with callbacks |
+## Guidelines
 
-**Optimization Steps:**
-1. **Deduplicate:** Chunks 1 and 2 overlap on lines 20-45. Merge into a single chunk covering lines 1-55 of `login.js`.
-2. **Filter:** Remove chunk 4 (README setup instructions, relevance 0.45) and chunk 6 (`package.json`, relevance 0.35) -- below the 0.50 threshold.
-3. **Reorder:** Place merged login.js chunk first (highest relevance), then the token generation chunk, then middleware.js, then register.js.
+1. Measure before optimizing—know your current state
+2. Apply compaction before masking when possible
+3. Design for cache stability with consistent prompts
+4. Partition before context becomes problematic
+5. Monitor optimization effectiveness over time
+6. Balance token savings against quality preservation
+7. Test optimization at production scale
+8. Implement graceful degradation for edge cases
 
-**Optimized Context (~2,800 tokens, 33% reduction):**
-1. `src/auth/login.js:1-55` (merged) -- Login function with callback-based DB lookup and token refresh
-2. `src/auth/login.js:40-70` -- Token generation and session creation
-3. `src/auth/middleware.js:1-30` -- Auth middleware with callback token verification
-4. `src/auth/register.js:1-40` -- Registration function using callbacks
+## Integration
 
-### Example 2: Optimizing RAG-Retrieved Context to Eliminate Redundancy
+This skill builds on context-fundamentals and context-degradation. It connects to:
 
-**Query:** "What is the company's return policy for electronics?"
+- multi-agent-patterns - Partitioning as isolation
+- evaluation - Measuring optimization effectiveness
+- memory-systems - Offloading context to memory
 
-**Raw Retrieved Chunks (6 chunks, ~3,000 tokens):**
-1. `returns-policy.md` (score 0.95) -- "Electronics purchased from our store may be returned within 30 days of purchase. Items must be in original packaging with all accessories. A 15% restocking fee applies to opened items."
-2. `faq.md` (score 0.88) -- "Q: Can I return electronics? A: Yes, within 30 days. Items must be in original packaging. A 15% restocking fee applies to opened items. See our returns policy for full details."
-3. `holiday-policy.md` (score 0.72) -- "During the holiday season (Nov 15 - Jan 15), the return window for all products, including electronics, is extended to 60 days. All other conditions apply."
-4. `shipping-info.md` (score 0.40) -- "We ship electronics via insured ground shipping. Delivery takes 3-7 business days."
-5. `returns-policy.md` (score 0.85) -- "Refunds are processed to the original payment method within 5-10 business days. Defective items are exempt from the restocking fee and may be returned within 90 days."
-6. `store-locator.md` (score 0.30) -- "Visit any of our 200 retail locations nationwide."
+## References
 
-**Optimization Steps:**
-1. **Deduplicate:** Chunks 1 and 2 convey nearly identical information (30-day window, original packaging, 15% fee). Keep chunk 1 (higher score, more authoritative source).
-2. **Filter:** Remove chunk 4 (shipping info, not about returns, score 0.40) and chunk 6 (store locator, irrelevant, score 0.30).
-3. **Reorder:** Chunk 1 (core policy) then chunk 5 (refund processing) then chunk 3 (holiday extension).
+Internal reference:
+- Optimization Techniques Reference - Detailed technical reference
 
-**Optimized Context (~900 tokens, 70% reduction):**
-1. Core policy: 30-day return window, original packaging required, 15% restocking fee for opened items.
-2. Refund details: processed to original payment method in 5-10 business days; defective items exempt from restocking fee, 90-day window.
-3. Holiday extension: Nov 15 - Jan 15, return window extended to 60 days.
+Related skills in this collection:
+- context-fundamentals - Context basics
+- context-degradation - Understanding when to optimize
+- evaluation - Measuring optimization
 
-## Best Practices
+External resources:
+- Research on context window limitations
+- KV-cache optimization techniques
+- Production engineering guides
 
-- **Deduplicate before filtering** -- removing redundant passages first gives you a clearer picture of the unique information available, leading to better filtering decisions.
-- **Tune thresholds on your domain** -- relevance and density score thresholds vary by use case. A code-generation task may need stricter relevance filtering than a general Q&A task. Calibrate on a labeled evaluation set.
-- **Preserve diversity of sources** -- when multiple chunks have similar scores, prefer keeping chunks from different source documents to increase coverage and reduce bias toward a single source.
-- **Account for the lost-in-the-middle effect** -- for context windows above 8K tokens, place the most critical chunks at the beginning and end of the context block. Test with your specific model, as the effect varies across architectures.
-- **Log what you filter** -- record which chunks were removed and why. This makes it possible to debug cases where the model gives an incomplete answer because a needed chunk was filtered out.
-- **Re-optimize when the query changes** -- context that was optimal for one query may be suboptimal for a follow-up. In multi-turn conversations, re-run optimization when the user's intent shifts.
+---
 
-## Edge Cases
+## Skill Metadata
 
-- **All chunks are highly relevant**: When every chunk scores above the threshold, skip filtering and focus on deduplication and ordering. Do not force removal of good content just to hit an arbitrary reduction target.
-- **Query covers multiple distinct topics**: A complex query like "Compare the return policy and warranty terms" requires context covering both topics. Ensure the coverage validation step checks for both and does not filter all chunks about one topic.
-- **Very small context windows (4K tokens)**: With tight budgets, aggressive compression after optimization may still be needed. Optimize first to remove waste, then compress the remainder if it still exceeds the budget.
-- **Rapidly changing source data**: In live systems where documents are updated frequently, cached optimization results may become stale. Invalidate and re-optimize when source documents change.
-- **Context with mixed content types**: When context includes prose, code, tables, and JSON, apply type-specific density scoring -- a 10-line code snippet is typically denser than a 10-line prose paragraph.
+**Created**: 2025-12-20
+**Last Updated**: 2025-12-20
+**Author**: Agent Skills for Context Engineering Contributors
+**Version**: 1.0.0
+
+## Limitations
+- Use this skill only when the task clearly matches the scope described above.
+- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
+- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.

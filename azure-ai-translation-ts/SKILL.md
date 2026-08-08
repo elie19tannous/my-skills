@@ -1,9 +1,11 @@
 ---
 name: azure-ai-translation-ts
-description: "Text and document translation with REST-style clients."
-risk: critical
-source: community
-date_added: "2026-02-27"
+description: Build translation applications using Azure Translation SDKs for JavaScript (@azure-rest/ai-translation-text, @azure-rest/ai-translation-document). Use when implementing text translation, transliteration, language detection, or batch document translation.
+license: MIT
+metadata:
+  author: Microsoft
+  version: "1.0.0"
+  package: '@azure-rest/ai-translation-text, @azure-rest/ai-translation-document'
 ---
 
 # Azure Translation SDKs for TypeScript
@@ -26,6 +28,7 @@ npm install @azure-rest/ai-translation-document @azure/identity
 TRANSLATOR_ENDPOINT=https://api.cognitive.microsofttranslator.com
 TRANSLATOR_SUBSCRIPTION_KEY=<your-api-key>
 TRANSLATOR_REGION=<your-region>  # e.g., westus, eastus
+AZURE_TOKEN_CREDENTIALS=prod # Required only if DefaultAzureCredential is used in production
 ```
 
 ## Text Translation Client
@@ -154,12 +157,18 @@ if (!isUnexpected(response)) {
 
 ```typescript
 import DocumentTranslationClient from "@azure-rest/ai-translation-document";
-import { DefaultAzureCredential } from "@azure/identity";
+import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
 
 const endpoint = "https://<translator>.cognitiveservices.azure.com";
 
+// Local dev: DefaultAzureCredential. Production: set AZURE_TOKEN_CREDENTIALS=prod or AZURE_TOKEN_CREDENTIALS=<specific_credential>
+const credential = new DefaultAzureCredential({requiredEnvVars: ["AZURE_TOKEN_CREDENTIALS"]});
+// Or use a specific credential directly in production:
+// See https://learn.microsoft.com/javascript/api/overview/azure/identity-readme?view=azure-node-latest#credential-classes
+// const credential = new ManagedIdentityCredential();
+
 // TokenCredential
-const client = DocumentTranslationClient(endpoint, new DefaultAzureCredential());
+const client = DocumentTranslationClient(endpoint, credential);
 
 // API Key
 const client2 = DocumentTranslationClient(endpoint, { key: "<api-key>" });
@@ -286,11 +295,3 @@ import type {
 3. **Use SAS tokens** - For document translation, use time-limited SAS URLs
 4. **Handle errors** - Always check `isUnexpected(response)` before accessing body
 5. **Regional endpoints** - Use regional endpoints for lower latency
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
